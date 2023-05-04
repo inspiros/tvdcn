@@ -58,7 +58,7 @@ Or just compile the binary for inplace usage:
 python setup.py build_ext --inplace
 ```
 
-A binary (`.so` file for Unix and `.pyd` file for Windows) should be compiled inside `tvdcn` folder.
+A binary (`.so` file for Unix and `.pyd` file for Windows) should be compiled inside the `tvdcn` folder.
 To check if installation is successful, try:
 
 ```python
