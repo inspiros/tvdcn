@@ -33,7 +33,10 @@ https://github.com/masamitsu-murase/deform_conv2d_onnx_exporter.
 
 #### From TestPyPI:
 
-[tvdcn](https://test_pypi.org/project/tvdcn) provides some prebuilt wheels with CUDA 11.8 at **TestPyPI**
+_This is not available yet because repairing PyTorch extension wheels is fairly complicated, please proceed to
+[instructions to build from source](#from-source), which is very easy._
+
+[tvdcn](https://test_pypi.org/project/tvdcn) will provide some prebuilt wheels with CUDA 11.8 at **TestPyPI**
 (this is not intended to be a standalone library).
 Run this command to install:
 
@@ -65,7 +68,7 @@ assert _HAS_OPS
 
 **Note:** We use soft CUDA version compatibility checking between the built binary and the installed PyTorch,
 which means only major version matching is required.
-However, you better build the binaries with the same CUDA version with installed PyTorch's CUDA version to prevent
+However, we suggest building the binaries with the same CUDA version with installed PyTorch's CUDA version to prevent
 any possible incompability.
 
 ## Usage

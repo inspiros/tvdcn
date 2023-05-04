@@ -36,7 +36,7 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
-          path: ./wheelhouse/.wheel-process/*.whl
+          path: ./wheelhouse/*.whl
 
   publish_on_pypi:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
