@@ -9,7 +9,7 @@ And beyond that, we also provide the **transposed** versions of them,
 which interestingly noone has ever proposed to use.
 Is that because they are programmatically challenging 😉?
 
-## Highlights:
+## Highlights
 
 **Supported operations:** _(All operations are implemented in C++/CUDA)_
 - `tvdcn.ops.deform_conv1d`
@@ -25,15 +25,31 @@ everything is `@torch.jit.script`-able! Please check [Usage](#usage).
 **Note:** We don't care much about `onnx` exportation, but if you do, you can check this repo:
 https://github.com/masamitsu-murase/deform_conv2d_onnx_exporter.
 
-## Requirements:
+## Requirements
 
 - `torch>=1.8`
 
-## Installation:
+## Installation
 
-For installing from source, you need a C++14 compiler (`gcc`, `msvc`) and a CUDA compiler (`nvcc`) to be installed.
-Clone this repo and execute the following commands in terminal:
+#### From TestPyPI:
 
+[tvdcn](https://test_pypi.org/project/tvdcn) provides some prebuilt wheels with CUDA 11.8 at **TestPyPI**
+(this is not intended to be a standalone library).
+Run this command to install:
+
+```terminal
+python --index-url https://test.pypi.org/simple/ tvdcn
+```
+
+#### From Source:
+For installing from source, you need a C++14 compiler (`gcc`/`msvc`) and a CUDA compiler (`nvcc`).
+Clone this repo and execute the following command:
+
+```terminal
+pip install .
+```
+
+Or just compile the binary for inplace usage:
 ```terminal
 python setup.py build_ext --inplace
 ```
@@ -52,9 +68,9 @@ which means only major version matching is required.
 However, you better build the binaries with the same CUDA version with installed PyTorch's CUDA version to prevent
 any possible incompability.
 
-## Usage:
+## Usage
 
-### Functions
+#### Functions:
 Functionally, the package offers 6 functions (listed in [Highlights](#highlights)) much similar to
 `torchvision.ops.deform_conv2d`.
 However, the order of parameters is slightly different, so be cautious.
@@ -88,7 +104,7 @@ def deform_conv_transpose2d(
 ```
 If `offset=None` and `mask=None`, the executed operations are identical to conventional convolution.
 
-### Neural Network Layers
+#### Neural Network Layers:
 
 The `nn.Module` wrappers are:
 - `tvdcn.ops.DeformConv1d`
