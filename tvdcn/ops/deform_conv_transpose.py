@@ -1,46 +1,45 @@
-import math
-
 import torch
 from torch import nn, Tensor
-from torch.jit.annotations import Optional, Tuple, Union
-from torch.nn import init
-from torch.nn.modules.utils import _single, _pair, _triple, _ntuple
-from torch.nn.parameter import Parameter
-from torch.nn.modules.conv import _ConvNd
-from ._types import IntTuple
+from torch.jit.annotations import List, Optional, Tuple, Union
+from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t
+from torch.nn.modules.utils import _single, _pair, _triple
 
-import torch.nn.functional as F
-
-from .extension import _assert_has_ops
+# noinspection PyUnresolvedReferences
+from .deform_conv import _DeformConvNd
+from .._types import _IntTuple
+from ..extension import _assert_has_ops
+from ..utils import _log_api_usage_once
 
 __all__ = [
-    'deform_conv1d',
-    'deform_conv2d',
-    'deform_conv3d',
-    'DeformConv1d',
-    'DeformConv2d',
-    'DeformConv3d',
-    'PackedDeformConv1d',
-    'PackedDeformConv2d',
-    'PackedDeformConv3d',
+    'deform_conv_transpose1d',
+    'deform_conv_transpose2d',
+    'deform_conv_transpose3d',
+    'DeformConvTranspose1d',
+    'DeformConvTranspose2d',
+    'DeformConvTranspose3d',
+    'PackedDeformConvTranspose1d',
+    'PackedDeformConvTranspose2d',
+    'PackedDeformConvTranspose3d',
 ]
 
 
-def deform_conv1d(
+def deform_conv_transpose1d(
         input: Tensor,
         weight: Tensor,
         offset: Optional[Tensor] = None,
         mask: Optional[Tensor] = None,
         bias: Optional[Tensor] = None,
-        stride: IntTuple = 1,
-        padding: IntTuple = 0,
-        dilation: IntTuple = 1,
-        groups: int = 1) -> Tensor:
+        stride: Tuple[int] = (1,),
+        padding: Tuple[int] = (0,),
+        output_padding: Tuple[int] = (0,),
+        dilation: Tuple[int] = (1,),
+        groups: int = 1,
+) -> Tensor:
     r"""
-    Performs 1D version of Deformable Convolution v2, described in
+    Performs 1D transposed version of Deformable Convolution v2, described in
     `Deformable ConvNets v2: More Deformable, Better Results
     <https://arxiv.org/abs/1811.11168>`__ if :attr:`mask` is not ``None`` and
-    Performs 1D version of Deformable Convolution, described in
+    Performs 1D transposed version of Deformable Convolution, described in
     `Deformable Convolutional Networks
     <https://arxiv.org/abs/1703.06211>`__ if :attr:`mask` is ``None``.
 
@@ -56,8 +55,10 @@ def deform_conv1d(
             of convolution kernel. Default: None
         bias (Tensor[out_channels]): optional bias of shape (out_channels,). Default: None
         stride (int or Tuple[int]): distance between convolution centers. Default: 1
-        padding (int or Tuple[int]): height/width of padding of zeroes around
-            each image. Default: 0
+        padding (int or Tuple[int]): height/width of padding of zeroes around each image.
+            Default: 0
+        output_padding (int or Tuple[int]): additional size added to one side
+            of each dimension in the output shape. Default: 0
         dilation (int or Tuple[int]): the spacing between kernel elements. Default: 1
         groups (int): number of blocked connections from input channels to output channels.
             Default: 1
@@ -72,12 +73,13 @@ def deform_conv1d(
         >>> # and kernel size of 3, without padding, the output size is 8
         >>> offset = torch.rand(5, kw, 8)
         >>> mask = torch.rand(5, kw, 8).sigmoid()
-        >>> out = deform_conv1d(input, weight, offset, mask)
+        >>> out = deform_conv_transpose1d(input, weight, offset, mask)
         >>> print(out.shape)
         >>> # returns
         >>>  torch.Size([1, 5, 8])
     """
-
+    if not torch.jit.is_scripting() and not torch.jit.is_tracing():
+        _log_api_usage_once(deform_conv_transpose1d)
     _assert_has_ops()
     out_channels = weight.shape[0]
 
@@ -93,30 +95,30 @@ def deform_conv1d(
 
     stride = _single(stride)
     pad = _single(padding)
+    out_pad = _single(output_padding)
     dil = _single(dilation)
 
-    weight_w = weight.shape[-1]
-    _, n_in_channels, in_w = input.shape
+    weights_w = weight.shape[-1]
+    _, _, in_w = input.shape
 
-    n_offset_grps = offset.shape[1] // weight_w
-    n_mask_grps = mask.shape[1] // weight_w
-    n_weight_grps = n_in_channels // weight.shape[1]
+    n_offset_grps = offset.shape[1] // weights_w
+    n_mask_grps = mask.shape[1] // weights_w
+    n_weight_grps = groups
 
-    assert n_weight_grps == groups
     if deformable and n_offset_grps == 0:
         raise RuntimeError(
             "the shape of the offset tensor at dimension 1 is not valid. It should "
             "be a multiple of weight.size[2].\n"
             "Got offset.shape[1]={}, while weight.size[2]={}".format(
-                offset.shape[1], weight_w))
+                offset.shape[1], weights_w))
     if modulated and n_mask_grps == 0:
         raise RuntimeError(
             "the shape of the mask tensor at dimension 1 is not valid. It should "
             "be a multiple of weight.size[2].\n"
             "Got mask.shape[1]={}, while weight.size[2]={}".format(
-                mask.shape[1], weight_w))
+                mask.shape[1], weights_w))
 
-    return torch.ops.tvdcn.deform_conv1d(
+    return torch.ops.tvdcn.deform_conv_transpose1d(
         input,
         weight,
         offset,
@@ -124,6 +126,7 @@ def deform_conv1d(
         bias,
         stride[0],
         pad[0],
+        out_pad[0],
         dil[0],
         n_weight_grps,
         n_offset_grps,
@@ -132,21 +135,22 @@ def deform_conv1d(
         modulated)
 
 
-def deform_conv2d(
+def deform_conv_transpose2d(
         input: Tensor,
         weight: Tensor,
         offset: Optional[Tensor] = None,
         mask: Optional[Tensor] = None,
         bias: Optional[Tensor] = None,
-        stride: IntTuple = (1, 1),
-        padding: IntTuple = (0, 0),
-        dilation: IntTuple = (1, 1),
+        stride: Tuple[int, int] = (1, 1),
+        padding: Tuple[int, int] = (0, 0),
+        output_padding: Tuple[int, int] = (0, 0),
+        dilation: Tuple[int, int] = (1, 1),
         groups: int = 1) -> Tensor:
     r"""
-    Performs Deformable Convolution v2, described in
+    Performs transposed Deformable Convolution v2, described in
     `Deformable ConvNets v2: More Deformable, Better Results
     <https://arxiv.org/abs/1811.11168>`__ if :attr:`mask` is not ``None`` and
-    Performs Deformable Convolution, described in
+    Performs transposed Deformable Convolution, described in
     `Deformable Convolutional Networks
     <https://arxiv.org/abs/1703.06211>`__ if :attr:`mask` is ``None``.
 
@@ -155,15 +159,17 @@ def deform_conv2d(
         weight (Tensor[out_channels, in_channels // groups, kernel_height, kernel_width]):
             convolution weights, split into groups of size (in_channels // groups)
         offset (Tensor[batch_size, 2 * offset_groups * kernel_height * kernel_width,
-            out_height, out_width]): offsets to be applied for each position in the
+            in_height, in_width]): offsets to be applied for each position in the
             convolution kernel. Default: None
         mask (Tensor[batch_size, mask_groups * kernel_height * kernel_width,
-            out_height, out_width]): modulation masks to be multiplied with each output
+            in_height, in_width]): modulation masks to be multiplied with each output
             of convolution kernel. Default: None
         bias (Tensor[out_channels]): optional bias of shape (out_channels,). Default: None
         stride (int or Tuple[int, int]): distance between convolution centers. Default: 1
         padding (int or Tuple[int, int]): height/width of padding of zeroes around
             each image. Default: 0
+        output_padding (int or Tuple[int, int]): additional size added to one side
+            of each dimension in the output shape. Default: 0
         dilation (int or Tuple[int, int]): the spacing between kernel elements. Default: 1
         groups (int): number of blocked connections from input channels to output channels.
             Default: 1
@@ -178,13 +184,13 @@ def deform_conv2d(
         >>> # and kernel size of 3, without padding, the output size is 8
         >>> offset = torch.rand(5, 2 * kh * kw, 8, 8)
         >>> mask = torch.rand(5, kh * kw, 8, 8).sigmoid()
-        >>> kernel_offset = torch.randn(5, 2, 8, 8).sigmoid()
-        >>> out = deform_conv2d(input, weight, offset, mask, kernel_offset)
+        >>> out = deform_conv_transpose2d(input, weight, offset, mask)
         >>> print(out.shape)
         >>> # returns
         >>>  torch.Size([1, 5, 8, 8])
     """
-
+    if not torch.jit.is_scripting() and not torch.jit.is_tracing():
+        _log_api_usage_once(deform_conv_transpose2d)
     _assert_has_ops()
     out_channels = weight.shape[0]
 
@@ -200,15 +206,15 @@ def deform_conv2d(
 
     stride_h, stride_w = _pair(stride)
     pad_h, pad_w = _pair(padding)
+    out_pad_h, out_pad_w = _pair(output_padding)
     dil_h, dil_w = _pair(dilation)
     weight_h, weight_w = weight.shape[-2:]
-    _, n_in_channels, in_h, in_w = input.shape
+    _, _, in_h, in_w = input.shape
 
     n_offset_grps = offset.shape[1] // (2 * weight_h * weight_w)
     n_mask_grps = mask.shape[1] // (weight_h * weight_w)
-    n_weight_grps = n_in_channels // weight.shape[1]
+    n_weight_grps = groups
 
-    assert n_weight_grps == groups
     if deformable and n_offset_grps == 0:
         raise RuntimeError(
             "the shape of the offset tensor at dimension 1 is not valid. It should "
@@ -222,7 +228,7 @@ def deform_conv2d(
             "Got mask.shape[1]={}, while weight.size[2] * weight.size[3]={}".format(
                 mask.shape[1], weight_h * weight_w))
 
-    return torch.ops.tvdcn.deform_conv2d(
+    return torch.ops.tvdcn.deform_conv_transpose2d(
         input,
         weight,
         offset,
@@ -230,6 +236,7 @@ def deform_conv2d(
         bias,
         stride_h, stride_w,
         pad_h, pad_w,
+        out_pad_h, out_pad_w,
         dil_h, dil_w,
         n_weight_grps,
         n_offset_grps,
@@ -238,21 +245,22 @@ def deform_conv2d(
         modulated)
 
 
-def deform_conv3d(
+def deform_conv_transpose3d(
         input: Tensor,
         weight: Tensor,
         offset: Optional[Tensor] = None,
         mask: Optional[Tensor] = None,
         bias: Optional[Tensor] = None,
-        stride: IntTuple = (1, 1, 1),
-        padding: IntTuple = (0, 0, 0),
-        dilation: IntTuple = (1, 1, 1),
+        stride: Tuple[int, int, int] = (1, 1, 1),
+        padding: Tuple[int, int, int] = (0, 0, 0),
+        output_padding: Tuple[int, int, int] = (0, 0, 0),
+        dilation: Tuple[int, int, int] = (1, 1, 1),
         groups: int = 1) -> Tensor:
     r"""
-    Performs 3D version of Deformable Convolution v2, described in
+    Performs 3D transposed version of Deformable Convolution v2, described in
     `Deformable ConvNets v2: More Deformable, Better Results
     <https://arxiv.org/abs/1811.11168>`__ if :attr:`mask` is not ``None`` and
-    Performs 3D version of Deformable Convolution, described in
+    Performs 3D transposed version of Deformable Convolution, described in
     `Deformable Convolutional Networks
     <https://arxiv.org/abs/1703.06211>`__ if :attr:`mask` is ``None``.
 
@@ -262,14 +270,16 @@ def deform_conv3d(
             convolution weights, split into groups of size (in_channels // groups)
         offset (Tensor[batch_size, 3 * offset_groups * kernel_height * kernel_width,
             out_height, out_width]): offsets to be applied for each position in the
-            convolution kernel.
+            convolution kernel. Default: None
         mask (Tensor[batch_size, 3 * offset_groups * kernel_height * kernel_width,
             out_height, out_width]): modulation masks to be multiplied with each output
-            of convolution kernel.
+            of convolution kernel. Default: None
         bias (Tensor[out_channels]): optional bias of shape (out_channels,). Default: None
         stride (int or Tuple[int, int, int]): distance between convolution centers. Default: 1
         padding (int or Tuple[int, int, int]): height/width of padding of zeroes around
             each image. Default: 0
+        output_padding (int or Tuple[int, int, int]): additional size added to one side
+            of each dimension in the output shape. Default: 0
         dilation (int or Tuple[int, int, int]): the spacing between kernel elements. Default: 1
         groups (int): number of blocked connections from input channels to output channels.
             Default: 1
@@ -284,12 +294,13 @@ def deform_conv3d(
         >>> # and kernel size of 3, without padding, the output size is 8
         >>> offset = torch.rand(5, 3 * kd * kh * kw, 8, 8, 8)
         >>> mask = torch.rand(5, kd * kh * kw, 8, 8, 8)
-        >>> out = deform_conv3d(input, weight, offset, mask)
+        >>> out = deform_conv_transpose3d(input, weight, offset, mask)
         >>> print(out.shape)
         >>> # returns
         >>>  torch.Size([1, 5, 8, 8, 8])
     """
-
+    if not torch.jit.is_scripting() and not torch.jit.is_tracing():
+        _log_api_usage_once(deform_conv_transpose3d)
     _assert_has_ops()
     out_channels = weight.shape[0]
 
@@ -305,15 +316,15 @@ def deform_conv3d(
 
     stride_d, stride_h, stride_w = _triple(stride)
     pad_d, pad_h, pad_w = _triple(padding)
+    out_pad_d, out_pad_h, out_pad_w = _triple(output_padding)
     dil_d, dil_h, dil_w = _triple(dilation)
     weight_d, weight_h, weight_w = weight.shape[-3:]
-    _, n_in_channels, in_d, in_h, in_w = input.shape
+    _, _, in_d, in_h, in_w = input.shape
 
     n_offset_grps = offset.shape[1] // (3 * weight_d * weight_h * weight_w)
     n_mask_grps = mask.shape[1] // (weight_d * weight_h * weight_w)
-    n_weight_grps = n_in_channels // weight.shape[1]
+    n_weight_grps = groups
 
-    assert n_weight_grps == groups
     if deformable and n_offset_grps == 0:
         raise RuntimeError(
             "the shape of the offset tensor at dimension 1 is not valid. It should "
@@ -323,11 +334,11 @@ def deform_conv3d(
     if modulated and n_mask_grps == 0:
         raise RuntimeError(
             "the shape of the mask tensor at dimension 1 is not valid. It should "
-            "be a multiple of weight.size[2] * weight.size[3] * weight.size[4].\n"
-            "Got offset.shape[1]={}, while weight.size[2] * weight.size[3] * weight.size[4]={}".format(
-                mask.shape[1], weight_d * weight_h * weight_w))
+            "be a multiple of 3 * weight.size[2] * weight.size[3] * weight.size[4].\n"
+            "Got mask.shape[1]={}, while 3 * weight.size[2] * weight.size[3] * weight.size[4]={}".format(
+                mask.shape[1], 3 * weight_d * weight_h * weight_w))
 
-    return torch.ops.tvdcn.deform_conv3d(
+    return torch.ops.tvdcn.deform_conv_transpose3d(
         input,
         weight,
         offset,
@@ -335,6 +346,7 @@ def deform_conv3d(
         bias,
         stride_d, stride_h, stride_w,
         pad_d, pad_h, pad_w,
+        out_pad_d, out_pad_h, out_pad_w,
         dil_d, dil_h, dil_w,
         n_weight_grps,
         n_offset_grps,
@@ -343,21 +355,24 @@ def deform_conv3d(
         modulated)
 
 
+################################################################################
+# Modules
+################################################################################
 # noinspection PyMethodOverriding
-class _DeformConvNd(_ConvNd):
+class _DeformConvTransposeNd(_DeformConvNd):
     """
-    Base class for DeformConv
+    Base class for DeformConvTranspose
     """
 
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
-                 kernel_size: IntTuple,
-                 stride: IntTuple,
-                 padding: Union[IntTuple, str],
-                 dilation: IntTuple,
+                 kernel_size: _IntTuple,
+                 stride: _IntTuple,
+                 padding: Union[str, _IntTuple],
+                 dilation: _IntTuple,
                  transposed: bool,
-                 output_padding: Union[IntTuple, str],
+                 output_padding: Union[str, _IntTuple],
                  groups: int,
                  bias: bool,
                  padding_mode: str,
@@ -369,178 +384,248 @@ class _DeformConvNd(_ConvNd):
             padding, dilation, transposed, output_padding,
             groups, bias, padding_mode, **factory_kwargs)
 
-    def _conv_forward(self,
-                      input: Tensor,
-                      weight: Tensor,
-                      offset: Tensor,
-                      mask: Optional[Tensor],
-                      bias: Optional[Tensor]):
+    def _output_padding(self, input: Tensor, output_size: Optional[List[int]],
+                        stride: List[int], padding: List[int], kernel_size: List[int],
+                        num_spatial_dims: int, dilation: Optional[List[int]] = None) -> List[int]:
+        if output_size is None:
+            ret = _single(self.output_padding)  # converting to list if was not already
+        else:
+            has_batch_dim = input.dim() == num_spatial_dims + 2
+            num_non_spatial_dims = 2 if has_batch_dim else 1
+            if len(output_size) == num_non_spatial_dims + num_spatial_dims:
+                output_size = output_size[num_non_spatial_dims:]
+            if len(output_size) != num_spatial_dims:
+                raise ValueError(
+                    "ConvTranspose{}D: for {}D input, output_size must have {} or {} elements (got {})"
+                    .format(num_spatial_dims, input.dim(), num_spatial_dims,
+                            num_non_spatial_dims + num_spatial_dims, len(output_size)))
+
+            min_sizes = torch.jit.annotate(List[int], [])
+            max_sizes = torch.jit.annotate(List[int], [])
+            for d in range(num_spatial_dims):
+                dim_size = ((input.size(d + num_non_spatial_dims) - 1) * stride[d] -
+                            2 * padding[d] +
+                            (dilation[d] if dilation is not None else 1) * (kernel_size[d] - 1) + 1)
+                min_sizes.append(dim_size)
+                max_sizes.append(min_sizes[d] + stride[d] - 1)
+
+            for i in range(len(output_size)):
+                size = output_size[i]
+                min_size = min_sizes[i]
+                max_size = max_sizes[i]
+                if size < min_size or size > max_size:
+                    raise ValueError((
+                        "requested an output size of {}, but valid sizes range "
+                        "from {} to {} (for an input of {})").format(
+                        output_size, min_sizes, max_sizes, input.size()[2:]))
+
+            res = torch.jit.annotate(List[int], [])
+            for d in range(num_spatial_dims):
+                res.append(output_size[d] - min_sizes[d])
+
+            ret = res
+        return ret
+
+    def _conv_transpose_forward(self,
+                                input: Tensor,
+                                weight: Tensor,
+                                offset: Tensor,
+                                mask: Optional[Tensor],
+                                bias: Optional[Tensor],
+                                output_size: Optional[List[int]] = None) -> Tensor:
         raise NotImplementedError
 
-    def forward(self, input: Tensor, offset: Tensor, mask: Optional[Tensor] = None) -> Tensor:
-        return self._conv_forward(input, self.weight, offset, mask, self.bias)
-
-    def __repr__(self) -> str:
-        num_spatial_dims = self.weight.ndim - 2
-        n_tuple = _ntuple(num_spatial_dims)
-        s = self.__class__.__name__ + '('
-        s += '{in_channels}'
-        s += ', {out_channels}'
-        s += ', kernel_size={kernel_size}'
-        s += ', stride={stride}'
-        s += ', padding={padding}' if self.padding != n_tuple(0) else ''
-        s += ', dilation={dilation}' if self.dilation != n_tuple(1) else ''
-        s += ', groups={groups}' if self.groups != 1 else ''
-        s += ', bias=False' if self.bias is None else ''
-        s += ')'
-        return s.format(**self.__dict__)
+    def forward(self,
+                input: Tensor,
+                offset: Tensor,
+                mask: Optional[Tensor] = None,
+                output_size: Optional[List[int]] = None) -> Tensor:
+        return self._conv_transpose_forward(input, self.weight, offset, mask, self.bias, output_size)
 
 
-class DeformConv1d(_DeformConvNd):
+class DeformConvTranspose1d(_DeformConvTransposeNd):
     """
-    See :func:`deform_conv1d`
+    See :func:`deform_conv_transpose1d`
     """
 
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
-                 kernel_size: IntTuple,
-                 stride: IntTuple = 1,
-                 padding: Union[IntTuple, str] = 0,
-                 dilation: IntTuple = 1,
+                 kernel_size: _size_1_t,
+                 stride: _size_1_t = 1,
+                 padding: Union[str, _size_1_t] = 0,
+                 dilation: _size_1_t = 1,
+                 output_padding: Union[str, _size_1_t] = 0,
                  groups: int = 1,
                  bias: bool = True,
                  padding_mode: str = 'zeros',
                  device=None,
                  dtype=None) -> None:
         factory_kwargs = {'device': device, 'dtype': dtype}
-        kernel_size_ = _single(kernel_size)
-        stride_ = _single(stride)
-        padding_ = padding if isinstance(padding, str) else _single(padding)
-        dilation_ = _single(dilation)
+        kernel_size = _single(kernel_size)
+        stride = _single(stride)
+        padding = _single(padding)
+        dilation = _single(dilation)
+        output_padding = _single(output_padding)
         super().__init__(
-            in_channels, out_channels, kernel_size_, stride_, padding_, dilation_,
-            False, _single(0), groups, bias, padding_mode, **factory_kwargs)
+            in_channels, out_channels, kernel_size, stride, padding, dilation,
+            True, output_padding, groups, bias, padding_mode, **factory_kwargs)
 
-    def _conv_forward(self,
-                      input: Tensor,
-                      weight: Tensor,
-                      offset: Tensor,
-                      mask: Optional[Tensor],
-                      bias: Optional[Tensor]):
+    def _conv_transpose_forward(self,
+                                input: Tensor,
+                                weight: Tensor,
+                                offset: Tensor,
+                                mask: Optional[Tensor],
+                                bias: Optional[Tensor],
+                                output_size: Optional[List[int]] = None) -> Tensor:
         if self.padding_mode != 'zeros':
-            return deform_conv1d(F.pad(input, self._reversed_padding_repeated_twice, mode=self.padding_mode),
-                                 weight, offset, mask, bias, self.stride,
-                                 _single(0), self.dilation, self.groups)
-        return deform_conv1d(input, weight, offset, mask, bias,
-                             self.stride, self.padding, self.dilation, self.groups)
+            raise ValueError('Only `zeros` padding mode is supported for DeformConvTranspose1d.')
+
+        assert isinstance(self.padding, tuple)
+        # One cannot replace List by Tuple or Sequence in "_output_padding" because
+        # TorchScript does not support `Sequence[T]` or `Tuple[T, ...]`.
+        num_spatial_dims = 1
+        output_padding = self._output_padding(
+            input, output_size, self.stride, self.padding, self.kernel_size,  # type: ignore[arg-type]
+            num_spatial_dims, self.dilation)  # type: ignore[arg-type]
+        return deform_conv_transpose1d(input, weight, offset, mask, bias,
+                                       self.stride, self.padding,
+                                       (output_padding[0],),
+                                       self.dilation, self.groups)
 
 
-class DeformConv2d(_DeformConvNd):
+class DeformConvTranspose2d(_DeformConvTransposeNd):
     """
-    See :func:`deform_conv2d`
+    See :func:`deform_conv_transpose2d`
     """
 
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
-                 kernel_size: IntTuple,
-                 stride: IntTuple = 1,
-                 padding: Union[IntTuple, str] = 0,
-                 dilation: IntTuple = 1,
+                 kernel_size: _size_2_t,
+                 stride: _size_2_t = 1,
+                 padding: Union[str, _size_2_t] = 0,
+                 dilation: _size_2_t = 1,
+                 output_padding: Union[str, _size_2_t] = 0,
                  groups: int = 1,
                  bias: bool = True,
                  padding_mode: str = 'zeros',
                  device=None,
                  dtype=None):
         factory_kwargs = {'device': device, 'dtype': dtype}
-        kernel_size_ = _pair(kernel_size)
-        stride_ = _pair(stride)
-        padding_ = padding if isinstance(padding, str) else _pair(padding)
-        dilation_ = _pair(dilation)
+        kernel_size = _pair(kernel_size)
+        stride = _pair(stride)
+        padding = _pair(padding)
+        dilation = _pair(dilation)
+        output_padding = _pair(output_padding)
         super().__init__(
-            in_channels, out_channels, kernel_size_, stride_, padding_, dilation_,
-            False, _pair(0), groups, bias, padding_mode, **factory_kwargs)
+            in_channels, out_channels, kernel_size, stride, padding, dilation,
+            True, output_padding, groups, bias, padding_mode, **factory_kwargs)
 
-    def _conv_forward(self,
-                      input: Tensor,
-                      weight: Tensor,
-                      offset: Tensor,
-                      mask: Optional[Tensor],
-                      bias: Optional[Tensor]):
+    def _conv_transpose_forward(self,
+                                input: Tensor,
+                                weight: Tensor,
+                                offset: Tensor,
+                                mask: Optional[Tensor],
+                                bias: Optional[Tensor],
+                                output_size: Optional[List[int]] = None) -> Tensor:
         if self.padding_mode != 'zeros':
-            return deform_conv2d(F.pad(input, self._reversed_padding_repeated_twice, mode=self.padding_mode),
-                                 weight, offset, mask, bias, self.stride,
-                                 _single(0), self.dilation, self.groups)
-        return deform_conv2d(input, weight, offset, mask, bias,
-                             self.stride, self.padding, self.dilation, self.groups)
+            raise ValueError('Only `zeros` padding mode is supported for DeformConvTranspose2d.')
+
+        assert isinstance(self.padding, tuple)
+        # One cannot replace List by Tuple or Sequence in "_output_padding" because
+        # TorchScript does not support `Sequence[T]` or `Tuple[T, ...]`.
+        num_spatial_dims = 2
+        output_padding = self._output_padding(
+            input, output_size, self.stride, self.padding, self.kernel_size,  # type: ignore[arg-type]
+            num_spatial_dims, self.dilation)  # type: ignore[arg-type]
+
+        return deform_conv_transpose2d(input, weight, offset, mask, bias,
+                                       self.stride, self.padding,  # type: ignore[arg-type]
+                                       (output_padding[0], output_padding[1]),
+                                       self.dilation, self.groups)  # type: ignore[arg-type]
 
 
-class DeformConv3d(_DeformConvNd):
+class DeformConvTranspose3d(_DeformConvTransposeNd):
     """
-    See :func:`deform_conv3d`
+    See :func:`deform_conv_transpose3d`
     """
 
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
-                 kernel_size: IntTuple,
-                 stride: IntTuple = 1,
-                 padding: Union[IntTuple, str] = 0,
-                 dilation: IntTuple = 1,
+                 kernel_size: _size_3_t,
+                 stride: _size_3_t = 1,
+                 padding: Union[str, _size_3_t] = 0,
+                 dilation: _size_3_t = 1,
+                 output_padding: Union[str, _size_3_t] = 0,
                  groups: int = 1,
                  bias: bool = True,
                  padding_mode: str = 'zeros',
                  device=None,
                  dtype=None):
         factory_kwargs = {'device': device, 'dtype': dtype}
-        kernel_size_ = _triple(kernel_size)
-        stride_ = _triple(stride)
-        padding_ = padding if isinstance(padding, str) else _triple(padding)
-        dilation_ = _triple(dilation)
+        kernel_size = _triple(kernel_size)
+        stride = _triple(stride)
+        padding = _triple(padding)
+        dilation = _triple(dilation)
+        output_padding = _triple(output_padding)
         super().__init__(
-            in_channels, out_channels, kernel_size_, stride_, padding_, dilation_,
-            False, _triple(0), groups, bias, padding_mode, **factory_kwargs)
+            in_channels, out_channels, kernel_size, stride, padding, dilation,
+            True, output_padding, groups, bias, padding_mode, **factory_kwargs)
 
-    def _conv_forward(self,
-                      input: Tensor,
-                      weight: Tensor,
-                      offset: Tensor,
-                      mask: Optional[Tensor],
-                      bias: Optional[Tensor]):
+    def _conv_transpose_forward(self,
+                                input: Tensor,
+                                weight: Tensor,
+                                offset: Tensor,
+                                mask: Optional[Tensor],
+                                bias: Optional[Tensor],
+                                output_size: Optional[List[int]] = None) -> Tensor:
         if self.padding_mode != 'zeros':
-            return deform_conv3d(F.pad(input, self._reversed_padding_repeated_twice, mode=self.padding_mode),
-                                 weight, offset, mask, bias, self.stride,
-                                 _single(0), self.dilation, self.groups)
-        return deform_conv3d(input, weight, offset, mask, bias,
-                             self.stride, self.padding, self.dilation, self.groups)
+            raise ValueError('Only `zeros` padding mode is supported for DeformConvTranspose3d.')
+
+        assert isinstance(self.padding, tuple)
+        # One cannot replace List by Tuple or Sequence in "_output_padding" because
+        # TorchScript does not support `Sequence[T]` or `Tuple[T, ...]`.
+        num_spatial_dims = 3
+        output_padding = self._output_padding(
+            input, output_size, self.stride, self.padding, self.kernel_size,  # type: ignore[arg-type]
+            num_spatial_dims, self.dilation)  # type: ignore[arg-type]
+
+        return deform_conv_transpose3d(input, weight, offset, mask, bias,
+                                       self.stride, self.padding,  # type: ignore[arg-type]
+                                       (output_padding[0], output_padding[1], output_padding[2]),
+                                       self.dilation, self.groups)  # type: ignore[arg-type]
 
 
+################################################################################
+# Packed Modules
+################################################################################
 # noinspection PyMethodOverriding
-class PackedDeformConv1d(DeformConv1d):
+class PackedDeformConvTranspose1d(DeformConvTranspose1d):
     """
-    See DeformConv1d
+    Packed version of :class:`DeformConvTranspose1d`
     """
 
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
-                 kernel_size: IntTuple,
-                 stride: IntTuple = 1,
-                 padding: Union[IntTuple, str] = 0,
-                 dilation: IntTuple = 1,
+                 kernel_size: _size_1_t,
+                 stride: _size_1_t = 1,
+                 padding: Union[str, _size_1_t] = 0,
+                 dilation: _size_1_t = 1,
+                 output_padding: Union[str, _size_1_t] = 0,
                  groups: int = 1,
                  offset_groups: int = 1,
                  mask_groups: int = 1,
                  bias: bool = True,
-                 deformable: bool = True,
                  modulated: bool = False,
                  padding_mode: str = 'zeros',
                  device=None,
                  dtype=None):
         super().__init__(
             in_channels, out_channels, kernel_size, stride, padding, dilation,
-            groups, bias, padding_mode, device, dtype)
+            output_padding, groups, bias, padding_mode, device, dtype)
 
         if in_channels % offset_groups != 0:
             raise ValueError('in_channels must be divisible by offset_groups')
@@ -554,92 +639,70 @@ class PackedDeformConv1d(DeformConv1d):
 
         self.offset_groups = offset_groups
         self.mask_groups = mask_groups
-        self.deformable = deformable
         self.modulated = modulated
 
         self.conv_offset = nn.Conv1d(
             self.in_channels,
             self.kernel_size[0] * self.offset_groups,
-            kernel_size=self.kernel_size,
-            stride=self.stride,
-            padding=self.padding,
-            dilation=self.dilation,
-            groups=self.groups,
-            bias=True)
+            kernel_size=1,
+            bias=self.bias is not None,
+            device=dtype,
+            dtype=device)
 
-        self.conv_mask = nn.Conv1d(
-            self.in_channels,
-            self.kernel_size[0] * self.mask_groups,
-            kernel_size=self.kernel_size,
-            stride=self.stride,
-            padding=self.padding,
-            dilation=self.dilation,
-            groups=self.groups,
-            bias=True) if self.modulated else None
+        if self.modulated:
+            self.conv_mask = nn.Conv1d(
+                self.in_channels,
+                self.kernel_size[0] * self.mask_groups,
+                kernel_size=1,
+                bias=self.bias is not None,
+                device=dtype,
+                dtype=device)
+        else:
+            self.register_module('conv_mask', None)
 
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
         if not hasattr(self, 'modulated'):
             return
-        super().reset_parameters()
+        super(PackedDeformConvTranspose1d, self).reset_parameters()
         self.conv_offset.weight.data.zero_()
         self.conv_offset.bias.data.zero_()
         if self.modulated:
             self.conv_mask.weight.data.zero_()
             self.conv_mask.bias.data.zero_()
 
-    def forward(self, input: Tensor) -> Tensor:
-        """
-        Arguments:
-            input (Tensor[batch_size, in_channels, in_width]): input tensor
-        """
+    def forward(self, input: Tensor, output_size: Optional[List[int]] = None) -> Tensor:
         offset = self.conv_offset(input)
         mask = self.conv_mask(input).sigmoid() if self.modulated else None
-        return super().forward(input, offset, mask)
-
-    def __repr__(self) -> str:
-        s = self.__class__.__name__ + '('
-        s += '{in_channels}'
-        s += ', {out_channels}'
-        s += ', kernel_size={kernel_size}'
-        s += ', stride={stride}'
-        s += ', padding={padding}' if self.padding != 0 else ''
-        s += ', dilation={dilation}' if self.dilation != 1 else ''
-        s += ', groups={groups}' if self.groups != 1 else ''
-        s += ', offset_groups={offset_groups}' if self.offset_groups != 1 else ''
-        s += ', mask_groups={mask_groups}' if self.mask_groups != 1 else ''
-        s += ', bias=False' if self.bias is None else ''
-        s += ', modulated=True' if self.modulated else ''
-        s += ')'
-        return s.format(**self.__dict__)
+        return self._conv_transpose_forward(input, self.weight, offset, mask, self.bias, output_size)
 
 
 # noinspection PyMethodOverriding
-class PackedDeformConv2d(DeformConv2d):
+class PackedDeformConvTranspose2d(DeformConvTranspose2d):
     """
-    See DeformConv2d
+    Packed version of :class:`DeformConvTranspose2d`
     """
 
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
-                 kernel_size: IntTuple,
-                 stride: IntTuple = 1,
-                 padding: Union[IntTuple, str] = 0,
-                 dilation: IntTuple = 1,
+                 kernel_size: _size_2_t,
+                 stride: _size_2_t = 1,
+                 padding: Union[str, _size_2_t] = 0,
+                 dilation: _size_2_t = 1,
+                 output_padding: Union[str, _size_2_t] = 0,
                  groups: int = 1,
                  offset_groups: int = 1,
                  mask_groups: int = 1,
                  bias: bool = True,
-                 deformable: bool = True,
                  modulated: bool = False,
                  padding_mode: str = 'zeros',
                  device=None,
                  dtype=None):
         super().__init__(
             in_channels, out_channels, kernel_size, stride, padding, dilation,
-            groups, bias, padding_mode, device, dtype)
+            output_padding, groups, bias, padding_mode, device, dtype)
 
         if in_channels % offset_groups != 0:
             raise ValueError('in_channels must be divisible by offset_groups')
@@ -653,90 +716,74 @@ class PackedDeformConv2d(DeformConv2d):
 
         self.offset_groups = offset_groups
         self.mask_groups = mask_groups
-        self.deformable = deformable
         self.modulated = modulated
 
         self.conv_offset = nn.Conv2d(
             self.in_channels,
             2 * self.kernel_size[0] * self.kernel_size[1] * self.offset_groups,
-            kernel_size=self.kernel_size,
-            stride=self.stride,
-            padding=self.padding,
-            dilation=self.dilation,
-            bias=True) if self.deformable else None
+            kernel_size=1,
+            bias=self.bias is not None,
+            device=dtype,
+            dtype=device)
 
-        self.conv_mask = nn.Conv2d(
-            self.in_channels,
-            self.kernel_size[0] * self.kernel_size[1] * self.mask_groups,
-            kernel_size=self.kernel_size,
-            stride=self.stride,
-            padding=self.padding,
-            dilation=self.dilation,
-            bias=True) if self.modulated else None
+        if self.modulated:
+            self.conv_mask = nn.Conv2d(
+                self.in_channels,
+                self.kernel_size[0] * self.kernel_size[1] * self.mask_groups,
+                kernel_size=1,
+                bias=self.bias is not None,
+                device=dtype,
+                dtype=device)
+        else:
+            self.register_module('conv_mask', None)
 
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
         if not hasattr(self, 'modulated'):
             return
-        super(PackedDeformConv2d, self).reset_parameters()
+        super(PackedDeformConvTranspose2d, self).reset_parameters()
         self.conv_offset.weight.data.zero_()
         self.conv_offset.bias.data.zero_()
         if self.conv_mask is not None:
             self.conv_mask.weight.data.zero_()
             self.conv_mask.bias.data.zero_()
 
-    def forward(self, input: Tensor) -> Tensor:
+    def forward(self, input: Tensor, output_size: Optional[List[int]] = None) -> Tensor:
         """
         Arguments:
             input (Tensor[batch_size, in_channels, in_height, in_width]): input tensor
         """
-        offset = self.conv_offset(input) if self.deformable else None
+        offset = self.conv_offset(input)
         mask = self.conv_mask(input).sigmoid() if self.modulated else None
-        return super().forward(input, offset, mask)
-
-    def __repr__(self) -> str:
-        s = self.__class__.__name__ + '('
-        s += '{in_channels}'
-        s += ', {out_channels}'
-        s += ', kernel_size={kernel_size}'
-        s += ', stride={stride}'
-        s += ', padding={padding}' if self.padding != (0, 0) else ''
-        s += ', dilation={dilation}' if self.dilation != (1, 1) else ''
-        s += ', groups={groups}' if self.groups != 1 else ''
-        s += ', offset_groups={offset_groups}' if self.offset_groups != 1 else ''
-        s += ', mask_groups={mask_groups}' if self.mask_groups != 1 else ''
-        s += ', bias=False' if self.bias is None else ''
-        s += ', modulated=True' if self.modulated else ''
-        s += ')'
-        return s.format(**self.__dict__)
+        return self._conv_transpose_forward(input, self.weight, offset, mask, self.bias, output_size)
 
 
 # noinspection PyMethodOverriding
-class PackedDeformConv3d(DeformConv3d):
+class PackedDeformConvTranspose3d(DeformConvTranspose3d):
     """
-    See :class:`DeformConv3d`
+    Packed version of :class:`DeformConvTranspose3d`
     """
 
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
-                 kernel_size: IntTuple,
-                 stride: IntTuple = 1,
-                 padding: Union[IntTuple, str] = 0,
-                 dilation: IntTuple = 1,
+                 kernel_size: _size_3_t,
+                 stride: _size_3_t = 1,
+                 padding: Union[str, _size_3_t] = 0,
+                 dilation: _size_3_t = 1,
+                 output_padding: Union[str, _size_3_t] = 0,
                  groups: int = 1,
                  offset_groups: int = 1,
                  mask_groups: int = 1,
                  bias: bool = True,
-                 deformable: bool = True,
                  modulated: bool = False,
                  padding_mode: str = 'zeros',
                  device=None,
                  dtype=None):
         super().__init__(
             in_channels, out_channels, kernel_size, stride, padding, dilation,
-            groups, bias, padding_mode, device, dtype)
+            output_padding, groups, bias, padding_mode, device, dtype)
 
         if in_channels % offset_groups != 0:
             raise ValueError('in_channels must be divisible by offset_groups')
@@ -750,60 +797,40 @@ class PackedDeformConv3d(DeformConv3d):
 
         self.offset_groups = offset_groups
         self.mask_groups = mask_groups
-        self.deformable = deformable
         self.modulated = modulated
 
         self.conv_offset = nn.Conv3d(
             self.in_channels,
             3 * self.kernel_size[0] * self.kernel_size[1] * self.kernel_size[2] * self.offset_groups,
-            kernel_size=self.kernel_size,
-            stride=self.stride,
-            padding=self.padding,
-            dilation=self.dilation,
-            bias=True)
+            kernel_size=1,
+            bias=self.bias is not None,
+            device=dtype,
+            dtype=device)
 
-        self.conv_mask = nn.Conv3d(
-            self.in_channels,
-            self.kernel_size[0] * self.kernel_size[1] * self.kernel_size[2] * self.mask_groups,
-            kernel_size=self.kernel_size,
-            stride=self.stride,
-            padding=self.padding,
-            dilation=self.dilation,
-            bias=True) if self.modulated else None
+        if self.modulated:
+            self.conv_mask = nn.Conv3d(
+                self.in_channels,
+                self.kernel_size[0] * self.kernel_size[1] * self.kernel_size[2] * self.mask_groups,
+                kernel_size=1,
+                bias=self.bias is not None,
+                device=dtype,
+                dtype=device)
+        else:
+            self.register_module('conv_mask', None)
 
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
         if not hasattr(self, 'modulated'):
             return
-        super().reset_parameters()
+        super(PackedDeformConvTranspose3d, self).reset_parameters()
         self.conv_offset.weight.data.zero_()
         self.conv_offset.bias.data.zero_()
         if self.conv_mask is not None:
             self.conv_mask.weight.data.zero_()
             self.conv_mask.bias.data.zero_()
 
-    def forward(self, input: Tensor) -> Tensor:
-        """
-        Arguments:
-            input (Tensor[batch_size, in_channels, in_height, in_width, in_depth]): input tensor
-        """
-        offset = self.conv_offset(input) if self.deformable else None
+    def forward(self, input: Tensor, output_size: Optional[List[int]] = None) -> Tensor:
+        offset = self.conv_offset(input)
         mask = self.conv_mask(input).sigmoid() if self.modulated else None
-        return super().forward(input, offset, mask)
-
-    def __repr__(self) -> str:
-        s = self.__class__.__name__ + '('
-        s += '{in_channels}'
-        s += ', {out_channels}'
-        s += ', kernel_size={kernel_size}'
-        s += ', stride={stride}'
-        s += ', padding={padding}' if self.padding != (0, 0, 0) else ''
-        s += ', dilation={dilation}' if self.dilation != (1, 1, 1) else ''
-        s += ', groups={groups}' if self.groups != 1 else ''
-        s += ', offset_groups={offset_groups}' if self.offset_groups != 1 else ''
-        s += ', mask_groups={mask_groups}' if self.mask_groups != 1 else ''
-        s += ', bias=False' if self.bias is None else ''
-        s += ', modulated=True' if self.modulated else ''
-        s += ')'
-        return s.format(**self.__dict__)
+        return self._conv_transpose_forward(input, self.weight, offset, mask, self.bias, output_size)

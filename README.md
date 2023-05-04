@@ -2,7 +2,7 @@ Torchvision Deformable Convolution Networks
 ========
 
 This package contains the PyTorch implementations of the **2D Deformable Convolution** operation
-(a commonly used  `torchvision.ops.deform_conv2d`) proposed in https://arxiv.org/abs/1811.11168,
+(the commonly used  `torchvision.ops.deform_conv2d`) proposed in https://arxiv.org/abs/1811.11168,
 as well as its **1D** and **3D** equivalences, which are not available in `torchvision` (thus the name).
 
 And beyond that, we also provide the **transposed** versions of them, which interestingly noone has ever used.
@@ -18,7 +18,8 @@ Is that because they are programmatically challenging 😉?
 - `deform_conv_transpose2d`
 - `deform_conv_transpose3d`
 
-Besides, all the `nn.Module` wrappers for these operations are implemented, please check [Usage](#usage).
+Besides, all the `nn.Module` wrappers for these operations are implemented,
+everything is `@torch.jit.script`-able! Please check [Usage](#usage).
 
 **Note:** We don't care much about `onnx` exportation, but if you do, you can check this repo:
 https://github.com/masamitsu-murase/deform_conv2d_onnx_exporter.
@@ -52,8 +53,9 @@ any possible incompability.
 
 ## Usage:
 
-Functionally, we produced 6 `@torch.jit.script`-able functions (listed in [Highlights](#highlights)) much similar to `torchvision.ops.deform_conv2d`.
-However, the order of parameters is slightly different, be cautious:
+Functionally, we produced 6 functions (listed in [Highlights](#highlights)) much similar to
+`torchvision.ops.deform_conv2d`.
+However, the order of parameters is slightly different, so be cautious:
 
 ```python
 def deform_conv2d(
@@ -121,6 +123,9 @@ conv = PackedDeformConv1d(3, 16, kernel_size=5, modulated=True)
 output = conv(input)
 print(output.shape)
 ```
+
+Note that for transposed packed modules, we are generating `offset` and `mask` with pointwise convolution
+as we haven't found a better way to do it.
 
 Check the [examples](examples) folder, maybe you can find something helpful.
 
