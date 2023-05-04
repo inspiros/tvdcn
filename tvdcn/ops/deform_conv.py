@@ -583,7 +583,7 @@ class PackedDeformConv1d(DeformConv1d):
             padding=self.padding,
             dilation=self.dilation,
             groups=self.groups,
-            bias=True,
+            bias=self.bias is not None,
             device=device,
             dtype=dtype)
 
@@ -596,7 +596,7 @@ class PackedDeformConv1d(DeformConv1d):
                 padding=self.padding,
                 dilation=self.dilation,
                 groups=self.groups,
-                bias=True,
+                bias=self.bias is not None,
                 device=device,
                 dtype=dtype)
         else:
@@ -670,7 +670,7 @@ class PackedDeformConv2d(DeformConv2d):
             stride=self.stride,  # type: ignore[arg-type]
             padding=self.padding,
             dilation=self.dilation,  # type: ignore[arg-type]
-            bias=True,
+            bias=self.bias is not None,
             device=device,
             dtype=dtype)
 
@@ -683,7 +683,7 @@ class PackedDeformConv2d(DeformConv2d):
                 padding=self.padding,
                 dilation=self.dilation,  # type: ignore[arg-type]
                 groups=self.groups,
-                bias=True,
+                bias=self.bias is not None,
                 device=device,
                 dtype=dtype)
         else:
@@ -758,7 +758,7 @@ class PackedDeformConv3d(DeformConv3d):
             padding=self.padding,
             dilation=self.dilation,  # type: ignore[arg-type]
             groups=self.groups,
-            bias=True,
+            bias=self.bias is not None,
             device=dtype,
             dtype=device,
         )
@@ -772,7 +772,7 @@ class PackedDeformConv3d(DeformConv3d):
                 padding=self.padding,
                 dilation=self.dilation,  # type: ignore[arg-type]
                 groups=self.groups,
-                bias=True,
+                bias=self.bias is not None,
                 device=dtype,
                 dtype=device,
             )

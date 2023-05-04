@@ -5,18 +5,19 @@ This package contains the PyTorch implementations of the **2D Deformable Convolu
 (the commonly used  `torchvision.ops.deform_conv2d`) proposed in https://arxiv.org/abs/1811.11168,
 as well as its **1D** and **3D** equivalences, which are not available in `torchvision` (thus the name).
 
-And beyond that, we also provide the **transposed** versions of them, which interestingly noone has ever used.
+And beyond that, we also provide the **transposed** versions of them,
+which interestingly noone has ever proposed to use.
 Is that because they are programmatically challenging 😉?
 
 ## Highlights:
 
 **Supported operations:** _(All operations are implemented in C++/CUDA)_
-- `deform_conv1d`
-- `deform_conv2d`
-- `deform_conv3d`
-- `deform_conv_transpose1d`
-- `deform_conv_transpose2d`
-- `deform_conv_transpose3d`
+- `tvdcn.ops.deform_conv1d`
+- `tvdcn.ops.deform_conv2d`
+- `tvdcn.ops.deform_conv3d`
+- `tvdcn.ops.deform_conv_transpose1d`
+- `tvdcn.ops.deform_conv_transpose2d`
+- `tvdcn.ops.deform_conv_transpose3d`
 
 Besides, all the `nn.Module` wrappers for these operations are implemented,
 everything is `@torch.jit.script`-able! Please check [Usage](#usage).
@@ -53,7 +54,7 @@ any possible incompability.
 
 ## Usage:
 
-Functionally, we produced 6 functions (listed in [Highlights](#highlights)) much similar to
+Functionally, the package offers 6 functions (listed in [Highlights](#highlights)) much similar to
 `torchvision.ops.deform_conv2d`.
 However, the order of parameters is slightly different, so be cautious:
 
@@ -71,15 +72,15 @@ def deform_conv2d(
     ...
 ```
 
-Their raw `nn.Module` wrappers are:
-- `DeformConv1d`
-- `DeformConv2d`
-- `DeformConv3d`
-- `DeformConvTranspose1d`
-- `DeformConvTranspose2d`
-- `DeformConvTranspose3d`
+The `nn.Module` wrappers are:
+- `tvdcn.ops.DeformConv1d`
+- `tvdcn.ops.DeformConv2d`
+- `tvdcn.ops.DeformConv3d`
+- `tvdcn.ops.DeformConvTranspose1d`
+- `tvdcn.ops.DeformConvTranspose2d`
+- `tvdcn.ops.DeformConvTranspose3d`
 
-They are subclasses of the `torch.nn.modules._ConvNd` and `torch.nn.modules._ConvTransposeNd`,
+They are subclasses of the `torch.nn.modules._ConvNd`,
 but you have to specify `offset` and optionally `mask` as extra inputs for the `forward` function.
 For example:
 
@@ -100,16 +101,16 @@ print(output.shape)
 ```
 
 Additionally, following many other implementations out there, we also implemented the _packed_ wrappers:
-- `PackedDeformConv1d`
-- `PackedDeformConv2d`
-- `PackedDeformConv3d`
-- `PackedDeformConvTranspose1d`
-- `PackedDeformConvTranspose2d`
-- `PackedDeformConvTranspose3d`
+- `tvdcn.ops.PackedDeformConv1d`
+- `tvdcn.ops.PackedDeformConv2d`
+- `tvdcn.ops.PackedDeformConv3d`
+- `tvdcn.ops.PackedDeformConvTranspose1d`
+- `tvdcn.ops.PackedDeformConvTranspose2d`
+- `tvdcn.ops.PackedDeformConvTranspose3d`
 
-These are easy-to-use classes that contain the appropriate to generate
-`offset` (and `mask` if initialized with `modulated=True`) using ordinary convolution layers;
-but note that they offer less customizations.
+These are easy-to-use classes that contain ordinary convolution layers with appropriate hyperparameters to generate
+`offset` (and `mask` if initialized with `modulated=True`);
+but that means less customization.
 
 ```python
 import torch
@@ -124,7 +125,7 @@ output = conv(input)
 print(output.shape)
 ```
 
-Note that for transposed packed modules, we are generating `offset` and `mask` with pointwise convolution
+**Note:** For transposed packed modules, we are generating `offset` and `mask` with pointwise convolution
 as we haven't found a better way to do it.
 
 Check the [examples](examples) folder, maybe you can find something helpful.
