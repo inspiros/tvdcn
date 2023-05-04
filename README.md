@@ -54,9 +54,11 @@ any possible incompability.
 
 ## Usage:
 
+### Functions
 Functionally, the package offers 6 functions (listed in [Highlights](#highlights)) much similar to
 `torchvision.ops.deform_conv2d`.
-However, the order of parameters is slightly different, so be cautious:
+However, the order of parameters is slightly different, so be cautious.
+Specifically, the signatures of `deform_conv2d` and `deform_conv_transpose2d` look like this:
 
 ```python
 def deform_conv2d(
@@ -65,12 +67,28 @@ def deform_conv2d(
         offset: Optional[Tensor] = None,
         mask: Optional[Tensor] = None,
         bias: Optional[Tensor] = None,
-        stride: IntTuple = (1, 1),
-        padding: IntTuple = (0, 0),
-        dilation: IntTuple = (1, 1),
+        stride: Union[int, Tuple[int, ...]] = 1,
+        padding: Union[int, Tuple[int, ...]] = 0,
+        dilation: Union[int, Tuple[int, ...]] = 1,
+        groups: int = 1) -> Tensor:
+    ...
+
+def deform_conv_transpose2d(
+        input: Tensor,
+        weight: Tensor,
+        offset: Optional[Tensor] = None,
+        mask: Optional[Tensor] = None,
+        bias: Optional[Tensor] = None,
+        stride: Union[int, Tuple[int, ...]] = 1,
+        padding: Union[int, Tuple[int, ...]] = 0,
+        output_padding: Union[int, Tuple[int, ...]] = 0,
+        dilation: Union[int, Tuple[int, ...]] = 1,
         groups: int = 1) -> Tensor:
     ...
 ```
+If `offset=None` and `mask=None`, the executed operations are identical to conventional convolution.
+
+### Neural Network Layers
 
 The `nn.Module` wrappers are:
 - `tvdcn.ops.DeformConv1d`
@@ -94,9 +112,9 @@ offset = torch.rand(2, 2 * 3 * 3, 62, 62)
 # if mask is None, perform the original deform_conv without modulation (v2)
 mask = torch.rand(2, 1 * 3 * 3, 62, 62)
 
-layer = DeformConv2d(3, 16, kernel_size=(3, 3))
+conv = DeformConv2d(3, 16, kernel_size=(3, 3))
 
-output = layer(input, offset, mask)
+output = conv(input, offset, mask)
 print(output.shape)
 ```
 
@@ -111,6 +129,8 @@ Additionally, following many other implementations out there, we also implemente
 These are easy-to-use classes that contain ordinary convolution layers with appropriate hyperparameters to generate
 `offset` (and `mask` if initialized with `modulated=True`);
 but that means less customization.
+The only tunable hyperparameters that effect these supplementary conv layers are `offset_groups` and `mask_groups`,
+which have been decoupled from and behave somewhat similar to `groups`.
 
 ```python
 import torch
@@ -120,8 +140,11 @@ from tvdcn import PackedDeformConv1d
 input = torch.rand(2, 3, 128)
 
 conv = PackedDeformConv1d(3, 16, kernel_size=5, modulated=True)
+# jit scripting
+conv_jit = torch.jit.script(conv)
+print(conv_jit)
 
-output = conv(input)
+output = conv_jit(input)
 print(output.shape)
 ```
 
