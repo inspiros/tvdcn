@@ -35,7 +35,7 @@ https://github.com/masamitsu-murase/deform_conv2d_onnx_exporter.
 
 #### From TestPyPI:
 
-_This is not available yet, please proceed to [instructions to build from source](#from-source), which is very easy._
+_This is not available yet, please proceed to [instructions to build from source](#from-source), super easy._
 
 [tvdcn](https://test_pypi.org/project/tvdcn) will provide some prebuilt wheels with CUDA 11.8 at **TestPyPI**
 (this is not intended to be a standalone library).
