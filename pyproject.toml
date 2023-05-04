@@ -18,13 +18,16 @@ before-all = [
     "yum install -y blas-devel",
     "tools/prepare_build_environment_linux.sh",
 ]
+repair-wheel-command = "python packaging/wheel/relocate.py"
 
 [tool.cibuildwheel.windows]
 before-all = [
     "bash tools/prepare_build_environment_windows.sh"
 ]
+repair-wheel-command = "python packaging/wheel/relocate.py"
 
 [tool.cibuildwheel.macos]
 before-all = [
     "tools/prepare_build_environment_macos.sh"
 ]
+repair-wheel-command = "python packaging/wheel/relocate.py"
