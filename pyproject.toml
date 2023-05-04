@@ -21,13 +21,9 @@ before-all = [
 repair-wheel-command = ""
 
 [tool.cibuildwheel.windows]
-before-all = [
-    "bash tools/prepare_build_environment_windows.sh"
-]
+before-all = "bash tools/prepare_build_environment_windows.sh"
 repair-wheel-command = ""
 
 [tool.cibuildwheel.macos]
-before-all = [
-    "tools/prepare_build_environment_macos.sh"
-]
+before-all = "tools/prepare_build_environment_macos.sh"
 repair-wheel-command = ""

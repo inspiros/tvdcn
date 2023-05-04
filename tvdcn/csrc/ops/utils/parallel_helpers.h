@@ -2,13 +2,17 @@
 
 #include <ATen/ATen.h>
 
-constexpr auto kMaxParallelImgs = 32;
+namespace tvdcn {
+    namespace ops {
+        constexpr auto kMaxParallelImgs = 32;
 
-static int get_greatest_divisor_below_bound(int n, int bound) {
-    for (int k = std::min(n, bound); k > 1; --k) {
-        if (n % k == 0) {
-            return k;
+        static int get_greatest_divisor_below_bound(int n, int bound) {
+            for (int k = std::min(n, bound); k > 1; --k) {
+                if (n % k == 0) {
+                    return k;
+                }
+            }
+            return 1;
         }
     }
-    return 1;
 }

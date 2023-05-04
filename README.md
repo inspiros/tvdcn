@@ -1,5 +1,7 @@
 Torchvision Deformable Convolution Networks
 ========
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/inspiros/tvdcn/build_wheels.yml)
+![GitHub](https://img.shields.io/github/license/inspiros/tvdcn)
 
 This package contains the PyTorch implementations of the **2D Deformable Convolution** operation
 (the commonly used  `torchvision.ops.deform_conv2d`) proposed in https://arxiv.org/abs/1811.11168,
@@ -33,8 +35,7 @@ https://github.com/masamitsu-murase/deform_conv2d_onnx_exporter.
 
 #### From TestPyPI:
 
-_This is not available yet because repairing PyTorch extension wheels is fairly complicated, please proceed to
-[instructions to build from source](#from-source), which is very easy._
+_This is not available yet, please proceed to [instructions to build from source](#from-source), which is very easy._
 
 [tvdcn](https://test_pypi.org/project/tvdcn) will provide some prebuilt wheels with CUDA 11.8 at **TestPyPI**
 (this is not intended to be a standalone library).
@@ -45,7 +46,7 @@ python --index-url https://test.pypi.org/simple/ tvdcn
 ```
 
 #### From Source:
-For installing from source, you need a C++14 compiler (`gcc`/`msvc`) and a CUDA compiler (`nvcc`).
+For installing from source, you need a C++ compiler (`gcc`/`msvc`) and a CUDA compiler (`nvcc`).
 Clone this repo and execute the following command:
 
 ```terminal
