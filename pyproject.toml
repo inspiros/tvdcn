@@ -22,8 +22,3 @@ before-all = [
 before-all = [
     "bash tools/prepare_build_environment_windows.sh"
 ]
-
-[tool.cibuildwheel.macos]
-before-all = [
-    "tools/prepare_build_environment_macos.sh"
-]
