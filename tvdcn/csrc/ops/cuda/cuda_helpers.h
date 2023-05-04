@@ -1,18 +1,13 @@
 #pragma once
-
-#include <tuple>
-
-#include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
 #include <c10/cuda/CUDAGuard.h>
-#include <torch/library.h>
 #include <THC/THCAtomics.cuh>
 
-constexpr int kMaxParallelImgs = 32;
+#define CUDA_1D_KERNEL_LOOP(i, n)                                \
+    for (int i = (blockIdx.x * blockDim.x) + threadIdx.x; i < (n); i += (blockDim.x * gridDim.x))
 
 inline unsigned int GET_THREADS(
-        const float FRACTION = 1.0
-        ) {
+        const float FRACTION = 1.0) {
 #ifdef __HIP_PLATFORM_HCC__
     return (unsigned int) (256 * FRACTION);
 #endif
@@ -29,16 +24,8 @@ inline unsigned int GET_BLOCKS(
     return std::min(kMaxGridNum, (N + THREADS - 1) / THREADS);
 }
 
-static int get_greatest_divisor_below_bound(int n, int bound) {
-    for (int k = std::min(n, bound); k > 1; --k) {
-        if (n % k == 0) {
-            return k;
-        }
-    }
-    return 1;
-}
-
 // Temporarily counter latest MSVC update that causes incompatibility with CUDA
 #if (_MSC_VER >= 1928)
 #define floor floorf
+#define ceil ceilf
 #endif

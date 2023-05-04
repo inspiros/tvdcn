@@ -35,7 +35,7 @@ bld/
 # Visual Studio 2017 auto generated files
 Generated\ Files/
 
-# MSTest test Results
+# MSTest tests Results
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 
@@ -343,3 +343,4 @@ healthchecksdb
 # Cmake - for this project only
 cmake-build-*
 CMakeLists.txt
+build

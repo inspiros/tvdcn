@@ -193,14 +193,14 @@ class DeformConvTester(OpTester, unittest.TestCase):
         self.assertTrue(torch.allclose(res.to(expected.dtype), expected, rtol=tol, atol=tol),
                         '\nres:\n{}\nexpected:\n{}'.format(res, expected))
 
-        # no modulation test
+        # no modulation tests
         res = layer(x, offset)
         expected = self.expected_fn(x, weight, offset, None, bias, stride=stride, padding=padding, dilation=dilation)
 
         self.assertTrue(torch.allclose(res.to(expected.dtype), expected, rtol=tol, atol=tol),
                         '\nres:\n{}\nexpected:\n{}'.format(res, expected))
 
-        # test for wrong sizes
+        # tests for wrong sizes
         with self.assertRaises(RuntimeError):
             wrong_offset = torch.rand_like(offset[:, :2])
             res = layer(x, wrong_offset)
