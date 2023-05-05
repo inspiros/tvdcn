@@ -13,7 +13,7 @@ Is that because they are programmatically challenging 😉?
 
 ## Highlights
 
-**Supported operations:** _(All operations are implemented in C++/CUDA)_
+**Supported operations:** _(All operations are implemented in C++/Cuda)_
 - `tvdcn.ops.deform_conv1d`
 - `tvdcn.ops.deform_conv2d`
 - `tvdcn.ops.deform_conv3d`
@@ -37,16 +37,20 @@ https://github.com/masamitsu-murase/deform_conv2d_onnx_exporter.
 
 _This is not available yet, please proceed to [instructions to build from source](#from-source), super easy._
 
-[tvdcn](https://test_pypi.org/project/tvdcn) will provide some prebuilt wheels with CUDA 11.8 at **TestPyPI**
+[tvdcn](https://test_pypi.org/project/tvdcn) provides some prebuilt wheels at **TestPyPI**
 (this is not intended to be a standalone library).
+The Windows and Linux binaries are built with Cuda 11.8, which is compatible with `torch==2.0.0`.
 Run this command to install:
 
 ```terminal
 python --index-url https://test.pypi.org/simple/ tvdcn
 ```
 
+If you cannot find a wheel for your machine or Python version, or there is any problem with library linking when
+importing, please proceed to [instructions to build from source](#from-source), all steps are super easy.
+
 #### From Source:
-For installing from source, you need a C++ compiler (`gcc`/`msvc`) and a CUDA compiler (`nvcc`).
+For installing from source, you need a C++ compiler (`gcc`/`msvc`) and a Cuda compiler (`nvcc`).
 Clone this repo and execute the following command:
 
 ```terminal
@@ -67,10 +71,10 @@ from tvdcn import _HAS_OPS
 assert _HAS_OPS
 ```
 
-**Note:** We use soft CUDA version compatibility checking between the built binary and the installed PyTorch,
+**Note:** We use soft Cuda version compatibility checking between the built binary and the installed PyTorch,
 which means only major version matching is required.
-However, we suggest building the binaries with the same CUDA version with installed PyTorch's CUDA version to prevent
-any possible incompability.
+However, we suggest building the binaries with the same Cuda version with installed PyTorch's Cuda version to prevent
+any possible conflict.
 
 ## Usage
 
