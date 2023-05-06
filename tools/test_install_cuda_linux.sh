@@ -14,7 +14,7 @@ set -x
 #    libcublas-devel-11-8-11.11.3.6-1
 #ln -s cuda-11.8 /usr/local/cuda
 
-add-apt-repository https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-rhel7.repo
+sudo add-apt-repository https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-rhel7.repo
 sudo apt-get install -y \
     cuda-nvcc-11-2-11.2.152-1 \
     cuda-cudart-devel-11-2-11.2.152-1 \
