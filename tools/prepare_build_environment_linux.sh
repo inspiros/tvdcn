@@ -14,6 +14,7 @@ set -x
 #    libcublas-devel-11-8-11.11.3.6-1
 #ln -s cuda-11.8 /usr/local/cuda
 
+yum install yum-utils
 yum-config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-rhel7.repo
 yum install --setopt=obsoletes=0 -y \
     cuda-nvcc-11-2-11.2.152-1 \
