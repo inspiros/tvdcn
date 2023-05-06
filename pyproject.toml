@@ -10,7 +10,6 @@ requires = [
 build = ["cp38-*"]
 archs = ["auto64"]
 skip = ["*-musllinux_*", "*-win32", "*-manylinux_i686"]
-environment = { FORCE_CUDA = '1' }
 
 [tool.cibuildwheel.linux]
 before-all = [
@@ -18,10 +17,12 @@ before-all = [
     "yum install -y blas-devel",
     #    "tools/prepare_build_environment_linux.sh",
 ]
+environment = { FORCE_CUDA = '1' }
 repair-wheel-command = ""
 
 [tool.cibuildwheel.windows]
 #before-all = "bash tools/prepare_build_environment_windows.sh"
+environment = { FORCE_CUDA = '1' }
 repair-wheel-command = ""
 
 [tool.cibuildwheel.macos]
