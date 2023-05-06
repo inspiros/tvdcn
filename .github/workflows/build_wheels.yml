@@ -41,22 +41,13 @@ jobs:
 #      - name: Set CUDA_HOME
 #        run: echo "CUDA_HOME=${{ steps.cuda-toolkit.outputs.CUDA_PATH }}" >> $GITHUB_ENV
 
-      - name: Install Cuda
-        run: tools/test_install_cuda_linux.sh
-
-      - name: Test
-        run: echo $CUDA_HOME
-
-      - name: nvcc
-        run: nvcc -V
-
-#      - name: Build wheels
-#        uses: pypa/cibuildwheel@v2.12.1
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.12.1
 #        env:
 #          CIBW_ENVIRONMENT: CUDA_HOME='${{ steps.cuda-toolkit.outputs.CUDA_PATH }}' FORCE_CUDA='1'
 
-#      - name: Upload wheels
-#        uses: actions/upload-artifact@v3
+      - name: Upload wheels
+        uses: actions/upload-artifact@v3
 #        with:
 #          path: ./wheelhouse/*.whl
 

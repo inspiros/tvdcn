@@ -22,7 +22,10 @@ yum install --setopt=obsoletes=0 -y \
     libcudnn8-devel-8.1.1.33-1.cuda11.2 \
     libcublas-devel-11-2-11.4.1.1043-1
 ln -s cuda-11.2 /usr/local/cuda
+ln -s /usr/local/cuda-11.2 /usr/local/cuda
 
 export PATH=/usr/local/cuda/bin:$PATH
 export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 export CUDA_HOME="/usr/local/cuda"
+
+nvcc -V
