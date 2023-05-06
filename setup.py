@@ -43,6 +43,7 @@ def get_extensions():
     extra_compile_args = {'cxx': []}
     define_macros = []
 
+    assert os.getenv('FORCE_CUDA', '0') == '1', 'FORCE_CUDA not set'
     if (torch.cuda.is_available() and CUDA_HOME is not None) or os.getenv('FORCE_CUDA', '0') == '1':
         extension = CUDAExtension
         sources += source_cuda
