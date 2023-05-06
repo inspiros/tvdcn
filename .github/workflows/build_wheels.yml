@@ -45,19 +45,14 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Build wheels
-#        uses: pypa/cibuildwheel@v2.12.1
-#        env:
-#          CIBW_ENVIRONMENT: CUDA_HOME='${{ steps.cuda-toolkit.outputs.CUDA_PATH }}'
-        run: python setup.py bdist_wheel
+        uses: pypa/cibuildwheel@v2.12.1
         env:
-          CUDA_HOME: '${{ steps.cuda-toolkit.outputs.CUDA_PATH }}'
-          FORCE_CUDA: '1'
+          CIBW_ENVIRONMENT: CUDA_HOME='${{ steps.cuda-toolkit.outputs.CUDA_PATH }}'
 
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
-#          path: ./wheelhouse/*.whl
-          path: ./dist/*.whl
+          path: ./wheelhouse/*.whl
 
   publish_on_pypi:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')

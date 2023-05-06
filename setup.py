@@ -55,6 +55,7 @@ def get_extensions():
 
         # nvcc_flags.append('-DCUDA_HOST_COMPILER=/usr/bin/gcc-7')
         extra_compile_args['nvcc'] = nvcc_flags
+    assert all(_ in sources for _ in source_cuda), 'CUDA not enabled'
 
     if sys.platform == 'win32':
         define_macros += [('USE_PYTHON', None)]
