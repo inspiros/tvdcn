@@ -13,3 +13,4 @@ yum install --setopt=obsoletes=0 -y \
     libcurand-devel-11-8-10.3.0.86-1 \
     libcublas-devel-11-8-11.11.3.6-1
 ln -s cuda-11.8 /usr/local/cuda
+export CUDA_HOME="/usr/local/cuda"
