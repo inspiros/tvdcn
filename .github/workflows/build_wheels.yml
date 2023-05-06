@@ -39,10 +39,12 @@ jobs:
           sub-packages: '["nvcc"]'
 
       - name: Set CUDA_HOME
-        run: echo "CUDA_HOME=${{steps.cuda-toolkit.outputs.CUDA_PATH}}" >> $GITHUB_ENV
+        run: echo "CUDA_HOME=${{ steps.cuda-toolkit.outputs.CUDA_PATH }}" >> $GITHUB_ENV
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.12.1
+        env:
+          CIBW_ENVIRONMENT: CUDA_HOME='${{ steps.cuda-toolkit.outputs.CUDA_PATH }}'
 
       - name: Upload wheels
         uses: actions/upload-artifact@v3

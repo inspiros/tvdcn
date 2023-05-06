@@ -10,13 +10,13 @@ requires = [
 build = ["cp38-*"]
 archs = ["auto64"]
 skip = ["*-musllinux_*", "*-win32", "*-manylinux_i686"]
-environment = "FORCE_CUDA='1'"
+environment = { FORCE_CUDA = '1' }
 
 [tool.cibuildwheel.linux]
 before-all = [
     "yum install -y lapack-devel",
     "yum install -y blas-devel",
-#    "tools/prepare_build_environment_linux.sh",
+    #    "tools/prepare_build_environment_linux.sh",
 ]
 repair-wheel-command = ""
 
