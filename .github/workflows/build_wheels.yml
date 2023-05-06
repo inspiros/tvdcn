@@ -42,7 +42,7 @@ jobs:
 #        run: echo "CUDA_HOME=${{ steps.cuda-toolkit.outputs.CUDA_PATH }}" >> $GITHUB_ENV
 
       - name: Install Cuda
-        run: tools/prepare_build_environment_linux.sh
+        run: tools/test_install_cuda.sh
 
       - name: Test
         run: echo $CUDA_HOME
