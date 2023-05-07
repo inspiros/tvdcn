@@ -3,4 +3,4 @@
 set -e
 set -x
 
-# CUDA is not available on MacOS
+echo "CUDA is not available on MacOS"

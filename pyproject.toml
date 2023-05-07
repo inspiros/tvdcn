@@ -22,9 +22,9 @@ repair-wheel-command = ""
 
 [tool.cibuildwheel.windows]
 before-all = "bash tools/prepare_build_environment_windows.sh"
-environment = "FORCE_CUDA='1'"
+environment = "FORCE_CUDA='1' TORCH_CUDA_ARCH_LIST='6.1 7.5+PTX'"
 repair-wheel-command = ""
 
 [tool.cibuildwheel.macos]
-#before-all = "tools/prepare_build_environment_macos.sh"
+before-all = "tools/prepare_build_environment_macos.sh"
 repair-wheel-command = ""
