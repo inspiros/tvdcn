@@ -13,9 +13,6 @@ archs = ["auto64"]
 skip = ["*-musllinux_*", "*-win32", "*-manylinux_i686"]
 build-frontend = "build"
 
-[tool.cibuildwheel.config-settings]
---build-option = "--no-build-isolation"
-
 [tool.cibuildwheel.linux]
 before-all = [
     "yum install -y lapack-devel",
