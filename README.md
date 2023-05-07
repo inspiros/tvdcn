@@ -46,7 +46,7 @@ python --index-url https://test.pypi.org/simple/ tvdcn
 ```
 
 The Linux and Windows wheels are built with Cuda 11.8, which is compatible with `torch==2.0.0`.
-If you cannot find a wheel for your OS/Python/Cuda, or there is any problem with library linking when importing,
+If you cannot find a wheel for your Arch/Python/Cuda, or there is any problem with library linking when importing,
 please proceed to [instructions to build from source](#from-source), all steps are super easy.
 
 |                 |     Linux/Windows     |  MacOS   |
