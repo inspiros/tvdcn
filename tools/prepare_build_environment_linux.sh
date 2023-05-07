@@ -3,6 +3,9 @@
 set -e
 set -x
 
+# Install lapack, blas
+yum install -y lapack-devel blas-devel
+
 # Install CUDA 11.8:
 echo "Installing CUDA 11.8"
 yum-config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-rhel7.repo
