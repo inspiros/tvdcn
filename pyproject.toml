@@ -2,8 +2,8 @@
 requires = [
     "setuptools>=42",
     "wheel",
-    "--find-links https://download.pytorch.org/whl/cu118/torch_stable.html; sys_platform == 'linux' or sys_platform == 'win32'",
-    "torch>=1.8",
+    "--find-links https://download.pytorch.org/whl/cu118/torch_stable.html torch>=1.8; sys_platform == 'linux' or sys_platform == 'win32'",
+    "torch>=1.8; sys_platform == 'darwin'",
 ]
 
 [tool.cibuildwheel]
