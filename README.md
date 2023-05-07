@@ -51,7 +51,7 @@ please proceed to [instructions to build from source](#from-source), all steps a
 
 |                 |     Linux/Windows     |  MacOS   |
 |-----------------|:---------------------:|:--------:|
-| Python version: |       3.6-3.11        | 3.6-3.11 |
+| Python version: |       3.8-3.11        | 3.8-3.11 |
 | Cuda version:   |         11.8          |    -     |
 | GPU CCs:        | `6.1,7.5,8.6,8.9+PTX` |    -     |
 
