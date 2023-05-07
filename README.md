@@ -42,7 +42,7 @@ https://github.com/masamitsu-murase/deform_conv2d_onnx_exporter.
 Run this command to install:
 
 ```terminal
-python --index-url https://test.pypi.org/simple/ tvdcn
+pip install --index-url https://test.pypi.org/simple/ tvdcn
 ```
 
 The Linux and Windows wheels are built with Cuda 11.8, which is compatible with `torch==2.0.0`.
