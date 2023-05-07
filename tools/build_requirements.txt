@@ -5,5 +5,5 @@ wheel
 --find-links https://download.pytorch.org/whl/cu118/torch_stable.html; sys_platform == "linux" or sys_platform == "win32"
 torch>=1.8; sys_platform == "linux" or sys_platform == "win32"
 
-# for linux
+# for macos
 torch==1.8; sys_platform == "darwin"

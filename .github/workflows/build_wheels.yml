@@ -12,9 +12,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-#      - name: Install dependencies
-#        run: pip install -r tools/build_requirements.txt
-
       - name: Build sdist
         run: pipx run build --sdist
 
