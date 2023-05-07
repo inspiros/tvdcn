@@ -23,8 +23,9 @@ repair-wheel-command = ""
 [tool.cibuildwheel.windows]
 #before-all = "bash tools/prepare_build_environment_windows.sh"
 before-build = [
-    "python -m pip install torch>=1.8",
-    "pip list | grep torch"
+    "pip install torch>=1.8",
+    "pip list | grep torch",
+    "python -c 'import torch; print(torch.__version__)'"
 ]
 environment = "FORCE_CUDA='1' TORCH_CUDA_ARCH_LIST='6.1 7.5+PTX'"
 repair-wheel-command = ""
