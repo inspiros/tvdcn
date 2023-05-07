@@ -341,6 +341,12 @@ ASALocalRun/
 healthchecksdb
 
 # Cmake - for this project only
-cmake-build-*
+cmake-build-*/
 CMakeLists.txt
-build
+
+# Python build
+build/
+dist/
+wheelhouse/
+*.egg-info/
+
