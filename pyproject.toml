@@ -17,7 +17,7 @@ before-all = [
     "yum install -y blas-devel",
     "tools/prepare_build_environment_linux.sh",
 ]
-environment = "FORCE_CUDA='1' TORCH_CUDA_ARCH_LIST='6.1 7.5+PTX''
+environment = "FORCE_CUDA='1' TORCH_CUDA_ARCH_LIST='6.1 7.5+PTX'"
 repair-wheel-command = ""
 
 [tool.cibuildwheel.windows]
