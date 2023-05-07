@@ -25,7 +25,7 @@ repair-wheel-command = ""
 before-build = [
     "pip install torch>=1.8",
     "pip list | grep torch",
-    "python -c 'import torch; print(torch.__version__)'"
+    "python -c \"import torch\""
 ]
 environment = "FORCE_CUDA='1' TORCH_CUDA_ARCH_LIST='6.1 7.5+PTX'"
 repair-wheel-command = ""

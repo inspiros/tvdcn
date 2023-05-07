@@ -8,7 +8,7 @@ def test_wrapper():
     conv = torch.jit.script(conv)
     print(conv)
 
-from setuptools import build_meta
+
 def test_packed_wrapper():
     x = torch.randn(1, 2, 4, 5)
 
