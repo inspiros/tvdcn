@@ -15,8 +15,7 @@ skip = ["*-musllinux_*", "*-win32", "*-manylinux_i686"]
 
 [tool.cibuildwheel.linux]
 before-all = "tools/prepare_build_environment_linux.sh"
-before-build = "pip install torch>=1.8 --index-url https://download.pytorch.org/whl/cu118"
-environment = "FORCE_CUDA='1' PIP_NO_BUILD_ISOLATION='0' TORCH_CUDA_ARCH_LIST='6.1 7.5+PTX'"
+environment = "FORCE_CUDA='1' TORCH_CUDA_ARCH_LIST='6.1 7.5+PTX'"
 repair-wheel-command = ""
 
 [tool.cibuildwheel.windows]
@@ -27,5 +26,4 @@ repair-wheel-command = ""
 
 [tool.cibuildwheel.macos]
 before-all = "tools/prepare_build_environment_macos.sh"
-before-build = "pip install torch>=1.8"
 repair-wheel-command = ""

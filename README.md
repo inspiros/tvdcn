@@ -9,11 +9,13 @@ as well as its **1D** and **3D** equivalences, which are not available in `torch
 
 And beyond that, we also provide the **transposed** versions of them,
 which interestingly noone has ever proposed to use.
-Is that because they are programmatically challenging 😉?
+
+[//]: # (Is that because they are programmatically challenging 😉?)
 
 ## Highlights
 
 **Supported operations:** _(All operations are implemented in C++/Cuda)_
+
 - `tvdcn.ops.deform_conv1d`
 - `tvdcn.ops.deform_conv2d`
 - `tvdcn.ops.deform_conv3d`
@@ -35,21 +37,26 @@ https://github.com/masamitsu-murase/deform_conv2d_onnx_exporter.
 
 #### From TestPyPI:
 
-_This is not available yet, please proceed to [instructions to build from source](#from-source), super easy._
-
 [tvdcn](https://test_pypi.org/project/tvdcn) provides some prebuilt wheels at **TestPyPI**
 (this is not intended to be a standalone library).
-The Windows and Linux binaries are built with Cuda 11.8, which is compatible with `torch==2.0.0`.
 Run this command to install:
 
 ```terminal
 python --index-url https://test.pypi.org/simple/ tvdcn
 ```
 
-If you cannot find a wheel for your machine or Python version, or there is any problem with library linking when
-importing, please proceed to [instructions to build from source](#from-source), all steps are super easy.
+The Linux and Windows wheels are built with Cuda 11.8, which is compatible with `torch==2.0.0`.
+If you cannot find a wheel for your OS/Python/Cuda, or there is any problem with library linking when importing,
+please proceed to [instructions to build from source](#from-source), all steps are super easy.
+
+|                 |     Linux/Windows     |  MacOS   |
+|-----------------|:---------------------:|:--------:|
+| Python version: |       3.6-3.11        | 3.6-3.11 |
+| Cuda version:   |         11.8          |    -     |
+| GPU CCs:        | `6.1,7.5,8.6,8.9+PTX` |    -     |
 
 #### From Source:
+
 For installing from source, you need a C++ compiler (`gcc`/`msvc`) and a Cuda compiler (`nvcc`).
 Clone this repo and execute the following command:
 
@@ -58,6 +65,7 @@ pip install .
 ```
 
 Or just compile the binary for inplace usage:
+
 ```terminal
 python setup.py build_ext --inplace
 ```
@@ -79,6 +87,7 @@ any possible conflict.
 ## Usage
 
 #### Functions:
+
 Functionally, the package offers 6 functions (listed in [Highlights](#highlights)) much similar to
 `torchvision.ops.deform_conv2d`.
 However, the order of parameters is slightly different, so be cautious.
@@ -97,6 +106,7 @@ def deform_conv2d(
         groups: int = 1) -> Tensor:
     ...
 
+
 def deform_conv_transpose2d(
         input: Tensor,
         weight: Tensor,
@@ -110,11 +120,13 @@ def deform_conv_transpose2d(
         groups: int = 1) -> Tensor:
     ...
 ```
+
 If `offset=None` and `mask=None`, the executed operations are identical to conventional convolution.
 
 #### Neural Network Layers:
 
 The `nn.Module` wrappers are:
+
 - `tvdcn.ops.DeformConv1d`
 - `tvdcn.ops.DeformConv2d`
 - `tvdcn.ops.DeformConv3d`
@@ -143,6 +155,7 @@ print(output.shape)
 ```
 
 Additionally, following many other implementations out there, we also implemented the _packed_ wrappers:
+
 - `tvdcn.ops.PackedDeformConv1d`
 - `tvdcn.ops.PackedDeformConv2d`
 - `tvdcn.ops.PackedDeformConv3d`
