@@ -1,8 +1,8 @@
-[build-system]
-requires = [
-    "setuptools>=42",
-    "wheel",
-]
+#[build-system]
+#requires = [
+#    "setuptools>=42",
+#    "wheel",
+#]
 
 [tool.cibuildwheel]
 #build = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "cp311-*"]
@@ -22,7 +22,7 @@ repair-wheel-command = ""
 
 [tool.cibuildwheel.windows]
 before-all = "bash tools/prepare_build_environment_windows.sh"
-before-build = "pip install torch>=1.8"
+before-build = "pip install -U setuptools>=42 wheel torch>=1.8"
 environment = "FORCE_CUDA='1' TORCH_CUDA_ARCH_LIST='6.1 7.5+PTX'"
 repair-wheel-command = ""
 
