@@ -1,10 +1,10 @@
-#[build-system]
-#requires = [
-#    "setuptools>=42",
-#    "wheel",
+[build-system]
+requires = [
+    "setuptools>=42",
+    "wheel",
 #    "--find-links https://download.pytorch.org/whl/cu118; sys_platform == \"linux\" or sys_platform == \"win32\"",
-#    "torch>=1.8"
-#]
+    "torch>=1.8",
+]
 
 [tool.cibuildwheel]
 #build = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "cp311-*"]
