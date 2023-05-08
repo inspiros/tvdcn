@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn, Tensor
 from torch.jit.annotations import Optional, Tuple, Union
+from torch.nn import init
 from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from torch.nn.modules.conv import _ConvNd
 from torch.nn.modules.utils import _single, _pair, _triple
@@ -608,11 +609,13 @@ class PackedDeformConv1d(DeformConv1d):
         if not hasattr(self, 'modulated'):
             return
         super().reset_parameters()
-        self.conv_offset.weight.data.zero_()
-        self.conv_offset.bias.data.zero_()
+        init.zeros_(self.conv_offset.weight)
+        if self.conv_offset.bias is not None:
+            init.zeros_(self.conv_offset.bias)
         if self.modulated:
-            self.conv_mask.weight.data.zero_()
-            self.conv_mask.bias.data.zero_()
+            init.zeros_(self.conv_mask.weight)
+            if self.conv_mask.bias is not None:
+                init.zeros_(self.conv_mask.bias)
 
     def forward(self, input: Tensor) -> Tensor:
         """
@@ -695,12 +698,14 @@ class PackedDeformConv2d(DeformConv2d):
     def reset_parameters(self) -> None:
         if not hasattr(self, 'modulated'):
             return
-        super(PackedDeformConv2d, self).reset_parameters()
-        self.conv_offset.weight.data.zero_()
-        self.conv_offset.bias.data.zero_()
-        if self.conv_mask is not None:
-            self.conv_mask.weight.data.zero_()
-            self.conv_mask.bias.data.zero_()
+        super().reset_parameters()
+        init.zeros_(self.conv_offset.weight)
+        if self.conv_offset.bias is not None:
+            init.zeros_(self.conv_offset.bias)
+        if self.modulated:
+            init.zeros_(self.conv_mask.weight)
+            if self.conv_mask.bias is not None:
+                init.zeros_(self.conv_mask.bias)
 
     def forward(self, input: Tensor) -> Tensor:
         """
@@ -786,11 +791,13 @@ class PackedDeformConv3d(DeformConv3d):
         if not hasattr(self, 'modulated'):
             return
         super().reset_parameters()
-        self.conv_offset.weight.data.zero_()
-        self.conv_offset.bias.data.zero_()
-        if self.conv_mask is not None:
-            self.conv_mask.weight.data.zero_()
-            self.conv_mask.bias.data.zero_()
+        init.zeros_(self.conv_offset.weight)
+        if self.conv_offset.bias is not None:
+            init.zeros_(self.conv_offset.bias)
+        if self.modulated:
+            init.zeros_(self.conv_mask.weight)
+            if self.conv_mask.bias is not None:
+                init.zeros_(self.conv_mask.bias)
 
     def forward(self, input: Tensor) -> Tensor:
         """

@@ -1,6 +1,7 @@
 import torch
 from torch import nn, Tensor
 from torch.jit.annotations import List, Optional, Tuple, Union
+from torch.nn import init
 from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from torch.nn.modules.utils import _single, _pair, _triple
 
@@ -665,12 +666,14 @@ class PackedDeformConvTranspose1d(DeformConvTranspose1d):
     def reset_parameters(self) -> None:
         if not hasattr(self, 'modulated'):
             return
-        super(PackedDeformConvTranspose1d, self).reset_parameters()
-        self.conv_offset.weight.data.zero_()
-        self.conv_offset.bias.data.zero_()
+        super().reset_parameters()
+        init.zeros_(self.conv_offset.weight)
+        if self.conv_offset.bias is not None:
+            init.zeros_(self.conv_offset.bias)
         if self.modulated:
-            self.conv_mask.weight.data.zero_()
-            self.conv_mask.bias.data.zero_()
+            init.zeros_(self.conv_mask.weight)
+            if self.conv_mask.bias is not None:
+                init.zeros_(self.conv_mask.bias)
 
     def forward(self, input: Tensor, output_size: Optional[List[int]] = None) -> Tensor:
         offset = self.conv_offset(input)
@@ -742,12 +745,14 @@ class PackedDeformConvTranspose2d(DeformConvTranspose2d):
     def reset_parameters(self) -> None:
         if not hasattr(self, 'modulated'):
             return
-        super(PackedDeformConvTranspose2d, self).reset_parameters()
-        self.conv_offset.weight.data.zero_()
-        self.conv_offset.bias.data.zero_()
-        if self.conv_mask is not None:
-            self.conv_mask.weight.data.zero_()
-            self.conv_mask.bias.data.zero_()
+        super().reset_parameters()
+        init.zeros_(self.conv_offset.weight)
+        if self.conv_offset.bias is not None:
+            init.zeros_(self.conv_offset.bias)
+        if self.modulated:
+            init.zeros_(self.conv_mask.weight)
+            if self.conv_mask.bias is not None:
+                init.zeros_(self.conv_mask.bias)
 
     def forward(self, input: Tensor, output_size: Optional[List[int]] = None) -> Tensor:
         """
@@ -823,12 +828,14 @@ class PackedDeformConvTranspose3d(DeformConvTranspose3d):
     def reset_parameters(self) -> None:
         if not hasattr(self, 'modulated'):
             return
-        super(PackedDeformConvTranspose3d, self).reset_parameters()
-        self.conv_offset.weight.data.zero_()
-        self.conv_offset.bias.data.zero_()
-        if self.conv_mask is not None:
-            self.conv_mask.weight.data.zero_()
-            self.conv_mask.bias.data.zero_()
+        super().reset_parameters()
+        init.zeros_(self.conv_offset.weight)
+        if self.conv_offset.bias is not None:
+            init.zeros_(self.conv_offset.bias)
+        if self.modulated:
+            init.zeros_(self.conv_mask.weight)
+            if self.conv_mask.bias is not None:
+                init.zeros_(self.conv_mask.bias)
 
     def forward(self, input: Tensor, output_size: Optional[List[int]] = None) -> Tensor:
         offset = self.conv_offset(input)
