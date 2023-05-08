@@ -511,7 +511,7 @@ class DeformConvTranspose2d(_DeformConvTransposeNd):
                  bias: bool = True,
                  padding_mode: str = 'zeros',
                  device=None,
-                 dtype=None):
+                 dtype=None) -> None:
         factory_kwargs = {'device': device, 'dtype': dtype}
         kernel_size = _pair(kernel_size)
         stride = _pair(stride)
@@ -563,7 +563,7 @@ class DeformConvTranspose3d(_DeformConvTransposeNd):
                  bias: bool = True,
                  padding_mode: str = 'zeros',
                  device=None,
-                 dtype=None):
+                 dtype=None) -> None:
         factory_kwargs = {'device': device, 'dtype': dtype}
         kernel_size = _triple(kernel_size)
         stride = _triple(stride)
@@ -622,7 +622,7 @@ class PackedDeformConvTranspose1d(DeformConvTranspose1d):
                  modulated: bool = False,
                  padding_mode: str = 'zeros',
                  device=None,
-                 dtype=None):
+                 dtype=None) -> None:
         super().__init__(
             in_channels, out_channels, kernel_size, stride, padding, dilation,
             output_padding, groups, bias, padding_mode, device, dtype)
@@ -699,7 +699,7 @@ class PackedDeformConvTranspose2d(DeformConvTranspose2d):
                  modulated: bool = False,
                  padding_mode: str = 'zeros',
                  device=None,
-                 dtype=None):
+                 dtype=None) -> None:
         super().__init__(
             in_channels, out_channels, kernel_size, stride, padding, dilation,
             output_padding, groups, bias, padding_mode, device, dtype)
@@ -780,7 +780,7 @@ class PackedDeformConvTranspose3d(DeformConvTranspose3d):
                  modulated: bool = False,
                  padding_mode: str = 'zeros',
                  device=None,
-                 dtype=None):
+                 dtype=None) -> None:
         super().__init__(
             in_channels, out_channels, kernel_size, stride, padding, dilation,
             output_padding, groups, bias, padding_mode, device, dtype)

@@ -349,6 +349,9 @@ def deform_conv3d(
         modulated)
 
 
+################################################################################
+# Modules
+################################################################################
 # noinspection PyMethodOverriding
 class _DeformConvNd(_ConvNd):
     """
@@ -410,9 +413,6 @@ class _DeformConvNd(_ConvNd):
         return s.format(**self.__dict__)
 
 
-################################################################################
-# Modules
-################################################################################
 class DeformConv1d(_DeformConvNd):
     """
     See :func:`deform_conv1d`
@@ -469,7 +469,7 @@ class DeformConv2d(_DeformConvNd):
                  bias: bool = True,
                  padding_mode: str = 'zeros',
                  device=None,
-                 dtype=None):
+                 dtype=None) -> None:
         factory_kwargs = {'device': device, 'dtype': dtype}
         kernel_size_ = _pair(kernel_size)
         stride_ = _pair(stride)
@@ -509,7 +509,7 @@ class DeformConv3d(_DeformConvNd):
                  bias: bool = True,
                  padding_mode: str = 'zeros',
                  device=None,
-                 dtype=None):
+                 dtype=None) -> None:
         factory_kwargs = {'device': device, 'dtype': dtype}
         kernel_size_ = _triple(kernel_size)
         stride_ = _triple(stride)
@@ -556,7 +556,7 @@ class PackedDeformConv1d(DeformConv1d):
                  modulated: bool = False,
                  padding_mode: str = 'zeros',
                  device=None,
-                 dtype=None):
+                 dtype=None) -> None:
         super().__init__(
             in_channels, out_channels, kernel_size, stride, padding, dilation,
             groups, bias, padding_mode, device, dtype)
@@ -644,7 +644,7 @@ class PackedDeformConv2d(DeformConv2d):
                  modulated: bool = False,
                  padding_mode: str = 'zeros',
                  device=None,
-                 dtype=None):
+                 dtype=None) -> None:
         super().__init__(
             in_channels, out_channels, kernel_size, stride, padding, dilation,
             groups, bias, padding_mode, device, dtype)
@@ -670,6 +670,7 @@ class PackedDeformConv2d(DeformConv2d):
             stride=self.stride,  # type: ignore[arg-type]
             padding=self.padding,
             dilation=self.dilation,  # type: ignore[arg-type]
+            groups=self.groups,
             bias=self.bias is not None,
             device=device,
             dtype=dtype)
@@ -731,7 +732,7 @@ class PackedDeformConv3d(DeformConv3d):
                  modulated: bool = False,
                  padding_mode: str = 'zeros',
                  device=None,
-                 dtype=None):
+                 dtype=None) -> None:
         super().__init__(
             in_channels, out_channels, kernel_size, stride, padding, dilation,
             groups, bias, padding_mode, device, dtype)
