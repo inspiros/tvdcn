@@ -84,6 +84,8 @@ def deform_conv1d(
 
     deformable = offset is not None
     modulated = mask is not None
+    if not deformable and not modulated:
+        return F.conv1d(input, weight, bias, stride, padding, dilation, groups)
 
     if offset is None:
         offset = torch.zeros((input.shape[0], 0), device=input.device, dtype=input.dtype)
@@ -194,6 +196,8 @@ def deform_conv2d(
 
     deformable = offset is not None
     modulated = mask is not None
+    if not deformable and not modulated:
+        return F.conv2d(input, weight, bias, stride, padding, dilation, groups)
 
     if offset is None:
         offset = torch.zeros((input.shape[0], 0), device=input.device, dtype=input.dtype)
@@ -302,6 +306,8 @@ def deform_conv3d(
 
     deformable = offset is not None
     modulated = mask is not None
+    if not deformable and not modulated:
+        return F.conv3d(input, weight, bias, stride, padding, dilation, groups)
 
     if offset is None:
         offset = torch.zeros((input.shape[0], 0), device=input.device, dtype=input.dtype)
@@ -382,12 +388,12 @@ class _DeformConvNd(_ConvNd):
     def _conv_forward(self,
                       input: Tensor,
                       weight: Tensor,
-                      offset: Tensor,
+                      offset: Optional[Tensor],
                       mask: Optional[Tensor],
                       bias: Optional[Tensor]) -> Tensor:
         raise NotImplementedError
 
-    def forward(self, input: Tensor, offset: Tensor, mask: Optional[Tensor] = None) -> Tensor:
+    def forward(self, input: Tensor, offset: Optional[Tensor], mask: Optional[Tensor] = None) -> Tensor:
         return self._conv_forward(input, self.weight, offset, mask, self.bias)
 
     def extra_repr(self):
@@ -445,7 +451,7 @@ class DeformConv1d(_DeformConvNd):
     def _conv_forward(self,
                       input: Tensor,
                       weight: Tensor,
-                      offset: Tensor,
+                      offset: Optional[Tensor],
                       mask: Optional[Tensor],
                       bias: Optional[Tensor]) -> Tensor:
         if self.padding_mode != 'zeros':
@@ -485,7 +491,7 @@ class DeformConv2d(_DeformConvNd):
     def _conv_forward(self,
                       input: Tensor,
                       weight: Tensor,
-                      offset: Tensor,
+                      offset: Optional[Tensor],
                       mask: Optional[Tensor],
                       bias: Optional[Tensor]) -> Tensor:
         if self.padding_mode != 'zeros':
@@ -525,7 +531,7 @@ class DeformConv3d(_DeformConvNd):
     def _conv_forward(self,
                       input: Tensor,
                       weight: Tensor,
-                      offset: Tensor,
+                      offset: Optional[Tensor],
                       mask: Optional[Tensor],
                       bias: Optional[Tensor]) -> Tensor:
         if self.padding_mode != 'zeros':

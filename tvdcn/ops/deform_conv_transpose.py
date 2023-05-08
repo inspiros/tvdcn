@@ -1,5 +1,6 @@
 import torch
 from torch import nn, Tensor
+import torch.nn.functional as F
 from torch.jit.annotations import List, Optional, Tuple, Union
 from torch.nn import init
 from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t
@@ -85,6 +86,8 @@ def deform_conv_transpose1d(
 
     deformable = offset is not None
     modulated = mask is not None
+    if not deformable and not modulated:
+        return F.conv_transpose1d(input, weight, bias, stride, padding, output_padding, groups, dilation)
 
     if offset is None:
         offset = torch.zeros((input.shape[0], 0), device=input.device, dtype=input.dtype)
@@ -196,6 +199,8 @@ def deform_conv_transpose2d(
 
     deformable = offset is not None
     modulated = mask is not None
+    if not deformable and not modulated:
+        return F.conv_transpose2d(input, weight, bias, stride, padding, output_padding, groups, dilation)
 
     if offset is None:
         offset = torch.zeros((input.shape[0], 0), device=input.device, dtype=input.dtype)
@@ -306,6 +311,8 @@ def deform_conv_transpose3d(
 
     deformable = offset is not None
     modulated = mask is not None
+    if not deformable and not modulated:
+        return F.conv_transpose3d(input, weight, bias, stride, padding, output_padding, groups, dilation)
 
     if offset is None:
         offset = torch.zeros((input.shape[0], 0), device=input.device, dtype=input.dtype)
@@ -429,7 +436,7 @@ class _DeformConvTransposeNd(_DeformConvNd):
     def _conv_transpose_forward(self,
                                 input: Tensor,
                                 weight: Tensor,
-                                offset: Tensor,
+                                offset: Optional[Tensor],
                                 mask: Optional[Tensor],
                                 bias: Optional[Tensor],
                                 output_size: Optional[List[int]] = None) -> Tensor:
@@ -437,7 +444,7 @@ class _DeformConvTransposeNd(_DeformConvNd):
 
     def forward(self,
                 input: Tensor,
-                offset: Tensor,
+                offset: Optional[Tensor],
                 mask: Optional[Tensor] = None,
                 output_size: Optional[List[int]] = None) -> Tensor:
         return self._conv_transpose_forward(input, self.weight, offset, mask, self.bias, output_size)
@@ -474,7 +481,7 @@ class DeformConvTranspose1d(_DeformConvTransposeNd):
     def _conv_transpose_forward(self,
                                 input: Tensor,
                                 weight: Tensor,
-                                offset: Tensor,
+                                offset: Optional[Tensor],
                                 mask: Optional[Tensor],
                                 bias: Optional[Tensor],
                                 output_size: Optional[List[int]] = None) -> Tensor:
@@ -525,7 +532,7 @@ class DeformConvTranspose2d(_DeformConvTransposeNd):
     def _conv_transpose_forward(self,
                                 input: Tensor,
                                 weight: Tensor,
-                                offset: Tensor,
+                                offset: Optional[Tensor],
                                 mask: Optional[Tensor],
                                 bias: Optional[Tensor],
                                 output_size: Optional[List[int]] = None) -> Tensor:
@@ -577,7 +584,7 @@ class DeformConvTranspose3d(_DeformConvTransposeNd):
     def _conv_transpose_forward(self,
                                 input: Tensor,
                                 weight: Tensor,
-                                offset: Tensor,
+                                offset: Optional[Tensor],
                                 mask: Optional[Tensor],
                                 bias: Optional[Tensor],
                                 output_size: Optional[List[int]] = None) -> Tensor:
