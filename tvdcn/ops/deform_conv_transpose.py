@@ -619,6 +619,7 @@ class PackedDeformConvTranspose1d(DeformConvTranspose1d):
                  offset_groups: int = 1,
                  mask_groups: int = 1,
                  bias: bool = True,
+                 deformable: bool = True,
                  modulated: bool = False,
                  padding_mode: str = 'zeros',
                  device=None,
@@ -639,15 +640,19 @@ class PackedDeformConvTranspose1d(DeformConvTranspose1d):
 
         self.offset_groups = offset_groups
         self.mask_groups = mask_groups
+        self.deformable = deformable
         self.modulated = modulated
 
-        self.conv_offset = nn.Conv1d(
-            self.in_channels,
-            self.kernel_size[0] * self.offset_groups,
-            kernel_size=1,
-            bias=self.bias is not None,
-            device=dtype,
-            dtype=device)
+        if self.deformable:
+            self.conv_offset = nn.Conv1d(
+                self.in_channels,
+                self.kernel_size[0] * self.offset_groups,
+                kernel_size=1,
+                bias=self.bias is not None,
+                device=dtype,
+                dtype=device)
+        else:
+            self.register_module('conv_offset', None)
 
         if self.modulated:
             self.conv_mask = nn.Conv1d(
@@ -666,16 +671,17 @@ class PackedDeformConvTranspose1d(DeformConvTranspose1d):
         if not hasattr(self, 'modulated'):
             return
         super().reset_parameters()
-        init.zeros_(self.conv_offset.weight)
-        if self.conv_offset.bias is not None:
-            init.zeros_(self.conv_offset.bias)
+        if self.conv_offset is not None:
+            init.zeros_(self.conv_offset.weight)
+            if self.conv_offset.bias is not None:
+                init.zeros_(self.conv_offset.bias)
         if self.conv_mask is not None:
             init.zeros_(self.conv_mask.weight)
             if self.conv_mask.bias is not None:
                 init.zeros_(self.conv_mask.bias)
 
     def forward(self, input: Tensor, output_size: Optional[List[int]] = None) -> Tensor:
-        offset = self.conv_offset(input)
+        offset = self.conv_offset(input) if self.deformable and self.conv_offset is not None else None
         mask = self.conv_mask(input).sigmoid() if self.modulated and self.conv_mask is not None else None
         return self._conv_transpose_forward(input, self.weight, offset, mask, self.bias, output_size)
 
@@ -698,6 +704,7 @@ class PackedDeformConvTranspose2d(DeformConvTranspose2d):
                  offset_groups: int = 1,
                  mask_groups: int = 1,
                  bias: bool = True,
+                 deformable: bool = True,
                  modulated: bool = False,
                  padding_mode: str = 'zeros',
                  device=None,
@@ -718,15 +725,19 @@ class PackedDeformConvTranspose2d(DeformConvTranspose2d):
 
         self.offset_groups = offset_groups
         self.mask_groups = mask_groups
+        self.deformable = deformable
         self.modulated = modulated
 
-        self.conv_offset = nn.Conv2d(
-            self.in_channels,
-            2 * self.kernel_size[0] * self.kernel_size[1] * self.offset_groups,
-            kernel_size=1,
-            bias=self.bias is not None,
-            device=dtype,
-            dtype=device)
+        if self.deformable:
+            self.conv_offset = nn.Conv2d(
+                self.in_channels,
+                2 * self.kernel_size[0] * self.kernel_size[1] * self.offset_groups,
+                kernel_size=1,
+                bias=self.bias is not None,
+                device=dtype,
+                dtype=device)
+        else:
+            self.register_module('conv_offset', None)
 
         if self.modulated:
             self.conv_mask = nn.Conv2d(
@@ -745,16 +756,17 @@ class PackedDeformConvTranspose2d(DeformConvTranspose2d):
         if not hasattr(self, 'modulated'):
             return
         super().reset_parameters()
-        init.zeros_(self.conv_offset.weight)
-        if self.conv_offset.bias is not None:
-            init.zeros_(self.conv_offset.bias)
+        if self.conv_offset is not None:
+            init.zeros_(self.conv_offset.weight)
+            if self.conv_offset.bias is not None:
+                init.zeros_(self.conv_offset.bias)
         if self.conv_mask is not None:
             init.zeros_(self.conv_mask.weight)
             if self.conv_mask.bias is not None:
                 init.zeros_(self.conv_mask.bias)
 
     def forward(self, input: Tensor, output_size: Optional[List[int]] = None) -> Tensor:
-        offset = self.conv_offset(input)
+        offset = self.conv_offset(input) if self.deformable and self.conv_offset is not None else None
         mask = self.conv_mask(input).sigmoid() if self.modulated and self.conv_mask is not None else None
         return self._conv_transpose_forward(input, self.weight, offset, mask, self.bias, output_size)
 
@@ -777,6 +789,7 @@ class PackedDeformConvTranspose3d(DeformConvTranspose3d):
                  offset_groups: int = 1,
                  mask_groups: int = 1,
                  bias: bool = True,
+                 deformable: bool = True,
                  modulated: bool = False,
                  padding_mode: str = 'zeros',
                  device=None,
@@ -797,15 +810,19 @@ class PackedDeformConvTranspose3d(DeformConvTranspose3d):
 
         self.offset_groups = offset_groups
         self.mask_groups = mask_groups
+        self.deformable = deformable
         self.modulated = modulated
 
-        self.conv_offset = nn.Conv3d(
-            self.in_channels,
-            3 * self.kernel_size[0] * self.kernel_size[1] * self.kernel_size[2] * self.offset_groups,
-            kernel_size=1,
-            bias=self.bias is not None,
-            device=dtype,
-            dtype=device)
+        if self.deformable:
+            self.conv_offset = nn.Conv3d(
+                self.in_channels,
+                3 * self.kernel_size[0] * self.kernel_size[1] * self.kernel_size[2] * self.offset_groups,
+                kernel_size=1,
+                bias=self.bias is not None,
+                device=dtype,
+                dtype=device)
+        else:
+            self.register_module('conv_offset', None)
 
         if self.modulated:
             self.conv_mask = nn.Conv3d(
@@ -824,15 +841,16 @@ class PackedDeformConvTranspose3d(DeformConvTranspose3d):
         if not hasattr(self, 'modulated'):
             return
         super().reset_parameters()
-        init.zeros_(self.conv_offset.weight)
-        if self.conv_offset.bias is not None:
-            init.zeros_(self.conv_offset.bias)
+        if self.conv_offset is not None:
+            init.zeros_(self.conv_offset.weight)
+            if self.conv_offset.bias is not None:
+                init.zeros_(self.conv_offset.bias)
         if self.conv_mask is not None:
             init.zeros_(self.conv_mask.weight)
             if self.conv_mask.bias is not None:
                 init.zeros_(self.conv_mask.bias)
 
     def forward(self, input: Tensor, output_size: Optional[List[int]] = None) -> Tensor:
-        offset = self.conv_offset(input)
+        offset = self.conv_offset(input) if self.deformable and self.conv_offset is not None else None
         mask = self.conv_mask(input).sigmoid() if self.modulated and self.conv_mask is not None else None
         return self._conv_transpose_forward(input, self.weight, offset, mask, self.bias, output_size)
