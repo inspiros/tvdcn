@@ -37,7 +37,7 @@ https://github.com/masamitsu-murase/deform_conv2d_onnx_exporter.
 
 #### From TestPyPI:
 
-[tvdcn](https://test_pypi.org/project/tvdcn) provides some prebuilt wheels at **TestPyPI**
+[tvdcn](https://test.pypi.org/project/tvdcn) provides some prebuilt wheels at **TestPyPI**
 (this is not intended to be a standalone library).
 Run this command to install:
 
