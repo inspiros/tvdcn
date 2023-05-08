@@ -70,7 +70,7 @@
 // https://github.com/pytorch/vision/blob/master/torchvision/csrc/cpu/DeformConv_cpu.cpp
 
 #include "utils/parallel_helpers.h"
-#include "deform_conv3d_kernels.h"
+#include "dispatch/deform_conv3d_kernels.h"
 
 namespace tvdcn {
     namespace ops {
@@ -98,8 +98,6 @@ namespace tvdcn {
             TORCH_CHECK(!deformable || offset_c.ndimension() == 5)
             TORCH_CHECK(!modulated || mask_c.ndimension() == 5)
             TORCH_CHECK(weight_c.ndimension() == 5)
-            TORCH_CHECK(input_c.is_contiguous())
-            TORCH_CHECK(weight_c.is_contiguous())
 
             if (input_c.is_cuda())
                 at::DeviceGuard guard(input_c.device());
@@ -596,7 +594,7 @@ namespace tvdcn {
             if (modulated)
                 grad_mask = grad_mask.view(
                         {batch_sz, mask_groups * weight_d * weight_h * weight_w, out_d, out_h, out_w});
-            grad_bias *= grad_out_c.sum(at::IntArrayRef({0, 2, 3, 4}));
+            grad_bias *= grad_out.sum(at::IntArrayRef({0, 2, 3, 4}));
 
             return std::make_tuple(grad_input, grad_weight, grad_offset, grad_mask, grad_bias);
         }

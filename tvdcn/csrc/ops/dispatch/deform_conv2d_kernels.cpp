@@ -1,23 +1,29 @@
-#include "cpu/deform_conv1d_kernels_cpu.h"
+#include "../cpu/deform_conv2d_kernels_cpu.h"
 
-#if defined(WITH_CUDA)
+#ifdef WITH_CUDA
 
-#include "cuda/deform_conv1d_kernels_cuda.h"
+#include "../cuda/deform_conv2d_kernels_cuda.h"
 
 #endif
 
 namespace tvdcn {
     namespace ops {
-        void arr2col(
+        void im2col(
                 const at::Tensor &input,
                 const at::Tensor &offset,
                 const at::Tensor &mask,
                 const int in_channels,
+                const int height,
                 const int width,
+                const int weight_h,
                 const int weight_w,
+                const int pad_h,
                 const int pad_w,
+                const int stride_h,
                 const int stride_w,
+                const int dilation_h,
                 const int dilation_w,
+                const int out_h,
                 const int out_w,
                 const int batch_sz,
                 const int n_offset_grps,
@@ -27,35 +33,21 @@ namespace tvdcn {
                 at::Tensor &columns) {
             if (input.is_cuda()) {
 #if defined(WITH_CUDA) || defined(WITH_HIP)
-                arr2col_cuda(input,
-                             offset,
-                             mask,
-                             in_channels,
-                             width,
-                             weight_w,
-                             pad_w,
-                             stride_w,
-                             dilation_w,
-                             out_w,
-                             batch_sz,
-                             n_offset_grps,
-                             n_mask_grps,
-                             deformable,
-                             modulated,
-                             columns);
-#else
-                AT_ERROR("Not compiled with GPU support");
-#endif
-            } else {
-                arr2col_cpu(input,
+                im2col_cuda(input,
                             offset,
                             mask,
                             in_channels,
+                            height,
                             width,
+                            weight_h,
                             weight_w,
+                            pad_h,
                             pad_w,
+                            stride_h,
                             stride_w,
+                            dilation_h,
                             dilation_w,
+                            out_h,
                             out_w,
                             batch_sz,
                             n_offset_grps,
@@ -63,19 +55,51 @@ namespace tvdcn {
                             deformable,
                             modulated,
                             columns);
+#else
+                AT_ERROR("Not compiled with GPU support");
+#endif
+            } else {
+                im2col_cpu(input,
+                           offset,
+                           mask,
+                           in_channels,
+                           height,
+                           width,
+                           weight_h,
+                           weight_w,
+                           pad_h,
+                           pad_w,
+                           stride_h,
+                           stride_w,
+                           dilation_h,
+                           dilation_w,
+                           out_h,
+                           out_w,
+                           batch_sz,
+                           n_offset_grps,
+                           n_mask_grps,
+                           deformable,
+                           modulated,
+                           columns);
             }
         }
 
-        void col2arr(
+        void col2im(
                 const at::Tensor &columns,
                 const at::Tensor &offset,
                 const at::Tensor &mask,
                 const int in_channels,
+                const int height,
                 const int width,
+                const int weight_h,
                 const int weight_w,
+                const int pad_h,
                 const int pad_w,
+                const int stride_h,
                 const int stride_w,
+                const int dilation_h,
                 const int dilation_w,
+                const int out_h,
                 const int out_w,
                 const int batch_sz,
                 const int n_offset_grps,
@@ -85,35 +109,21 @@ namespace tvdcn {
                 at::Tensor &grad_input) {
             if (grad_input.is_cuda()) {
 #if defined(WITH_CUDA) || defined(WITH_HIP)
-                col2arr_cuda(columns,
-                             offset,
-                             mask,
-                             in_channels,
-                             width,
-                             weight_w,
-                             pad_w,
-                             stride_w,
-                             dilation_w,
-                             out_w,
-                             batch_sz,
-                             n_offset_grps,
-                             n_mask_grps,
-                             deformable,
-                             modulated,
-                             grad_input);
-#else
-                AT_ERROR("Not compiled with GPU support");
-#endif
-            } else {
-                col2arr_cpu(columns,
+                col2im_cuda(columns,
                             offset,
                             mask,
                             in_channels,
+                            height,
                             width,
+                            weight_h,
                             weight_w,
+                            pad_h,
                             pad_w,
+                            stride_h,
                             stride_w,
+                            dilation_h,
                             dilation_w,
+                            out_h,
                             out_w,
                             batch_sz,
                             n_offset_grps,
@@ -121,20 +131,52 @@ namespace tvdcn {
                             deformable,
                             modulated,
                             grad_input);
+#else
+                AT_ERROR("Not compiled with GPU support");
+#endif
+            } else {
+                col2im_cpu(columns,
+                           offset,
+                           mask,
+                           in_channels,
+                           height,
+                           width,
+                           weight_h,
+                           weight_w,
+                           pad_h,
+                           pad_w,
+                           stride_h,
+                           stride_w,
+                           dilation_h,
+                           dilation_w,
+                           out_h,
+                           out_w,
+                           batch_sz,
+                           n_offset_grps,
+                           n_mask_grps,
+                           deformable,
+                           modulated,
+                           grad_input);
             }
         }
 
-        void deform_conv1d_compute_grad_offset(
+        void deform_conv2d_compute_grad_offset(
                 const at::Tensor &columns,
                 const at::Tensor &input,
                 const at::Tensor &offset,
                 const at::Tensor &mask,
                 const int in_channels,
+                const int height,
                 const int width,
+                const int weight_h,
                 const int weight_w,
+                const int pad_h,
                 const int pad_w,
+                const int stride_h,
                 const int stride_w,
+                const int dilation_h,
                 const int dilation_w,
+                const int out_h,
                 const int out_w,
                 const int batch_sz,
                 const int n_offset_grps,
@@ -144,16 +186,22 @@ namespace tvdcn {
                 at::Tensor &grad_offset) {
             if (input.is_cuda()) {
 #if defined(WITH_CUDA) || defined(WITH_HIP)
-                deform_conv1d_compute_grad_offset_cuda(columns,
+                deform_conv2d_compute_grad_offset_cuda(columns,
                                                        input,
                                                        offset,
                                                        mask,
                                                        in_channels,
+                                                       height,
                                                        width,
+                                                       weight_h,
                                                        weight_w,
+                                                       pad_h,
                                                        pad_w,
+                                                       stride_h,
                                                        stride_w,
+                                                       dilation_h,
                                                        dilation_w,
+                                                       out_h,
                                                        out_w,
                                                        batch_sz,
                                                        n_offset_grps,
@@ -165,16 +213,22 @@ namespace tvdcn {
                 AT_ERROR("Not compiled with GPU support");
 #endif
             } else {
-                deform_conv1d_compute_grad_offset_cpu(columns,
+                deform_conv2d_compute_grad_offset_cpu(columns,
                                                       input,
                                                       offset,
                                                       mask,
                                                       in_channels,
+                                                      height,
                                                       width,
+                                                      weight_h,
                                                       weight_w,
+                                                      pad_h,
                                                       pad_w,
+                                                      stride_h,
                                                       stride_w,
+                                                      dilation_h,
                                                       dilation_w,
+                                                      out_h,
                                                       out_w,
                                                       batch_sz,
                                                       n_offset_grps,
@@ -185,16 +239,22 @@ namespace tvdcn {
             }
         }
 
-        void deform_conv1d_compute_grad_mask(
+        void deform_conv2d_compute_grad_mask(
                 const at::Tensor &columns,
                 const at::Tensor &input,
                 const at::Tensor &offset,
                 const int in_channels,
+                const int height,
                 const int width,
+                const int weight_h,
                 const int weight_w,
+                const int pad_h,
                 const int pad_w,
+                const int stride_h,
                 const int stride_w,
+                const int dilation_h,
                 const int dilation_w,
+                const int out_h,
                 const int out_w,
                 const int batch_sz,
                 const int n_offset_grps,
@@ -204,15 +264,21 @@ namespace tvdcn {
                 at::Tensor &grad_mask) {
             if (input.is_cuda()) {
 #if defined(WITH_CUDA) || defined(WITH_HIP)
-                deform_conv1d_compute_grad_mask_cuda(columns,
+                deform_conv2d_compute_grad_mask_cuda(columns,
                                                      input,
                                                      offset,
                                                      in_channels,
+                                                     height,
                                                      width,
+                                                     weight_h,
                                                      weight_w,
+                                                     pad_h,
                                                      pad_w,
+                                                     stride_h,
                                                      stride_w,
+                                                     dilation_h,
                                                      dilation_w,
+                                                     out_h,
                                                      out_w,
                                                      batch_sz,
                                                      n_offset_grps,
@@ -224,15 +290,21 @@ namespace tvdcn {
                 AT_ERROR("Not compiled with GPU support");
 #endif
             } else {
-                deform_conv1d_compute_grad_mask_cpu(columns,
+                deform_conv2d_compute_grad_mask_cpu(columns,
                                                     input,
                                                     offset,
                                                     in_channels,
+                                                    height,
                                                     width,
+                                                    weight_h,
                                                     weight_w,
+                                                    pad_h,
                                                     pad_w,
+                                                    stride_h,
                                                     stride_w,
+                                                    dilation_h,
                                                     dilation_w,
+                                                    out_h,
                                                     out_w,
                                                     batch_sz,
                                                     n_offset_grps,
