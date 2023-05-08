@@ -1,8 +1,8 @@
 #pragma once
 
-#include "ops/deform_conv.h"
-#include "ops/deform_conv_transpose.h"
+#include "ops/ops.h"
+#include "macros.h"
 
 namespace tvdcn {
-    int64_t cuda_version();
+    VISION_API int64_t cuda_version();
 }

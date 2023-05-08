@@ -44,23 +44,42 @@ def get_extensions():
     extra_compile_args = {'cxx': []}
     define_macros = []
 
-    if (torch.cuda.is_available() and CUDA_HOME is not None) or os.getenv('FORCE_CUDA', '0') == '1':
+    print('Compiling extensions with following flags:')
+    force_cuda = os.getenv('FORCE_CUDA', '0') == '1'
+    print(f'  FORCE_CUDA: {force_cuda}')
+    debug_mode = os.getenv('DEBUG', '0') == '1'
+    print(f'  DEBUG: {debug_mode}')
+
+    nvcc_flags = os.getenv('NVCC_FLAGS', '')
+    print(f'  NVCC_FLAGS: {nvcc_flags}')
+
+    if (torch.cuda.is_available() and CUDA_HOME is not None) or force_cuda:
         extension = CUDAExtension
         sources += source_cuda
         define_macros += [('WITH_CUDA', None)]
-        nvcc_flags = os.getenv('NVCC_FLAGS', '')
         if nvcc_flags == '':
             nvcc_flags = []
         else:
             nvcc_flags = nvcc_flags.split(' ')
-
-        # nvcc_flags.append('-DCUDA_HOST_COMPILER=/usr/bin/gcc-7')
         extra_compile_args['nvcc'] = nvcc_flags
 
     if sys.platform == 'win32':
+        define_macros += [(f'{PACKAGE_ROOT}_EXPORTS', None)]
         define_macros += [('USE_PYTHON', None)]
+        extra_compile_args['cxx'].append('/MP')
 
-    include_dirs = [extensions_dir, os.path.join(extensions_dir, 'cpu'), os.path.join(extensions_dir, 'cuda')]
+    if debug_mode:
+        print('Compiling in debug mode')
+        extra_compile_args['cxx'].append('-g')
+        extra_compile_args['cxx'].append('-O0')
+        if 'nvcc' in extra_compile_args:
+            # we have to remove '-OX' and '-g' flag if exists and append
+            nvcc_flags = extra_compile_args['nvcc']
+            extra_compile_args['nvcc'] = [f for f in nvcc_flags if not ('-O' in f or '-g' in f)]
+            extra_compile_args['nvcc'].append('-O0')
+            extra_compile_args['nvcc'].append('-g')
+
+    include_dirs = [extensions_dir]
     ext_modules = [
         extension(
             f'{PACKAGE_ROOT}._C',

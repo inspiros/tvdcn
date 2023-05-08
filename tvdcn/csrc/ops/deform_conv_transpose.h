@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ATen/Tensor.h>
+#include "../macros.h"
 
 namespace tvdcn {
     namespace ops {
@@ -496,7 +497,7 @@ namespace tvdcn {
             }
         };
 
-        at::Tensor deform_conv_transpose1d(
+        VISION_API at::Tensor deform_conv_transpose1d(
                 const at::Tensor &input,
                 const at::Tensor &weight,
                 const at::Tensor &offset,
@@ -511,6 +512,7 @@ namespace tvdcn {
                 int64_t mask_groups,
                 bool deformable,
                 bool modulated) {
+            C10_LOG_API_USAGE_ONCE("tvdcn.csrc.ops.deform_conv_transpose.deform_conv_transpose1d");
             auto result = DeformConvTranspose1dFunction::apply(
                     input,
                     weight,
@@ -529,7 +531,7 @@ namespace tvdcn {
             return result[0];
         }
 
-        at::Tensor deform_conv_transpose2d(
+        VISION_API at::Tensor deform_conv_transpose2d(
                 const at::Tensor &input,
                 const at::Tensor &weight,
                 const at::Tensor &offset,
@@ -548,6 +550,7 @@ namespace tvdcn {
                 int64_t mask_groups,
                 bool deformable,
                 bool modulated) {
+            C10_LOG_API_USAGE_ONCE("tvdcn.csrc.ops.deform_conv_transpose.deform_conv_transpose2d");
             auto result = DeformConvTranspose2dFunction::apply(
                     input,
                     weight,
@@ -570,7 +573,7 @@ namespace tvdcn {
             return result[0];
         }
 
-        at::Tensor deform_conv_transpose3d(
+        VISION_API at::Tensor deform_conv_transpose3d(
                 const at::Tensor &input,
                 const at::Tensor &weight,
                 const at::Tensor &offset,
@@ -593,6 +596,7 @@ namespace tvdcn {
                 int64_t mask_groups,
                 bool deformable,
                 bool modulated) {
+            C10_LOG_API_USAGE_ONCE("tvdcn.csrc.ops.deform_conv_transpose.deform_conv_transpose3d");
             auto result = DeformConvTranspose3dFunction::apply(
                     input,
                     weight,

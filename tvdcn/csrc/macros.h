@@ -1,7 +1,7 @@
 #pragma once
 
-#ifdef _WIN32
-#if defined(torchvision_EXPORTS)
+#if defined(_WIN32) && !defined(TVDCN_BUILD_STATIC_LIBS)
+#if defined(tvdcn_EXPORTS)
 #define VISION_API __declspec(dllexport)
 #else
 #define VISION_API __declspec(dllimport)

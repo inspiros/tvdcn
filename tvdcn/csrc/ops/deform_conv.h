@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ATen/Tensor.h>
+#include "../macros.h"
 
 namespace tvdcn {
     namespace ops {
@@ -460,7 +461,7 @@ namespace tvdcn {
             }
         };
 
-        at::Tensor deform_conv1d(
+        VISION_API at::Tensor deform_conv1d(
                 const at::Tensor &input,
                 const at::Tensor &weight,
                 const at::Tensor &offset,
@@ -474,6 +475,7 @@ namespace tvdcn {
                 int64_t mask_groups,
                 bool deformable,
                 bool modulated) {
+            C10_LOG_API_USAGE_ONCE("tvdcn.csrc.ops.deform_conv.deform_conv1d");
             auto result = DeformConv1dFunction::apply(
                     input,
                     weight,
@@ -491,7 +493,7 @@ namespace tvdcn {
             return result[0];
         }
 
-        at::Tensor deform_conv2d(
+        VISION_API at::Tensor deform_conv2d(
                 const at::Tensor &input,
                 const at::Tensor &weight,
                 const at::Tensor &offset,
@@ -508,6 +510,7 @@ namespace tvdcn {
                 int64_t mask_groups,
                 bool deformable,
                 bool modulated) {
+            C10_LOG_API_USAGE_ONCE("tvdcn.csrc.ops.deform_conv.deform_conv2d");
             auto result = DeformConv2dFunction::apply(
                     input,
                     weight,
@@ -528,7 +531,7 @@ namespace tvdcn {
             return result[0];
         }
 
-        at::Tensor deform_conv3d(
+        VISION_API at::Tensor deform_conv3d(
                 const at::Tensor &input,
                 const at::Tensor &weight,
                 const at::Tensor &offset,
@@ -548,6 +551,7 @@ namespace tvdcn {
                 int64_t mask_groups,
                 bool deformable,
                 bool modulated) {
+            C10_LOG_API_USAGE_ONCE("tvdcn.csrc.ops.deform_conv.deform_conv3d");
             auto result = DeformConv3dFunction::apply(
                     input,
                     weight,

@@ -21,9 +21,9 @@ def _log_api_usage_once(obj: Any) -> None:
         obj (class instance or method): an object to extract info from.
     """
     module = obj.__module__
-    if not module.startswith("torchvision"):
-        module = f"torchvision.internal.{module}"
+    if not module.startswith('tvdcn'):
+        module = f'tvdcn.internal.{module}'
     name = obj.__class__.__name__
     if isinstance(obj, FunctionType):
         name = obj.__name__
-    torch._C._log_api_usage_once(f"{module}.{name}")
+    torch._C._log_api_usage_once(f'{module}.{name}')
