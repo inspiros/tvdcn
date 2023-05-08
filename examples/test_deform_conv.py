@@ -10,7 +10,7 @@ def test_wrapper():
 
 
 def test_packed_wrapper():
-    x = torch.randn(1, 2, 4, 5)
+    x = torch.randn(1, 2, 4, 5, requires_grad=True)
 
     conv = PackedDeformConv2d(2, 4,
                               kernel_size=(2, 3),
@@ -23,6 +23,9 @@ def test_packed_wrapper():
 
     out = conv(x)
     print(out.shape)
+
+    out.sum().backward()
+    print(x.grad)
 
 
 if __name__ == '__main__':
