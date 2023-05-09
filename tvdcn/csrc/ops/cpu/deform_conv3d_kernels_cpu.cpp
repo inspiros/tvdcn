@@ -27,9 +27,8 @@ namespace tvdcn {
                     const scalar_t z,
                     const scalar_t y,
                     const scalar_t x) {
-                if (z <= -1 || depth <= z || y <= -1 || height <= y || x <= -1 || width <= x) {
+                if (z <= -1 || depth <= z || y <= -1 || height <= y || x <= -1 || width <= x)
                     return 0;
-                }
 
                 int z_l = floor(z);
                 int z_h = z_l + 1;
@@ -53,31 +52,22 @@ namespace tvdcn {
                 bool valid_x_h = x_h < width;
 
                 scalar_t val = 0;
-                val += (valid_z_l && valid_y_l && valid_x_l) ?
-                       dz_l * dy_l * dx_l * input[z_l * (width * height) + y_l * width + x_l]
-                                                             : static_cast<scalar_t>(0);
-                val += (valid_z_l && valid_y_l && valid_x_h) ?
-                       dz_l * dy_l * dx_h * input[z_l * (width * height) + y_l * width + x_h]
-                                                             : static_cast<scalar_t>(0);
-                val += (valid_z_l && valid_y_h && valid_x_l) ?
-                       dz_l * dy_h * dx_l * input[z_l * (width * height) + y_h * width + x_l]
-                                                             : static_cast<scalar_t>(0);
-                val += (valid_z_l && valid_y_h && valid_x_h) ?
-                       dz_l * dy_h * dx_h * input[z_l * (width * height) + y_h * width + x_h]
-                                                             : static_cast<scalar_t>(0);
-                val += (valid_z_h && valid_y_l && valid_x_l) ?
-                       dz_h * dy_l * dx_l * input[z_h * (width * height) + y_l * width + x_l]
-                                                             : static_cast<scalar_t>(0);
-                val += (valid_z_h && valid_y_l && valid_x_h) ?
-                       dz_h * dy_l * dx_h * input[z_h * (width * height) + y_l * width + x_h]
-                                                             : static_cast<scalar_t>(0);
-                val += (valid_z_h && valid_y_h && valid_x_l) ?
-                       dz_h * dy_h * dx_l * input[z_h * (width * height) + y_h * width + x_l]
-                                                             : static_cast<scalar_t>(0);
-                val += (valid_z_h && valid_y_h && valid_x_h) ?
-                       dz_h * dy_h * dx_h * input[z_h * (width * height) + y_h * width + x_h]
-                                                             : static_cast<scalar_t>(0);
-
+                if (valid_z_l && valid_y_l && valid_x_l)
+                    val += dz_l * dy_l * dx_l * input[z_l * (width * height) + y_l * width + x_l];
+                if (valid_z_l && valid_y_l && valid_x_h)
+                    val += dz_l * dy_l * dx_h * input[z_l * (width * height) + y_l * width + x_h];
+                if (valid_z_l && valid_y_h && valid_x_l)
+                    val += dz_l * dy_h * dx_l * input[z_l * (width * height) + y_h * width + x_l];
+                if (valid_z_l && valid_y_h && valid_x_h)
+                    val += dz_l * dy_h * dx_h * input[z_l * (width * height) + y_h * width + x_h];
+                if (valid_z_h && valid_y_l && valid_x_l)
+                    val += dz_h * dy_l * dx_l * input[z_h * (width * height) + y_l * width + x_l];
+                if (valid_z_h && valid_y_l && valid_x_h)
+                    val += dz_h * dy_l * dx_h * input[z_h * (width * height) + y_l * width + x_h];
+                if (valid_z_h && valid_y_h && valid_x_l)
+                    val += dz_h * dy_h * dx_l * input[z_h * (width * height) + y_h * width + x_l];
+                if (valid_z_h && valid_y_h && valid_x_h)
+                    val += dz_h * dy_h * dx_h * input[z_h * (width * height) + y_h * width + x_h];
                 return val;
             }
 
@@ -176,31 +166,22 @@ namespace tvdcn {
                 bool valid_x_h = 0 <= x_h && x_h < width;
 
                 scalar_t val = 0;
-                val += (valid_z_l && valid_y_l && valid_x_l) ?
-                       dz_l * dy_l * dx_l * input[z_l * (width * height) + y_l * width + x_l]
-                                                             : static_cast<scalar_t>(0);
-                val += (valid_z_l && valid_y_l && valid_x_h) ?
-                       dz_l * dy_l * dx_h * input[z_l * (width * height) + y_l * width + x_h]
-                                                             : static_cast<scalar_t>(0);
-                val += (valid_z_l && valid_y_h && valid_x_l) ?
-                       dz_l * dy_h * dx_l * input[z_l * (width * height) + y_h * width + x_l]
-                                                             : static_cast<scalar_t>(0);
-                val += (valid_z_l && valid_y_h && valid_x_h) ?
-                       dz_l * dy_h * dx_h * input[z_l * (width * height) + y_h * width + x_h]
-                                                             : static_cast<scalar_t>(0);
-                val += (valid_z_h && valid_y_l && valid_x_l) ?
-                       dz_h * dy_l * dx_l * input[z_h * (width * height) + y_l * width + x_l]
-                                                             : static_cast<scalar_t>(0);
-                val += (valid_z_h && valid_y_l && valid_x_h) ?
-                       dz_h * dy_l * dx_h * input[z_h * (width * height) + y_l * width + x_h]
-                                                             : static_cast<scalar_t>(0);
-                val += (valid_z_h && valid_y_h && valid_x_l) ?
-                       dz_h * dy_h * dx_l * input[z_h * (width * height) + y_h * width + x_l]
-                                                             : static_cast<scalar_t>(0);
-                val += (valid_z_h && valid_y_h && valid_x_h) ?
-                       dz_h * dy_h * dx_h * input[z_h * (width * height) + y_h * width + x_h]
-                                                             : static_cast<scalar_t>(0);
-
+                if (valid_z_l && valid_y_l && valid_x_l)
+                    val += dz_l * dy_l * dx_l * input[z_l * (width * height) + y_l * width + x_l];
+                if (valid_z_l && valid_y_l && valid_x_h)
+                    val += dz_l * dy_l * dx_h * input[z_l * (width * height) + y_l * width + x_h];
+                if (valid_z_l && valid_y_h && valid_x_l)
+                    val += dz_l * dy_h * dx_l * input[z_l * (width * height) + y_h * width + x_l];
+                if (valid_z_l && valid_y_h && valid_x_h)
+                    val += dz_l * dy_h * dx_h * input[z_l * (width * height) + y_h * width + x_h];
+                if (valid_z_h && valid_y_l && valid_x_l)
+                    val += dz_h * dy_l * dx_l * input[z_h * (width * height) + y_l * width + x_l];
+                if (valid_z_h && valid_y_l && valid_x_h)
+                    val += dz_h * dy_l * dx_h * input[z_h * (width * height) + y_l * width + x_h];
+                if (valid_z_h && valid_y_h && valid_x_l)
+                    val += dz_h * dy_h * dx_l * input[z_h * (width * height) + y_h * width + x_l];
+                if (valid_z_h && valid_y_h && valid_x_h)
+                    val += dz_h * dy_h * dx_h * input[z_h * (width * height) + y_h * width + x_h];
                 return val;
             }
         }
@@ -237,63 +218,64 @@ namespace tvdcn {
                 const int n_mask_grps,
                 scalar_t *columns) {
             CPU_1D_KERNEL_LOOP(index, n_kernels) {
-                int out_x = index % out_w;
-                int out_y = (index / out_w) % out_h;
-                int out_z = (index / (out_w * out_h)) % out_d;
-                int out_b = (index / (out_w * out_h * out_d)) % batch_sz;
-                int in_c = index / (out_w * out_h * out_d * batch_sz);
-                int out_c = in_c * weight_d * weight_h * weight_w;
+                const int out_x = index % out_w;
+                const int out_y = (index / out_w) % out_h;
+                const int out_z = (index / (out_w * out_h)) % out_d;
+                const int out_b = (index / (out_w * out_h * out_d)) % batch_sz;
+                const int in_c = index / (out_w * out_h * out_d * batch_sz);
+                const int out_c = in_c * weight_d * weight_h * weight_w;
 
-                int offset_grp = in_c / c_per_offset_grp;
-                int mask_grp = in_c / c_per_mask_grp;
+                const int offset_grp = in_c / c_per_offset_grp;
+                const int mask_grp = in_c / c_per_mask_grp;
 
-                int columns_ptr = (out_c * (batch_sz * out_d * out_h * out_w) + out_b * (out_d * out_h * out_w) +
-                                   out_z * (out_h * out_w) + out_y * out_w + out_x);
-                int input_ptr = (out_b * (in_channels * depth * height * width) + in_c * (depth * height * width));
-                int offset_ptr =
-                        (out_b * n_offset_grps + offset_grp) * 3 * weight_d * weight_h * weight_w * out_d * out_h *
-                        out_w;
-                int mask_ptr =
-                        (out_b * n_mask_grps + mask_grp) * weight_d * weight_h * weight_w * out_d * out_h * out_w;
+                auto columns_ptr = columns +
+                                   (out_c * (batch_sz * out_d * out_h * out_w) + out_b * (out_d * out_h * out_w) +
+                                    out_z * (out_h * out_w) + out_y * out_w + out_x);
+                auto input_ptr = input +
+                                 (out_b * (in_channels * depth * height * width) + in_c * (depth * height * width));
+                auto offset_ptr = offset +
+                                  (out_b * n_offset_grps + offset_grp) * 3 * weight_d * weight_h * weight_w *
+                                  out_d * out_h * out_w;
+                auto mask_ptr = mask +
+                                (out_b * n_mask_grps + mask_grp) * weight_d * weight_h * weight_w *
+                                out_d * out_h * out_w;
 
                 for (int i = 0; i < weight_d; ++i) {
                     for (int j = 0; j < weight_h; ++j) {
                         for (int k = 0; k < weight_w; ++k) {
-                            int mask_idx = (i * weight_h * weight_w + j * weight_w + k);
-                            int offset_idx = 3 * mask_idx;
+                            const int mask_idx = i * weight_h * weight_w + j * weight_w + k;
+                            const int offset_idx = 3 * mask_idx;
 
-                            const scalar_t offset_d = deformable ?
-                                                      offset[offset_ptr + offset_idx * (out_d * out_h * out_w) +
-                                                             out_z * (out_h * out_w) +
-                                                             out_y * out_w + out_x] : static_cast<scalar_t>(0);
-                            const scalar_t offset_h = deformable ?
-                                                      offset[offset_ptr +
-                                                             (offset_idx + 1) * (out_d * out_h * out_w) +
-                                                             out_z * (out_h * out_w) +
-                                                             out_y * out_w + out_x] : static_cast<scalar_t>(0);
-                            const scalar_t offset_w = deformable ?
-                                                      offset[offset_ptr +
-                                                             (offset_idx + 2) * (out_d * out_h * out_w) +
-                                                             out_z * (out_h * out_w) +
-                                                             out_y * out_w + out_x] : static_cast<scalar_t>(0);
+                            const scalar_t offset_d =
+                                    deformable ?
+                                    offset_ptr[((offset_idx * out_d + out_z) * out_h + out_y) * out_w + out_x]
+                                               : static_cast<scalar_t>(0);
+                            const scalar_t offset_h =
+                                    deformable ?
+                                    offset_ptr[(((offset_idx + 1) * out_d + out_z) * out_h + out_y) * out_w + out_x]
+                                               : static_cast<scalar_t>(0);
+                            const scalar_t offset_w =
+                                    deformable ?
+                                    offset_ptr[(((offset_idx + 2) * out_d + out_z) * out_h + out_y) * out_w + out_x]
+                                               : static_cast<scalar_t>(0);
                             const scalar_t z = (out_z * stride_d - pad_d) + i * dilation_d + offset_d;
                             const scalar_t y = (out_y * stride_h - pad_h) + j * dilation_h + offset_h;
                             const scalar_t x = (out_x * stride_w - pad_w) + k * dilation_w + offset_w;
 
-                            const scalar_t val = deformable ?
-                                                 interpolate_sample(input + input_ptr, depth, height, width, z, y,
-                                                                    x)
-                                                            : sample(input + input_ptr, depth, height, width,
-                                                                     static_cast<int>(z),
-                                                                     static_cast<int>(y),
-                                                                     static_cast<int>(x));
+                            const scalar_t val =
+                                    deformable ?
+                                    interpolate_sample(input_ptr, depth, height, width, z, y, x)
+                                               : sample(input_ptr, depth, height, width,
+                                                        static_cast<int>(z),
+                                                        static_cast<int>(y),
+                                                        static_cast<int>(x));
 
-                            const scalar_t mask_val = modulated ?
-                                                      mask[mask_ptr + mask_idx * (out_d * out_h * out_w) +
-                                                           out_z * out_h * out_y + out_y * out_w +
-                                                           out_x] : static_cast<scalar_t>(1);
+                            const scalar_t mask_val =
+                                    modulated ?
+                                    mask_ptr[((mask_idx * out_d + out_z) * out_h + out_y) * out_w + out_x]
+                                              : static_cast<scalar_t>(1);
 
-                            columns[columns_ptr] = val * mask_val;
+                            *columns_ptr = val * mask_val;
                             columns_ptr += batch_sz * out_d * out_h * out_w;
                         }
                     }
@@ -412,43 +394,47 @@ namespace tvdcn {
                 const int i = (index / (out_w * out_h * out_d * batch_sz * weight_w * weight_h)) % weight_d;
                 const int c = index / (out_w * out_h * out_d * batch_sz * weight_w * weight_h * weight_d);
 
-                int offset_grp = c / c_per_offset_grp;
-                int mask_grp = c / c_per_mask_grp;
+                const int offset_grp = c / c_per_offset_grp;
+                const int mask_grp = c / c_per_mask_grp;
 
-                int offset_ptr =
-                        (b * n_offset_grps + offset_grp) * 3 * weight_d * weight_h * weight_w * out_d * out_h *
-                        out_w;
-                int mask_ptr =
-                        (b * n_mask_grps + mask_grp) * weight_d * weight_h * weight_w * out_d * out_h * out_w;
+                const int mask_idx = (i * weight_h * weight_w + j * weight_w + k);
+                const int offset_idx = 3 * mask_idx;
 
-                int mask_idx = (i * weight_h * weight_w + j * weight_w + k);
-                int offset_idx = 3 * mask_idx;
-                int offset_d_ptr =
-                        ((offset_idx * out_d + out_z) * out_h + out_y) * out_w + out_x;
-                int offset_h_ptr =
-                        (((offset_idx + 1) * out_d + out_z) * out_h + out_y) * out_w + out_x;
-                int offset_w_ptr =
-                        (((offset_idx + 2) * out_d + out_z) * out_h + out_y) * out_w + out_x;
+                auto offset_ptr = offset +
+                                  (b * n_offset_grps + offset_grp) * 3 * weight_d * weight_h * weight_w *
+                                  out_d * out_h * out_w;
+                auto mask_ptr = mask +
+                                (b * n_mask_grps + mask_grp) * weight_d * weight_h * weight_w * out_d * out_h * out_w;
 
-                const scalar_t offset_d = deformable ? offset[offset_ptr + offset_d_ptr] : static_cast<scalar_t>(0);
-                const scalar_t offset_h = deformable ? offset[offset_ptr + offset_h_ptr] : static_cast<scalar_t>(0);
-                const scalar_t offset_w = deformable ? offset[offset_ptr + offset_w_ptr] : static_cast<scalar_t>(0);
+                const scalar_t offset_d =
+                        deformable ?
+                        offset_ptr[((offset_idx * out_d + out_z) * out_h + out_y) * out_w + out_x]
+                                   : static_cast<scalar_t>(0);
+                const scalar_t offset_h =
+                        deformable ?
+                        offset_ptr[(((offset_idx + 1) * out_d + out_z) * out_h + out_y) * out_w + out_x]
+                                   : static_cast<scalar_t>(0);
+                const scalar_t offset_w =
+                        deformable ?
+                        offset_ptr[(((offset_idx + 2) * out_d + out_z) * out_h + out_y) * out_w + out_x]
+                                   : static_cast<scalar_t>(0);
                 const scalar_t z = (out_z * stride_d - pad_d) + i * dilation_d + offset_d;
                 const scalar_t y = (out_y * stride_h - pad_h) + j * dilation_h + offset_h;
                 const scalar_t x = (out_x * stride_w - pad_w) + k * dilation_w + offset_w;
 
-                const scalar_t mask_val = modulated ?
-                                          mask[mask_ptr + ((mask_idx * out_d + out_z) * out_h + out_y) * out_w +
-                                               out_x]
-                                                    : static_cast<scalar_t>(1);
+                const scalar_t mask_val =
+                        modulated ?
+                        mask_ptr[((mask_idx * out_d + out_z) * out_h + out_y) * out_w + out_x]
+                                  : static_cast<scalar_t>(1);
 
                 const scalar_t val = columns[index] * mask_val;
 
-                int grad_input_ptr = (b * in_channels + c) * depth * height * width;
+                auto grad_input_ptr = grad_input +
+                                      (b * in_channels + c) * depth * height * width;
                 if (deformable)
-                    interpolate_insert(grad_input + grad_input_ptr, depth, height, width, z, y, x, val);
+                    interpolate_insert(grad_input_ptr, depth, height, width, z, y, x, val);
                 else
-                    insert(grad_input + grad_input_ptr, depth, height, width, z, y, x, val);
+                    insert(grad_input_ptr, depth, height, width, z, y, x, val);
             }
         }
 
@@ -559,69 +545,67 @@ namespace tvdcn {
             CPU_1D_KERNEL_LOOP(index, n_offset_kernels) {
                 scalar_t grad_offset_val = 0;
 
-                int w = index % out_w;
-                int h = (index / out_w) % out_h;
-                int d = (index / (out_w * out_h)) % out_d;
-                int c = (index / (out_w * out_h * out_d)) % offset_channels;
-                int b = index / (out_w * out_h * out_d * offset_channels);
+                const int w = index % out_w;
+                const int h = (index / out_w) % out_h;
+                const int d = (index / (out_w * out_h)) % out_d;
+                const int c = (index / (out_w * out_h * out_d)) % offset_channels;
+                const int b = index / (out_w * out_h * out_d * offset_channels);
 
-                int offset_grp = c / (3 * weight_d * weight_h * weight_w);
+                const int offset_grp = c / (3 * weight_d * weight_h * weight_w);
 
-                int col_ptr =
-                        offset_grp * c_per_offset_grp * weight_d * weight_h * weight_w * batch_sz * out_d * out_h *
-                        out_w;
-                int input_ptr = (b * n_offset_grps + offset_grp) * c_per_offset_grp * depth * height * width;
-                int offset_ptr =
-                        (b * n_offset_grps + offset_grp) * 3 * weight_d * weight_h * weight_w * out_d * out_h *
-                        out_w;
+                const int col_offset = offset_grp * c_per_offset_grp * weight_d * weight_h * weight_w * batch_sz *
+                                       out_d * out_h * out_w;
+                auto columns_ptr = columns + col_offset;
+                auto input_ptr = input +
+                                 (b * n_offset_grps + offset_grp) * c_per_offset_grp * depth * height * width;
+                auto offset_ptr = offset +
+                                  (b * n_offset_grps + offset_grp) * 3 * weight_d * weight_h * weight_w *
+                                  out_d * out_h * out_w;
 
-                int offset_c = c - offset_grp * 3 * weight_d * weight_h * weight_w;
-                int direction = offset_c % 3;
+                const int offset_c = c - offset_grp * 3 * weight_d * weight_h * weight_w;
+                const int direction = offset_c % 3;
 
                 const int c_bound = c_per_offset_grp * weight_d * weight_h * weight_w;
                 const int col_step = weight_d * weight_h * weight_w;
                 for (int col_c = (offset_c / 3); col_c < c_bound; col_c += col_step) {
-                    int col_pos = (((col_c * batch_sz + b) * out_d + d) * out_h + h) * out_w + w;
-                    int in_c = (col_ptr + col_pos) * in_channels / n_kernels;
+                    const int col_pos = (((col_c * batch_sz + b) * out_d + d) * out_h + h) * out_w + w;
+                    const int in_c = (col_offset + col_pos) * in_channels / n_kernels;
 
-                    int mask_grp = in_c / c_per_mask_grp;
-                    int mask_ptr =
-                            (b * n_mask_grps + mask_grp) * weight_d * weight_h * weight_w * out_d * out_h * out_w;
+                    const int mask_grp = in_c / c_per_mask_grp;
+                    auto mask_ptr = mask +
+                                    (b * n_mask_grps + mask_grp) * weight_d * weight_h * weight_w *
+                                    out_d * out_h * out_w;
 
-                    int out_x = col_pos % out_w;
-                    int out_y = (col_pos / out_w) % out_h;
-                    int out_z = (col_pos / (out_w * out_h)) % out_d;
-                    int k = (col_pos / (out_w * out_h * out_d * batch_sz)) % weight_w;
-                    int j = (col_pos / (out_w * out_h * out_d * batch_sz * weight_w)) % weight_h;
-                    int i = (col_pos / (out_w * out_h * out_d * batch_sz * weight_w * weight_h)) % weight_d;
+                    const int out_x = col_pos % out_w;
+                    const int out_y = (col_pos / out_w) % out_h;
+                    const int out_z = (col_pos / (out_w * out_h)) % out_d;
+                    const int k = (col_pos / (out_w * out_h * out_d * batch_sz)) % weight_w;
+                    const int j = (col_pos / (out_w * out_h * out_d * batch_sz * weight_w)) % weight_h;
+                    const int i = (col_pos / (out_w * out_h * out_d * batch_sz * weight_w * weight_h)) % weight_d;
 
-                    int mask_idx = i * weight_h * weight_w + j * weight_w + k;
-                    int offset_idx = 3 * mask_idx;
-                    const scalar_t offset_d = offset[offset_ptr +
-                                                     ((offset_idx * out_d + out_z) * out_h + out_y) * out_w +
-                                                     out_x];
-                    const scalar_t offset_h = offset[offset_ptr +
-                                                     (((offset_idx + 1) * out_d + out_z) * out_h + out_y) * out_w +
-                                                     out_x];
-                    const scalar_t offset_w = offset[offset_ptr +
-                                                     (((offset_idx + 2) * out_d + out_z) * out_h + out_y) * out_w +
-                                                     out_x];
+                    const int mask_idx = i * weight_h * weight_w + j * weight_w + k;
+                    const int offset_idx = 3 * mask_idx;
+
+                    const scalar_t offset_d =
+                            offset_ptr[((offset_idx * out_d + out_z) * out_h + out_y) * out_w + out_x];
+                    const scalar_t offset_h =
+                            offset_ptr[(((offset_idx + 1) * out_d + out_z) * out_h + out_y) * out_w + out_x];
+                    const scalar_t offset_w =
+                            offset_ptr[(((offset_idx + 2) * out_d + out_z) * out_h + out_y) * out_w + out_x];
 
                     const scalar_t z = (out_z * stride_d - pad_d) + i * dilation_d + offset_d;
                     const scalar_t y = (out_y * stride_h - pad_h) + j * dilation_h + offset_h;
                     const scalar_t x = (out_x * stride_w - pad_w) + k * dilation_w + offset_w;
 
-                    const scalar_t mask_val = modulated ?
-                                              mask[mask_ptr + mask_idx * (out_d * out_h * out_w) +
-                                                   out_z * (out_h * out_w) +
-                                                   out_y * out_w +
-                                                   out_x] : static_cast<scalar_t>(1);
+                    const scalar_t mask_val =
+                            modulated ?
+                            mask_ptr[((mask_idx * out_d + out_z) * out_h + out_y) * out_w + out_x]
+                                      : static_cast<scalar_t>(1);
 
                     const scalar_t weight =
-                            trilinear_coordinate_weight(input + input_ptr, depth, height, width, z, y, x,
-                                                        direction);
+                            trilinear_coordinate_weight(input_ptr, depth, height, width, z, y, x, direction);
 
-                    grad_offset_val += columns[col_ptr + col_pos] * weight * mask_val;
+                    grad_offset_val += columns_ptr[col_pos] * weight * mask_val;
                     input_ptr += depth * height * width;
                 }
 
@@ -743,75 +727,75 @@ namespace tvdcn {
             CPU_1D_KERNEL_LOOP(index, n_mask_kernels) {
                 scalar_t grad_mask_val = 0;
 
-                int w = index % out_w;
-                int h = (index / out_w) % out_h;
-                int d = (index / (out_w * out_h)) % out_d;
-                int c = (index / (out_w * out_h * out_d)) % mask_channels;
-                int b = index / (out_w * out_h * out_d * mask_channels);
+                const int w = index % out_w;
+                const int h = (index / out_w) % out_h;
+                const int d = (index / (out_w * out_h)) % out_d;
+                const int c = (index / (out_w * out_h * out_d)) % mask_channels;
+                const int b = index / (out_w * out_h * out_d * mask_channels);
 
-                int mask_grp = c / (weight_d * weight_h * weight_w);
+                const int mask_grp = c / (weight_d * weight_h * weight_w);
 
-                int col_ptr =
-                        mask_grp * c_per_mask_grp * weight_d * weight_h * weight_w * batch_sz * out_d * out_h *
-                        out_w;
-                int input_ptr = (b * n_mask_grps + mask_grp) * c_per_mask_grp * depth * height * width;
-                int mask_ptr =
-                        (b * n_mask_grps + mask_grp) * weight_d * weight_h * weight_w * out_d * out_h * out_w;
+                const int col_offset = mask_grp * c_per_mask_grp * weight_d * weight_h * weight_w * batch_sz *
+                                       out_d * out_h * out_w;
+                auto columns_ptr = columns + col_offset;
+                auto input_ptr = input +
+                                 (b * n_mask_grps + mask_grp) * c_per_mask_grp * depth * height * width;
+                auto grad_mask_ptr = grad_mask +
+                                (b * n_mask_grps + mask_grp) * weight_d * weight_h * weight_w * out_d * out_h * out_w;
 
-                int mask_c = c - mask_grp * weight_d * weight_h * weight_w;
+                const int mask_c = c - mask_grp * weight_d * weight_h * weight_w;
 
                 const int c_bound = c_per_mask_grp * weight_d * weight_h * weight_w;
                 const int col_step = weight_d * weight_h * weight_w;
                 for (int col_c = mask_c; col_c < c_bound; col_c += col_step) {
-                    int col_pos = (((col_c * batch_sz + b) * out_d + d) * out_h + h) * out_w + w;
-                    int in_c = (col_ptr + col_pos) * in_channels / n_kernels;
+                    const int col_pos = (((col_c * batch_sz + b) * out_d + d) * out_h + h) * out_w + w;
+                    const int in_c = (col_offset + col_pos) * in_channels / n_kernels;
 
-                    int offset_grp = in_c / c_per_offset_grp;
-                    int offset_ptr =
-                            (b * n_offset_grps + offset_grp) * 3 * weight_d * weight_h * weight_w * out_d * out_h *
-                            out_w;
+                    const int offset_grp = in_c / c_per_offset_grp;
+                    auto offset_ptr = offset +
+                                      (b * n_offset_grps + offset_grp) * 3 * weight_d * weight_h * weight_w *
+                                      out_d * out_h * out_w;
 
-                    int out_x = col_pos % out_w;
-                    int out_y = (col_pos / out_w) % out_h;
-                    int out_z = (col_pos / (out_w * out_h)) % out_d;
-                    int k = (col_pos / (out_w * out_h * out_d * batch_sz)) % weight_w;
-                    int j = (col_pos / (out_w * out_h * out_d * batch_sz * weight_w)) % weight_h;
-                    int i = (col_pos / (out_w * out_h * out_d * batch_sz * weight_w * weight_h)) % weight_d;
+                    const int out_x = col_pos % out_w;
+                    const int out_y = (col_pos / out_w) % out_h;
+                    const int out_z = (col_pos / (out_w * out_h)) % out_d;
+                    const int k = (col_pos / (out_w * out_h * out_d * batch_sz)) % weight_w;
+                    const int j = (col_pos / (out_w * out_h * out_d * batch_sz * weight_w)) % weight_h;
+                    const int i = (col_pos / (out_w * out_h * out_d * batch_sz * weight_w * weight_h)) % weight_d;
 
-                    int mask_idx = i * weight_h * weight_w + j * weight_w + k;
-                    int offset_idx = 3 * mask_idx;
-                    const scalar_t offset_d = deformable ?
-                                              offset[offset_ptr +
-                                                     ((offset_idx * out_d + out_z) * out_h + out_y) * out_w +
-                                                     out_x]
-                                                         : static_cast<scalar_t>(0);
-                    const scalar_t offset_h = deformable ?
-                                              offset[offset_ptr +
-                                                     (((offset_idx + 1) * out_d + out_z) * out_h + out_y) * out_w +
-                                                     out_x]
-                                                         : static_cast<scalar_t>(0);
-                    const scalar_t offset_w = deformable ?
-                                              offset[offset_ptr +
-                                                     (((offset_idx + 2) * out_d + out_z) * out_h + out_y) * out_w +
-                                                     out_x]
-                                                         : static_cast<scalar_t>(0);
+                    const int mask_idx = i * weight_h * weight_w + j * weight_w + k;
+                    const int offset_idx = 3 * mask_idx;
+
+                    const scalar_t offset_d =
+                            deformable ?
+                            offset_ptr[((offset_idx * out_d + out_z) * out_h + out_y) * out_w + out_x]
+                                       : static_cast<scalar_t>(0);
+                    const scalar_t offset_h =
+                            deformable ?
+                            offset_ptr[(((offset_idx + 1) * out_d + out_z) * out_h + out_y) * out_w + out_x]
+                                       : static_cast<scalar_t>(0);
+                    const scalar_t offset_w =
+                            deformable ?
+                            offset_ptr[(((offset_idx + 2) * out_d + out_z) * out_h + out_y) * out_w + out_x]
+                                       : static_cast<scalar_t>(0);
 
                     const scalar_t z = (out_z * stride_d - pad_d) + i * dilation_d + offset_d;
                     const scalar_t y = (out_y * stride_h - pad_h) + j * dilation_h + offset_h;
                     const scalar_t x = (out_x * stride_w - pad_w) + k * dilation_w + offset_w;
 
-                    const scalar_t val = deformable ?
-                                         interpolate_sample(input + input_ptr, depth, height, width, z, y, x)
-                                                    : sample(input + input_ptr, depth, height, width,
-                                                             static_cast<int>(z),
-                                                             static_cast<int>(y),
-                                                             static_cast<int>(x));
+                    const scalar_t val =
+                            deformable ?
+                            interpolate_sample(input_ptr, depth, height, width, z, y, x)
+                                       : sample(input_ptr, depth, height, width,
+                                                static_cast<int>(z),
+                                                static_cast<int>(y),
+                                                static_cast<int>(x));
 
-                    grad_mask_val += columns[col_ptr + col_pos] * val;
+                    grad_mask_val += columns_ptr[col_pos] * val;
                     input_ptr += depth * height * width;
                 }
 
-                grad_mask[mask_ptr + ((mask_c * out_d + d) * out_h + h) * out_w + w] = grad_mask_val;
+                grad_mask_ptr[((mask_c * out_d + d) * out_h + h) * out_w + w] = grad_mask_val;
             }
         }
 

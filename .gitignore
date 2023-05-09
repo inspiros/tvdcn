@@ -349,3 +349,6 @@ build/
 dist/
 wheelhouse/
 *.egg-info/
+
+# secret
+develop/

@@ -562,11 +562,15 @@ namespace tvdcn {
                         columns);
 
                 for (int g = 0; g < groups; g++) {
-                    grad_inp_buf[b][g] = grad_inp_buf[b][g].flatten(1).addmm_(
-                            weight_c[g].flatten(1), columns[g]).view_as(grad_inp_buf[b][g]);
+                    grad_inp_buf[b][g] = grad_inp_buf[b][g]
+                            .flatten(1)
+                            .addmm_(weight_c[g].flatten(1), columns[g])
+                            .view_as(grad_inp_buf[b][g]);
 
-                    grad_weight[g] = grad_weight[g].flatten(1).addmm_(
-                            inp_buf[b][g].flatten(1), columns[g].transpose(1, 0)).view_as(grad_weight[g]);
+                    grad_weight[g] = grad_weight[g]
+                            .flatten(1)
+                            .addmm_(inp_buf[b][g].flatten(1), columns[g].transpose(1, 0))
+                            .view_as(grad_weight[g]);
                 }
             }
 
@@ -577,14 +581,28 @@ namespace tvdcn {
                                               in_h,
                                               in_w}).transpose_(1, 2);
             grad_input.copy_(grad_inp_buf);
-            grad_input = grad_input.view({batch_sz, in_channels, in_d, in_h, in_w});
-            grad_weight = grad_weight.view({in_channels, out_channels / groups, weight_d, weight_h, weight_w});
+            grad_input = grad_input.view({batch_sz,
+                                          in_channels,
+                                          in_d,
+                                          in_h,
+                                          in_w});
+            grad_weight = grad_weight.view({in_channels,
+                                            out_channels / groups,
+                                            weight_d,
+                                            weight_h,
+                                            weight_w});
             if (deformable)
-                grad_offset = grad_offset.view(
-                        {batch_sz, offset_groups * 3 * weight_d * weight_h * weight_w, in_d, in_h, in_w});
+                grad_offset = grad_offset.view({batch_sz,
+                                                offset_groups * 3 * weight_d * weight_h * weight_w,
+                                                in_d,
+                                                in_h,
+                                                in_w});
             if (modulated)
-                grad_mask = grad_mask.view(
-                        {batch_sz, mask_groups * weight_d * weight_h * weight_w, in_d, in_h, in_w});
+                grad_mask = grad_mask.view({batch_sz,
+                                            mask_groups * weight_d * weight_h * weight_w,
+                                            in_d,
+                                            in_h,
+                                            in_w});
             grad_bias *= grad_out.sum(at::IntArrayRef({0, 2, 3, 4}));
 
             return std::make_tuple(grad_input, grad_weight, grad_offset, grad_mask, grad_bias);

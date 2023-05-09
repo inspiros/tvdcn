@@ -20,9 +20,8 @@ namespace tvdcn {
                     const scalar_t *input,
                     const int width,
                     const scalar_t x) {
-                if (x <= -1 || width <= x) {
+                if (x <= -1 || width <= x)
                     return 0;
-                }
 
                 int x_l = floor(x);
                 int x_h = x_l + 1;
@@ -36,7 +35,6 @@ namespace tvdcn {
                 scalar_t val = 0;
                 if (valid_x_l) val += dx_l * input[x_l];
                 if (valid_x_h) val += dx_h * input[x_h];
-
                 return val;
             }
 
@@ -86,7 +84,6 @@ namespace tvdcn {
                 scalar_t val = 0;
                 if (valid_x_l) val += dx_l * input[x_l];
                 if (valid_x_h) val += dx_h * input[x_h];
-
                 return val;
             }
         }
@@ -111,35 +108,44 @@ namespace tvdcn {
                 const int n_mask_grps,
                 scalar_t *columns) {
             CUDA_1D_KERNEL_LOOP(index, n_kernels) {
-                int out_x = index % out_w;
-                int out_b = (index / out_w) % batch_sz;
-                int in_c = index / (out_w * batch_sz);
-                int out_c = in_c * weight_w;
+                const int out_x = index % out_w;
+                const int out_b = (index / out_w) % batch_sz;
+                const int in_c = index / (out_w * batch_sz);
+                const int out_c = in_c * weight_w;
 
-                int offset_grp = in_c / c_per_offset_grp;
-                int mask_grp = in_c / c_per_mask_grp;
+                const int offset_grp = in_c / c_per_offset_grp;
+                const int mask_grp = in_c / c_per_mask_grp;
 
-                int columns_ptr = (out_c * (batch_sz * out_w) + out_b * out_w + out_x);
-                int input_ptr = (out_b * (in_channels * width) + in_c * width);
-                int offset_ptr = (out_b * n_offset_grps + offset_grp) * weight_w * out_w;
-                int mask_ptr = (out_b * n_mask_grps + mask_grp) * weight_w * out_w;
+                auto columns_ptr = columns +
+                                   (out_c * (batch_sz * out_w) + out_b * out_w + out_x);
+                auto input_ptr = input +
+                                 (out_b * (in_channels * width) + in_c * width);
+                auto offset_ptr = offset +
+                                  (out_b * n_offset_grps + offset_grp) * weight_w * out_w;
+                auto mask_ptr = mask +
+                                (out_b * n_mask_grps + mask_grp) * weight_w * out_w;
 
                 for (int i = 0; i < weight_w; ++i) {
-                    int mask_idx = i;
-                    int offset_idx = mask_idx;
+                    const int mask_idx = i;
+                    const int offset_idx = mask_idx;
 
-                    const scalar_t offset_w = deformable ?
-                                              offset[offset_ptr + offset_idx * out_w + out_x]
-                                                         : static_cast<scalar_t>(0);
+                    const scalar_t offset_w =
+                            deformable ?
+                            offset_ptr[offset_idx * out_w + out_x]
+                                       : static_cast<scalar_t>(0);
                     const scalar_t x = (out_x * stride_w - pad_w) + i * dilation_w + offset_w;
-                    const scalar_t val = deformable ?
-                                         interpolate_sample(input + input_ptr, width, x)
-                                                    : sample(input + input_ptr, width, static_cast<int>(x));
 
-                    const scalar_t mask_val = modulated ?
-                                              mask[mask_ptr + mask_idx * out_w + out_x] : static_cast<scalar_t>(1);
+                    const scalar_t val =
+                            deformable ?
+                            interpolate_sample(input_ptr, width, x)
+                                       : sample(input_ptr, width, static_cast<int>(x));
 
-                    columns[columns_ptr] = val * mask_val;
+                    const scalar_t mask_val =
+                            modulated ?
+                            mask_ptr[mask_idx * out_w + out_x]
+                                      : static_cast<scalar_t>(1);
+
+                    *columns_ptr = val * mask_val;
                     columns_ptr += batch_sz * out_w;
                 }
             }
@@ -219,35 +225,42 @@ namespace tvdcn {
                 const int n_mask_grps,
                 scalar_t *grad_input) {
             CUDA_1D_KERNEL_LOOP(index, n_kernels) {
-                int out_x = index % out_w;
-                int b = (index / out_w) % batch_sz;
-                int i = (index / (out_w * batch_sz)) % weight_w;
-                int c = index / (out_w * batch_sz * weight_w);
+                const int out_x = index % out_w;
+                const int b = (index / out_w) % batch_sz;
+                const int i = (index / (out_w * batch_sz)) % weight_w;
+                const int c = index / (out_w * batch_sz * weight_w);
 
-                int offset_grp = c / c_per_offset_grp;
-                int mask_grp = c / c_per_mask_grp;
+                const int offset_grp = c / c_per_offset_grp;
+                const int mask_grp = c / c_per_mask_grp;
 
-                int offset_ptr = (b * n_offset_grps + offset_grp) * weight_w * out_w;
-                int mask_ptr = (b * n_mask_grps + mask_grp) * weight_w * out_w;
+                auto offset_ptr = offset +
+                                  (b * n_offset_grps + offset_grp) * weight_w * out_w;
+                auto mask_ptr = mask +
+                                (b * n_mask_grps + mask_grp) * weight_w * out_w;
 
-                int mask_idx = i;
-                int offset_idx = mask_idx;
-                int offset_w_ptr = offset_idx * out_w + out_x;
+                const int mask_idx = i;
+                const int offset_idx = mask_idx;
+                const int offset_w_ptr = offset_idx * out_w + out_x;
 
-                const scalar_t offset_w = deformable ?
-                                          offset[offset_ptr + offset_w_ptr] : static_cast<scalar_t>(0);
+                const scalar_t offset_w =
+                        deformable ?
+                        offset_ptr[offset_w_ptr]
+                                   : static_cast<scalar_t>(0);
                 const scalar_t x = (out_x * stride_w - pad_w) + i * dilation_w + offset_w;
 
-                const scalar_t mask_val = modulated ?
-                                          mask[mask_ptr + mask_idx * out_w + out_x] : static_cast<scalar_t>(1);
+                const scalar_t mask_val =
+                        modulated ?
+                        mask_ptr[mask_idx * out_w + out_x]
+                                  : static_cast<scalar_t>(1);
 
                 const scalar_t val = columns[index] * mask_val;
 
-                int grad_input_ptr = (b * in_channels + c) * width;
+                auto grad_input_ptr = grad_input +
+                                      (b * in_channels + c) * width;
                 if (deformable)
-                    interpolate_insert(grad_input + grad_input_ptr, width, x, val);
+                    interpolate_insert(grad_input_ptr, width, x, val);
                 else
-                    insert(grad_input + grad_input_ptr, width, x, val);
+                    insert(grad_input_ptr, width, x, val);
             }
         }
 
@@ -330,41 +343,48 @@ namespace tvdcn {
             CUDA_1D_KERNEL_LOOP(index, n_offset_kernels) {
                 scalar_t grad_offset_val = 0;
 
-                int w = index % out_w;
-                int c = (index / out_w) % offset_channels;
-                int b = index / (out_w * offset_channels);
+                const int w = index % out_w;
+                const int c = (index / out_w) % offset_channels;
+                const int b = index / (out_w * offset_channels);
 
-                int offset_grp = c / weight_w;
+                const int offset_grp = c / weight_w;
 
-                int col_ptr = offset_grp * c_per_offset_grp * weight_w * batch_sz * out_w;
-                int input_ptr = (b * n_offset_grps + offset_grp) * c_per_offset_grp * width;
-                int offset_ptr = (b * n_offset_grps + offset_grp) * weight_w * out_w;
+                const int col_offset = offset_grp * c_per_offset_grp * weight_w * batch_sz * out_w;
+                auto columns_ptr = columns + col_offset;
+                auto input_ptr = input +
+                                 (b * n_offset_grps + offset_grp) * c_per_offset_grp * width;
+                auto offset_ptr = offset +
+                                  (b * n_offset_grps + offset_grp) * weight_w * out_w;
 
-                int offset_c = c - offset_grp * weight_w;
+                const int offset_c = c - offset_grp * weight_w;
 
                 const int c_bound = c_per_offset_grp * weight_w;
                 const int col_step = weight_w;
                 for (int col_c = offset_c; col_c < c_bound; col_c += col_step) {
-                    int col_pos = ((col_c * batch_sz + b) * out_w) + w;
-                    int in_c = (col_ptr + col_pos) * in_channels / n_kernels;
+                    const int col_pos = ((col_c * batch_sz + b) * out_w) + w;
+                    const int in_c = (col_offset + col_pos) * in_channels / n_kernels;
 
-                    int mask_grp = in_c / c_per_mask_grp;
-                    int mask_ptr = (b * n_mask_grps + mask_grp) * weight_w * out_w;
+                    const int mask_grp = in_c / c_per_mask_grp;
+                    auto mask_ptr = mask +
+                                    (b * n_mask_grps + mask_grp) * weight_w * out_w;
 
-                    int out_x = col_pos % out_w;
-                    int i = (col_pos / (out_w * batch_sz)) % weight_w;
+                    const int out_x = col_pos % out_w;
+                    const int i = (col_pos / (out_w * batch_sz)) % weight_w;
 
-                    int mask_idx = i;
-                    int offset_idx = mask_idx;
+                    const int mask_idx = i;
+                    const int offset_idx = mask_idx;
 
-                    const scalar_t offset_w = offset[offset_ptr + offset_idx * out_w + out_x];
+                    const scalar_t offset_w = offset_ptr[offset_idx * out_w + out_x];
                     const scalar_t x = (out_x * stride_w - pad_w) + i * dilation_w + offset_w;
-                    const scalar_t weight = linear_coordinate_weight(input + input_ptr, width, x);
 
-                    const scalar_t mask_val = modulated ?
-                                              mask[mask_ptr + mask_idx * out_w + out_x] : static_cast<scalar_t>(1);
+                    const scalar_t weight = linear_coordinate_weight(input_ptr, width, x);
 
-                    grad_offset_val += columns[col_ptr + col_pos] * weight * mask_val;
+                    const scalar_t mask_val =
+                            modulated ?
+                            mask_ptr[mask_idx * out_w + out_x]
+                                      : static_cast<scalar_t>(1);
+
+                    grad_offset_val += columns_ptr[col_pos] * weight * mask_val;
                     input_ptr += width;
                 }
 
@@ -457,45 +477,53 @@ namespace tvdcn {
             CUDA_1D_KERNEL_LOOP(index, n_mask_kernels) {
                 scalar_t grad_mask_val = 0;
 
-                int w = index % out_w;
-                int c = (index / out_w) % mask_channels;
-                int b = index / (out_w * mask_channels);
+                const int w = index % out_w;
+                const int c = (index / out_w) % mask_channels;
+                const int b = index / (out_w * mask_channels);
 
-                int mask_grp = c / weight_w;
+                const int mask_grp = c / weight_w;
 
-                int col_ptr = mask_grp * c_per_mask_grp * weight_w * batch_sz * out_w;
-                int input_ptr = (b * n_mask_grps + mask_grp) * c_per_mask_grp * width;
-                int mask_ptr = (b * n_mask_grps + mask_grp) * weight_w * out_w;
+                const int col_offset = mask_grp * c_per_mask_grp * weight_w * batch_sz * out_w;
+                auto columns_ptr = columns + col_offset;
+                auto input_ptr = input +
+                                 (b * n_mask_grps + mask_grp) * c_per_mask_grp * width;
+                auto grad_mask_ptr = grad_mask +
+                                     (b * n_mask_grps + mask_grp) * weight_w * out_w;
 
-                int mask_c = c - mask_grp * weight_w;
+                const int mask_c = c - mask_grp * weight_w;
 
                 const int c_bound = c_per_mask_grp * weight_w;
                 const int col_step = weight_w;
                 for (int col_c = mask_c; col_c < c_bound; col_c += col_step) {
-                    int col_pos = ((col_c * batch_sz + b) * out_w) + w;
-                    int in_c = (col_ptr + col_pos) * in_channels / n_kernels;
+                    const int col_pos = ((col_c * batch_sz + b) * out_w) + w;
+                    const int in_c = (col_offset + col_pos) * in_channels / n_kernels;
 
-                    int offset_grp = in_c / c_per_offset_grp;
-                    int offset_ptr = (b * n_offset_grps + offset_grp) * weight_w * out_w;
+                    const int offset_grp = in_c / c_per_offset_grp;
+                    auto offset_ptr = offset +
+                                      (b * n_offset_grps + offset_grp) * weight_w * out_w;
 
-                    int out_x = col_pos % out_w;
-                    int i = (col_pos / (out_w * batch_sz)) % weight_w;
+                    const int out_x = col_pos % out_w;
+                    const int i = (col_pos / (out_w * batch_sz)) % weight_w;
 
-                    int mask_idx = i;
-                    int offset_idx = mask_idx;
-                    const scalar_t offset_w = deformable ?
-                                              offset[offset_ptr + offset_idx * out_w + out_x]
-                                                         : static_cast<scalar_t>(0);
+                    const int mask_idx = i;
+                    const int offset_idx = mask_idx;
+
+                    const scalar_t offset_w =
+                            deformable ?
+                            offset_ptr[offset_idx * out_w + out_x]
+                                       : static_cast<scalar_t>(0);
                     const scalar_t x = (out_x * stride_w - pad_w) + i * dilation_w + offset_w;
-                    const scalar_t val = deformable ?
-                                         interpolate_sample(input + input_ptr, width, x)
-                                                    : sample(input + input_ptr, width, static_cast<int>(x));
 
-                    grad_mask_val += columns[col_ptr + col_pos] * val;
+                    const scalar_t val =
+                            deformable ?
+                            interpolate_sample(input_ptr, width, x)
+                                       : sample(input_ptr, width, static_cast<int>(x));
+
+                    grad_mask_val += columns_ptr[col_pos] * val;
                     input_ptr += width;
                 }
 
-                grad_mask[mask_ptr + mask_c * out_w + w] = grad_mask_val;
+                grad_mask_ptr[mask_c * out_w + w] = grad_mask_val;
             }
         }
 

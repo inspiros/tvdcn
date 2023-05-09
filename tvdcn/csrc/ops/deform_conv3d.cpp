@@ -219,8 +219,12 @@ namespace tvdcn {
             auto out = at::zeros({batch_sz, out_channels, out_d, out_h, out_w}, input_c.options());
 
             // Separate batches into blocks
-            input_c = input_c.view(
-                    {batch_sz / n_parallel_imgs, n_parallel_imgs, in_channels, in_d, in_h, in_w});
+            input_c = input_c.view({batch_sz / n_parallel_imgs,
+                                    n_parallel_imgs,
+                                    in_channels,
+                                    in_d,
+                                    in_h,
+                                    in_w});
             if (deformable)
                 offset_c = offset_c.view({batch_sz / n_parallel_imgs,
                                           n_parallel_imgs,
@@ -271,7 +275,6 @@ namespace tvdcn {
                     input_c.options());
             columns = columns.view(
                     {groups, columns.size(0) / groups, columns.size(1)});
-
             for (int b = 0; b < batch_sz / n_parallel_imgs; b++) {
                 vol2col(
                         input_c[b],
@@ -386,10 +389,18 @@ namespace tvdcn {
             auto grad_bias = at::ones_like(bias_c);
 
             // Separate into blocks
-            grad_input = grad_input.reshape(
-                    {batch_sz / n_parallel_imgs, n_parallel_imgs, in_channels, in_d, in_h, in_w});
-            input_c = input_c.reshape(
-                    {batch_sz / n_parallel_imgs, n_parallel_imgs, in_channels, in_d, in_h, in_w});
+            grad_input = grad_input.reshape({batch_sz / n_parallel_imgs,
+                                             n_parallel_imgs,
+                                             in_channels,
+                                             in_d,
+                                             in_h,
+                                             in_w});
+            input_c = input_c.reshape({batch_sz / n_parallel_imgs,
+                                       n_parallel_imgs,
+                                       in_channels,
+                                       in_d,
+                                       in_h,
+                                       in_w});
 
             if (deformable) {
                 grad_offset = grad_offset.reshape({batch_sz / n_parallel_imgs,
@@ -444,16 +455,15 @@ namespace tvdcn {
                                          weight_w});
 
             auto columns = at::empty(
-                    {in_channels * weight_d * weight_w * weight_h, n_parallel_imgs * out_d * out_h * out_w},
+                    {in_channels * weight_d * weight_h * weight_w, n_parallel_imgs * out_d * out_h * out_w},
                     input_c.options());
             columns = columns.view(
                     {groups, columns.size(0) / groups, columns.size(1)});
-
             for (int b = 0; b < batch_sz / n_parallel_imgs; b++) {
                 columns.zero_();
                 for (int g = 0; g < groups; g++) {
-                    columns[g] = columns[g].addmm_(
-                            weight_c[g].flatten(1).transpose(0, 1), grad_out_c[b][g].flatten(1));
+                    columns[g] = columns[g]
+                            .addmm_(weight_c[g].flatten(1).transpose(0, 1), grad_out_c[b][g].flatten(1));
                 }
 
                 auto grad_offset_b = grad_offset[b];
@@ -580,20 +590,35 @@ namespace tvdcn {
                         modulated,
                         columns);
                 for (int g = 0; g < groups; g++) {
-                    grad_weight[g] = grad_weight[g].flatten(1).addmm_(grad_out_c[b][g].flatten(1),
-                                                                      columns[g].transpose(1, 0)).view_as(
-                            grad_weight[g]);
+                    grad_weight[g] = grad_weight[g]
+                            .flatten(1)
+                            .addmm_(grad_out_c[b][g].flatten(1), columns[g].transpose(1, 0))
+                            .view_as(grad_weight[g]);
                 }
             }
 
-            grad_input = grad_input.view({batch_sz, in_channels, in_d, in_h, in_w});
-            grad_weight = grad_weight.view({out_channels, in_channels / groups, weight_d, weight_h, weight_w});
+            grad_input = grad_input.view({batch_sz,
+                                          in_channels,
+                                          in_d,
+                                          in_h,
+                                          in_w});
+            grad_weight = grad_weight.view({out_channels,
+                                            in_channels / groups,
+                                            weight_d,
+                                            weight_h,
+                                            weight_w});
             if (deformable)
-                grad_offset = grad_offset.view(
-                        {batch_sz, offset_groups * 3 * weight_d * weight_h * weight_w, out_d, out_h, out_w});
+                grad_offset = grad_offset.view({batch_sz,
+                                                offset_groups * 3 * weight_d * weight_h * weight_w,
+                                                out_d,
+                                                out_h,
+                                                out_w});
             if (modulated)
-                grad_mask = grad_mask.view(
-                        {batch_sz, mask_groups * weight_d * weight_h * weight_w, out_d, out_h, out_w});
+                grad_mask = grad_mask.view({batch_sz,
+                                            mask_groups * weight_d * weight_h * weight_w,
+                                            out_d,
+                                            out_h,
+                                            out_w});
             grad_bias *= grad_out.sum(at::IntArrayRef({0, 2, 3, 4}));
 
             return std::make_tuple(grad_input, grad_weight, grad_offset, grad_mask, grad_bias);
