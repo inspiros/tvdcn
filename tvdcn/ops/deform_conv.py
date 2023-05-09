@@ -35,46 +35,38 @@ def deform_conv1d(
         dilation: Tuple[int] = (1,),
         groups: int = 1) -> Tensor:
     r"""
-    Performs 1D version of Deformable Convolution v2, described in
-    `Deformable ConvNets v2: More Deformable, Better Results
-    <https://arxiv.org/abs/1811.11168>`__ if :attr:`mask` is not ``None`` and
-    Performs 1D version of Deformable Convolution, described in
-    `Deformable Convolutional Networks
-    <https://arxiv.org/abs/1703.06211>`__ if :attr:`mask` is ``None``.
+    Performs 1D Deformable Convolution.
 
     Arguments:
-        input (Tensor[batch_size, in_channels, in_height, in_width]): input tensor
-        weight (Tensor[out_channels, in_channels // groups, kernel_height, kernel_width]):
+        input (Tensor[batch_size, in_channels, in_width]): input tensor
+        weight (Tensor[out_channels, in_channels // groups, kernel_width]):
             convolution weights, split into groups of size (in_channels // groups)
-        offset (Tensor[batch_size, offset_groups * kernel_height * kernel_width,
-            out_height, out_width]): offsets to be applied for each position in the
-            convolution kernel. Default: None
-        mask (Tensor[batch_size, offset_groups * kernel_height * kernel_width,
-            out_height, out_width]): modulation masks to be multiplied with each output
-            of convolution kernel. Default: None
+        offset (Tensor[batch_size, offset_groups * kernel_width, out_width]): offsets
+            to be applied for each position in the convolution kernel. Default: None
+        mask (Tensor[batch_size, mask_groups * kernel_width, out_width]): modulation
+            masks to be multiplied with each output of convolution kernel. Default: None
         bias (Tensor[out_channels]): optional bias of shape (out_channels,). Default: None
         stride (int or Tuple[int]): distance between convolution centers. Default: 1
-        padding (int or Tuple[int]): height/width of padding of zeroes around
-            each image. Default: 0
+        padding (int or Tuple[int]): padding of zeroes around the input. Default: 0
         dilation (int or Tuple[int]): the spacing between kernel elements. Default: 1
         groups (int): number of blocked connections from input channels to output channels.
             Default: 1
 
     Returns:
-        output (Tensor[batch_sz, out_channels, out_h, out_w]): result of convolution
+        output (Tensor[batch_sz, out_channels, out_w]): result of convolution
 
     Examples:
         >>> input = torch.rand(1, 3, 10)
         >>> kw = 3
         >>> weight = torch.rand(5, 3, kw)
-        >>> # offset and mask should have the same spatial size as the output
-        >>> # of the convolution. In this case, for an input of 10, stride of 1
-        >>> # and kernel size of 3, without padding, the output size is 8
+        >>> # offset and mask should have the same spatial size as the output.
+        >>> # In this case, for an input of 10, stride of 1 and kernel size of 3,
+        >>> # without padding, the output size is 8.
         >>> offset = torch.rand(5, kw, 8)
         >>> mask = torch.rand(5, kw, 8).sigmoid()
         >>> out = deform_conv1d(input, weight, offset, mask)
         >>> print(out.shape)
-        >>> # returns
+        Output:
         >>>  torch.Size([1, 5, 8])
     """
     if not torch.jit.is_scripting() and not torch.jit.is_tracing():
@@ -84,8 +76,6 @@ def deform_conv1d(
 
     deformable = offset is not None
     modulated = mask is not None
-    if not deformable and not modulated:
-        return F.conv1d(input, weight, bias, stride, padding, dilation, groups)
 
     if offset is None:
         offset = torch.zeros((input.shape[0], 0), device=input.device, dtype=input.dtype)
@@ -101,20 +91,20 @@ def deform_conv1d(
     weight_w = weight.shape[-1]
     _, n_in_channels, in_w = input.shape
 
+    n_weight_grps = n_in_channels // weight.shape[1]
     n_offset_grps = offset.shape[1] // weight_w
     n_mask_grps = mask.shape[1] // weight_w
-    n_weight_grps = n_in_channels // weight.shape[1]
 
     assert n_weight_grps == groups
     if deformable and n_offset_grps == 0:
         raise RuntimeError(
-            "the shape of the offset tensor at dimension 1 is not valid. It should "
+            "The shape of the offset tensor at dimension 1 is not valid. It should "
             "be a multiple of weight.size[2].\n"
             "Got offset.shape[1]={}, while weight.size[2]={}".format(
                 offset.shape[1], weight_w))
     if modulated and n_mask_grps == 0:
         raise RuntimeError(
-            "the shape of the mask tensor at dimension 1 is not valid. It should "
+            "The shape of the mask tensor at dimension 1 is not valid. It should "
             "be a multiple of weight.size[2].\n"
             "Got mask.shape[1]={}, while weight.size[2]={}".format(
                 mask.shape[1], weight_w))
@@ -146,12 +136,11 @@ def deform_conv2d(
         dilation: Tuple[int, int] = (1, 1),
         groups: int = 1) -> Tensor:
     r"""
-    Performs Deformable Convolution v2, described in
-    `Deformable ConvNets v2: More Deformable, Better Results
-    <https://arxiv.org/abs/1811.11168>`__ if :attr:`mask` is not ``None`` and
-    Performs Deformable Convolution, described in
-    `Deformable Convolutional Networks
-    <https://arxiv.org/abs/1703.06211>`__ if :attr:`mask` is ``None``.
+    Performs 2D Deformable Convolution.
+
+    References:
+        https://arxiv.org/abs/1811.11168
+        https://arxiv.org/abs/1703.06211
 
     Arguments:
         input (Tensor[batch_size, in_channels, in_height, in_width]): input tensor
@@ -165,8 +154,7 @@ def deform_conv2d(
             of convolution kernel. Default: None
         bias (Tensor[out_channels]): optional bias of shape (out_channels,). Default: None
         stride (int or Tuple[int, int]): distance between convolution centers. Default: 1
-        padding (int or Tuple[int, int]): height/width of padding of zeroes around
-            each image. Default: 0
+        padding (int or Tuple[int, int]): padding of zeroes around the input. Default: 0
         dilation (int or Tuple[int, int]): the spacing between kernel elements. Default: 1
         groups (int): number of blocked connections from input channels to output channels.
             Default: 1
@@ -178,15 +166,14 @@ def deform_conv2d(
         >>> input = torch.rand(1, 3, 10, 10)
         >>> kh, kw = 3, 3
         >>> weight = torch.rand(5, 3, kh, kw)
-        >>> # offset and mask should have the same spatial size as the output
-        >>> # of the convolution. In this case, for an input of 10, stride of 1
-        >>> # and kernel size of 3, without padding, the output size is 8
-        >>> offset = torch.rand(5, 2 * kh * kw, 8, 8)
-        >>> mask = torch.rand(5, kh * kw, 8, 8).sigmoid()
-        >>> kernel_offset = torch.randn(5, 2, 8, 8).sigmoid()
-        >>> out = deform_conv2d(input, weight, offset, mask, kernel_offset)
+        >>> # offset and mask should have the same spatial size as the output.
+        >>> # In this case, for an input of 10, stride of 1 and kernel size of 3,
+        >>> # without padding, the output size is 8.
+        >>> offset = torch.rand(1, 2 * kh * kw, 8, 8)
+        >>> mask = torch.rand(1, kh * kw, 8, 8).sigmoid()
+        >>> out = deform_conv2d(input, weight, offset, mask)
         >>> print(out.shape)
-        >>> # returns
+        Output:
         >>>  torch.Size([1, 5, 8, 8])
     """
     if not torch.jit.is_scripting() and not torch.jit.is_tracing():
@@ -196,8 +183,6 @@ def deform_conv2d(
 
     deformable = offset is not None
     modulated = mask is not None
-    if not deformable and not modulated:
-        return F.conv2d(input, weight, bias, stride, padding, dilation, groups)
 
     if offset is None:
         offset = torch.zeros((input.shape[0], 0), device=input.device, dtype=input.dtype)
@@ -212,20 +197,20 @@ def deform_conv2d(
     weight_h, weight_w = weight.shape[-2:]
     _, n_in_channels, in_h, in_w = input.shape
 
+    n_weight_grps = n_in_channels // weight.shape[1]
     n_offset_grps = offset.shape[1] // (2 * weight_h * weight_w)
     n_mask_grps = mask.shape[1] // (weight_h * weight_w)
-    n_weight_grps = n_in_channels // weight.shape[1]
 
     assert n_weight_grps == groups
     if deformable and n_offset_grps == 0:
         raise RuntimeError(
-            "the shape of the offset tensor at dimension 1 is not valid. It should "
+            "The shape of the offset tensor at dimension 1 is not valid. It should "
             "be a multiple of 2 * weight.size[2] * weight.size[3].\n"
             "Got offset.shape[1]={}, while 2 * weight.size[2] * weight.size[3]={}".format(
                 offset.shape[1], 2 * weight_h * weight_w))
     if modulated and n_mask_grps == 0:
         raise RuntimeError(
-            "the shape of the mask tensor at dimension 1 is not valid. It should "
+            "The shape of the mask tensor at dimension 1 is not valid. It should "
             "be a multiple of weight.size[2] * weight.size[3].\n"
             "Got mask.shape[1]={}, while weight.size[2] * weight.size[3]={}".format(
                 mask.shape[1], weight_h * weight_w))
@@ -257,23 +242,18 @@ def deform_conv3d(
         dilation: Tuple[int, int, int] = (1, 1, 1),
         groups: int = 1) -> Tensor:
     r"""
-    Performs 3D version of Deformable Convolution v2, described in
-    `Deformable ConvNets v2: More Deformable, Better Results
-    <https://arxiv.org/abs/1811.11168>`__ if :attr:`mask` is not ``None`` and
-    Performs 3D version of Deformable Convolution, described in
-    `Deformable Convolutional Networks
-    <https://arxiv.org/abs/1703.06211>`__ if :attr:`mask` is ``None``.
+    Performs 3D Deformable Convolution.
 
     Arguments:
         input (Tensor[batch_size, in_channels, in_height, in_width, in_depth]): input tensor
-        weight (Tensor[out_channels, in_channels // groups, kernel_height, kernel_width]):
+        weight (Tensor[out_channels, in_channels // groups, kernel_depth, kernel_height, kernel_width]):
             convolution weights, split into groups of size (in_channels // groups)
-        offset (Tensor[batch_size, 3 * offset_groups * kernel_height * kernel_width,
-            out_height, out_width]): offsets to be applied for each position in the
-            convolution kernel.
-        mask (Tensor[batch_size, 3 * offset_groups * kernel_height * kernel_width,
-            out_height, out_width]): modulation masks to be multiplied with each output
-            of convolution kernel.
+        offset (Tensor[batch_size, 3 * offset_groups * kernel_depth * kernel_height * kernel_width,
+            out_depth, out_height, out_width]): offsets to be applied for each position in the
+            convolution kernel. Default: None
+        mask (Tensor[batch_size, mask_groups * kernel_depth * kernel_height * kernel_width,
+            out_depth, out_height, out_width]): modulation masks to be multiplied with each output
+            of convolution kernel. Default: None
         bias (Tensor[out_channels]): optional bias of shape (out_channels,). Default: None
         stride (int or Tuple[int, int, int]): distance between convolution centers. Default: 1
         padding (int or Tuple[int, int, int]): height/width of padding of zeroes around
@@ -283,21 +263,21 @@ def deform_conv3d(
             Default: 1
 
     Returns:
-        output (Tensor[batch_sz, out_channels, out_h, out_w, out_d]): result of convolution
+        output (Tensor[batch_sz, out_channels, out_d, out_h, out_w]): result of convolution
 
     Examples:
         >>> input = torch.rand(1, 3, 10, 10, 10)
         >>> kd, kh, kw = 3, 3, 3
         >>> weight = torch.rand(5, 3, kd, kh, kw)
-        >>> # offset and mask should have the same spatial size as the output
-        >>> # of the convolution. In this case, for an input of 10, stride of 1
-        >>> # and kernel size of 3, without padding, the output size is 8
-        >>> offset = torch.rand(5, 3 * kd * kh * kw, 8, 8, 8)
-        >>> mask = torch.rand(5, kd * kh * kw, 8, 8, 8)
+        >>> # offset and mask should have the same spatial size as the output.
+        >>> # In this case, for an input of 10, stride of 1 and kernel size of 3,
+        >>> # without padding, the output size is 8.
+        >>> offset = torch.rand(1, 3 * kd * kh * kw, 8, 8, 8)
+        >>> mask = torch.rand(1, kd * kh * kw, 8, 8, 8)
         >>> out = deform_conv3d(input, weight, offset, mask)
         >>> print(out.shape)
-        >>> # returns
-        >>>  torch.Size([1, 5, 8, 8, 8])
+        Output:
+        >>> torch.Size([1, 5, 8, 8, 8])
     """
     if not torch.jit.is_scripting() and not torch.jit.is_tracing():
         _log_api_usage_once(deform_conv3d)
@@ -306,8 +286,6 @@ def deform_conv3d(
 
     deformable = offset is not None
     modulated = mask is not None
-    if not deformable and not modulated:
-        return F.conv3d(input, weight, bias, stride, padding, dilation, groups)
 
     if offset is None:
         offset = torch.zeros((input.shape[0], 0), device=input.device, dtype=input.dtype)
@@ -322,22 +300,22 @@ def deform_conv3d(
     weight_d, weight_h, weight_w = weight.shape[-3:]
     _, n_in_channels, in_d, in_h, in_w = input.shape
 
+    n_weight_grps = n_in_channels // weight.shape[1]
     n_offset_grps = offset.shape[1] // (3 * weight_d * weight_h * weight_w)
     n_mask_grps = mask.shape[1] // (weight_d * weight_h * weight_w)
-    n_weight_grps = n_in_channels // weight.shape[1]
 
     assert n_weight_grps == groups
     if deformable and n_offset_grps == 0:
         raise RuntimeError(
-            "the shape of the offset tensor at dimension 1 is not valid. It should "
-            "be a multiple of 3 * weight.size[2] * weight.size[3] * weight.size[4].\n"
-            "Got offset.shape[1]={}, while 3 * weight.size[2] * weight.size[3] * weight.size[4]={}".format(
+            'The shape of the offset tensor at dimension 1 is not valid. It should '
+            'be a multiple of 3 * weight.size[2] * weight.size[3] * weight.size[4].\n'
+            'Got offset.shape[1]={}, while 3 * weight.size[2] * weight.size[3] * weight.size[4]={}'.format(
                 offset.shape[1], 3 * weight_d * weight_h * weight_w))
     if modulated and n_mask_grps == 0:
         raise RuntimeError(
-            "the shape of the mask tensor at dimension 1 is not valid. It should "
-            "be a multiple of weight.size[2] * weight.size[3] * weight.size[4].\n"
-            "Got offset.shape[1]={}, while weight.size[2] * weight.size[3] * weight.size[4]={}".format(
+            'The shape of the mask tensor at dimension 1 is not valid. It should '
+            'be a multiple of weight.size[2] * weight.size[3] * weight.size[4].\n'
+            'Got mask.shape[1]={}, while weight.size[2] * weight.size[3] * weight.size[4]={}'.format(
                 mask.shape[1], weight_d * weight_h * weight_w))
 
     return torch.ops.tvdcn.deform_conv3d(
