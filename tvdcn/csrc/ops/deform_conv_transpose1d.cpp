@@ -93,7 +93,7 @@ namespace tvdcn {
             at::Tensor weight_c = weight.contiguous();
             at::Tensor offset_c = offset.contiguous();
             at::Tensor mask_c = mask.contiguous();
-            at::Tensor bias_c = weight.contiguous();
+            at::Tensor bias_c = bias.contiguous();
 
             TORCH_CHECK(input_c.ndimension() == 3)
             TORCH_CHECK(!deformable || offset_c.ndimension() == 3)

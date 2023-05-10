@@ -101,22 +101,16 @@ namespace tvdcn {
                 bool deformable,
                 bool modulated);
 
-        using namespace at;
-        using torch::Tensor;
-        using torch::autograd::AutogradContext;
-        using torch::autograd::Variable;
-        using torch::autograd::variable_list;
-
         class DeformConv1dFunction
                 : public torch::autograd::Function<DeformConv1dFunction> {
         public:
-            static variable_list forward(
-                    AutogradContext *ctx,
-                    Variable input,
-                    Variable weight,
-                    Variable offset,
-                    Variable mask,
-                    Variable bias,
+            static torch::autograd::variable_list forward(
+                    torch::autograd::AutogradContext *ctx,
+                    const torch::autograd::Variable& input,
+                    const torch::autograd::Variable& weight,
+                    const torch::autograd::Variable& offset,
+                    const torch::autograd::Variable& mask,
+                    const torch::autograd::Variable& bias,
                     int64_t stride,
                     int64_t pad,
                     int64_t dilation,
@@ -155,9 +149,9 @@ namespace tvdcn {
                 };
             }
 
-            static variable_list backward(
-                    AutogradContext *ctx,
-                    variable_list grad_output) {
+            static torch::autograd::variable_list backward(
+                    torch::autograd::AutogradContext *ctx,
+                    const torch::autograd::variable_list &grad_output) {
                 auto saved = ctx->get_saved_variables();
                 auto input = saved[0];
                 auto weight = saved[1];
@@ -191,8 +185,8 @@ namespace tvdcn {
                         modulated);
                 auto grad_input = std::get<0>(grads);
                 auto grad_weight = std::get<1>(grads);
-                auto grad_offset = std::get<2>(grads);
-                auto grad_mask = std::get<3>(grads);
+                auto grad_offset = deformable ? std::get<2>(grads) : torch::autograd::Variable();
+                auto grad_mask = modulated ? std::get<3>(grads) : torch::autograd::Variable();
                 auto grad_bias = std::get<4>(grads);
 
                 return {
@@ -201,14 +195,14 @@ namespace tvdcn {
                         grad_offset,
                         grad_mask,
                         grad_bias,
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
                 };
             }
         };
@@ -216,13 +210,13 @@ namespace tvdcn {
         class DeformConv2dFunction
                 : public torch::autograd::Function<DeformConv2dFunction> {
         public:
-            static variable_list forward(
-                    AutogradContext *ctx,
-                    Variable input,
-                    Variable weight,
-                    Variable offset,
-                    Variable mask,
-                    Variable bias,
+            static torch::autograd::variable_list forward(
+                    torch::autograd::AutogradContext *ctx,
+                    const torch::autograd::Variable& input,
+                    const torch::autograd::Variable& weight,
+                    const torch::autograd::Variable& offset,
+                    const torch::autograd::Variable& mask,
+                    const torch::autograd::Variable& bias,
                     int64_t stride_h,
                     int64_t stride_w,
                     int64_t pad_h,
@@ -267,9 +261,9 @@ namespace tvdcn {
                 };
             }
 
-            static variable_list backward(
-                    AutogradContext *ctx,
-                    variable_list grad_output) {
+            static torch::autograd::variable_list backward(
+                    torch::autograd::AutogradContext *ctx,
+                    const torch::autograd::variable_list &grad_output) {
                 auto saved = ctx->get_saved_variables();
                 auto input = saved[0];
                 auto weight = saved[1];
@@ -306,8 +300,8 @@ namespace tvdcn {
                         modulated);
                 auto grad_input = std::get<0>(grads);
                 auto grad_weight = std::get<1>(grads);
-                auto grad_offset = std::get<2>(grads);
-                auto grad_mask = std::get<3>(grads);
+                auto grad_offset = deformable ? std::get<2>(grads) : torch::autograd::Variable();
+                auto grad_mask = modulated ? std::get<3>(grads) : torch::autograd::Variable();
                 auto grad_bias = std::get<4>(grads);
 
                 return {
@@ -316,17 +310,17 @@ namespace tvdcn {
                         grad_offset,
                         grad_mask,
                         grad_bias,
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
                 };
             }
         };
@@ -334,13 +328,13 @@ namespace tvdcn {
         class DeformConv3dFunction
                 : public torch::autograd::Function<DeformConv3dFunction> {
         public:
-            static variable_list forward(
-                    AutogradContext *ctx,
-                    Variable input,
-                    Variable weight,
-                    Variable offset,
-                    Variable mask,
-                    Variable bias,
+            static torch::autograd::variable_list forward(
+                    torch::autograd::AutogradContext *ctx,
+                    const torch::autograd::Variable& input,
+                    const torch::autograd::Variable& weight,
+                    const torch::autograd::Variable& offset,
+                    const torch::autograd::Variable& mask,
+                    const torch::autograd::Variable& bias,
                     int64_t stride_d,
                     int64_t stride_h,
                     int64_t stride_w,
@@ -391,9 +385,9 @@ namespace tvdcn {
                 };
             }
 
-            static variable_list backward(
-                    AutogradContext *ctx,
-                    variable_list grad_output) {
+            static torch::autograd::variable_list backward(
+                    torch::autograd::AutogradContext *ctx,
+                    const torch::autograd::variable_list &grad_output) {
                 auto saved = ctx->get_saved_variables();
                 auto input = saved[0];
                 auto weight = saved[1];
@@ -433,8 +427,8 @@ namespace tvdcn {
                         modulated);
                 auto grad_input = std::get<0>(grads);
                 auto grad_weight = std::get<1>(grads);
-                auto grad_offset = std::get<2>(grads);
-                auto grad_mask = std::get<3>(grads);
+                auto grad_offset = deformable ? std::get<2>(grads) : torch::autograd::Variable();
+                auto grad_mask = modulated ? std::get<3>(grads) : torch::autograd::Variable();
                 auto grad_bias = std::get<4>(grads);
 
                 return {
@@ -443,20 +437,20 @@ namespace tvdcn {
                         grad_offset,
                         grad_mask,
                         grad_bias,
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
-                        Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
                 };
             }
         };
