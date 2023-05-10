@@ -7,10 +7,10 @@ This package contains the PyTorch implementations of the **2D Deformable Convolu
 (the commonly used  `torchvision.ops.deform_conv2d`) proposed in https://arxiv.org/abs/1811.11168,
 as well as its **1D** and **3D** equivalences, which are not available in `torchvision` (thus the name).
 
-And beyond that, we also provide the **transposed** versions of them,
+And beyond that, the package also provides the **transposed** versions of them,
 which interestingly noone has ever proposed to use.
-
-[//]: # (Is that because they are programmatically challenging 😉?)
+The main idea is, while `offset` in deformable convolution guides the convolution kernel where to get the inputs to
+compute the output; in transposed deformable convolution, it guides the convolution kernel where to write the outputs.
 
 ## Highlights
 
@@ -37,8 +37,7 @@ https://github.com/masamitsu-murase/deform_conv2d_onnx_exporter.
 
 #### From TestPyPI:
 
-[tvdcn](https://test.pypi.org/project/tvdcn) provides some prebuilt wheels at **TestPyPI**
-(this is not intended to be a standalone library).
+[tvdcn](https://test.pypi.org/project/tvdcn) provides some prebuilt wheels at **TestPyPI**.
 Run this command to install:
 
 ```terminal
