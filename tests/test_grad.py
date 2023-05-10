@@ -1,11 +1,12 @@
 import torch
+import torchvision
 from torch.autograd.gradcheck import gradcheck
 
 import tvdcn
 from utils.deform_conv_test_args import DeformConvTestArgs
 
 
-def test_deform_conv(dim=1):
+def test_deform_conv(dim=2):
     torch.manual_seed(12)
     conv_func = getattr(tvdcn, f'deform_conv{dim}d')
     args = DeformConvTestArgs(dim=dim, device='cuda:0', dtype=torch.float64, batch_size=1)
@@ -30,13 +31,25 @@ def test_deform_conv(dim=1):
     print(c_res)
 
     grad_ok = gradcheck(
-        lambda inp, wei, off, bi: conv_func(inp, wei, off, None, bi,
+        lambda inp, wei, off, msk, bi: conv_func(inp, wei, off, msk, bi,
                                                  args.stride,
                                                  args.padding,
                                                  args.dilation,
                                                  args.weight_groups),
-        (args.input, args.weight, args.offset, args.bias), nondet_tol=args.tol)
-    print('grad_check:', grad_ok)
+        (args.input, args.weight, args.offset, args.mask, args.bias), nondet_tol=args.tol)
+    args.zero_grad()
+    print('tvdcn_grad_check:', grad_ok)
+
+    if dim == 2:
+        grad_ok = gradcheck(
+            lambda inp, wei, off, msk, bi: torchvision.ops.deform_conv.deform_conv2d(inp, off, wei, bi,
+                                                                                     args.stride,
+                                                                                     args.padding,
+                                                                                     args.dilation,
+                                                                                     msk),
+            (args.input, args.weight, args.offset, args.mask, args.bias), nondet_tol=args.tol)
+        args.zero_grad()
+        print('torchvision_grad_check:', grad_ok)
 
 
 if __name__ == '__main__':

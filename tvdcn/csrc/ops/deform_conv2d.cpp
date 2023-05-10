@@ -347,61 +347,59 @@ namespace tvdcn {
             auto grad_bias = at::ones_like(bias_c);
 
             // Separate into blocks
-            grad_input = grad_input.reshape({batch_sz / n_parallel_imgs,
-                                             n_parallel_imgs,
-                                             in_channels,
-                                             in_h,
-                                             in_w});
-            input_c = input_c.reshape({batch_sz / n_parallel_imgs,
-                                       n_parallel_imgs,
-                                       in_channels,
-                                       in_h,
-                                       in_w});
+            grad_input = grad_input.view({batch_sz / n_parallel_imgs,
+                                          n_parallel_imgs,
+                                          in_channels,
+                                          in_h,
+                                          in_w});
+            input_c = input_c.view({batch_sz / n_parallel_imgs,
+                                    n_parallel_imgs,
+                                    in_channels,
+                                    in_h,
+                                    in_w});
 
             if (deformable) {
-                grad_offset = grad_offset.reshape({batch_sz / n_parallel_imgs,
-                                                   n_parallel_imgs,
-                                                   offset_groups * 2 * weight_h * weight_w,
-                                                   out_h,
-                                                   out_w});
-                offset_c = offset_c.reshape({batch_sz / n_parallel_imgs,
-                                             n_parallel_imgs,
-                                             offset_groups * 2 * weight_h * weight_w,
-                                             out_h,
-                                             out_w});
+                grad_offset = grad_offset.view({batch_sz / n_parallel_imgs,
+                                                n_parallel_imgs,
+                                                offset_groups * 2 * weight_h * weight_w,
+                                                out_h,
+                                                out_w});
+                offset_c = offset_c.view({batch_sz / n_parallel_imgs,
+                                          n_parallel_imgs,
+                                          offset_groups * 2 * weight_h * weight_w,
+                                          out_h,
+                                          out_w});
             }
             if (modulated) {
-                grad_mask = grad_mask.reshape({batch_sz / n_parallel_imgs,
-                                               n_parallel_imgs,
-                                               mask_groups * weight_h * weight_w,
-                                               out_h,
-                                               out_w});
-                mask_c = mask_c.reshape({batch_sz / n_parallel_imgs,
-                                         n_parallel_imgs,
-                                         mask_groups * weight_h * weight_w,
-                                         out_h,
-                                         out_w});
+                grad_mask = grad_mask.view({batch_sz / n_parallel_imgs,
+                                            n_parallel_imgs,
+                                            mask_groups * weight_h * weight_w,
+                                            out_h,
+                                            out_w});
+                mask_c = mask_c.view({batch_sz / n_parallel_imgs,
+                                      n_parallel_imgs,
+                                      mask_groups * weight_h * weight_w,
+                                      out_h,
+                                      out_w});
             }
 
-            grad_out_c = grad_out_c
-                    .reshape({batch_sz / n_parallel_imgs,
-                              n_parallel_imgs,
-                              groups,
-                              out_channels / groups,
-                              out_h,
-                              out_w})
-                    .permute({0, 2, 3, 1, 4, 5}).contiguous();
+            grad_out_c = grad_out_c.view({batch_sz / n_parallel_imgs,
+                                          n_parallel_imgs,
+                                          groups,
+                                          out_channels / groups,
+                                          out_h,
+                                          out_w}).permute({0, 2, 3, 1, 4, 5}).contiguous();
 
-            grad_weight = grad_weight.reshape({groups,
-                                               out_channels / groups,
-                                               in_channels / groups,
-                                               weight_h,
-                                               weight_w});
-            weight_c = weight_c.reshape({groups,
-                                         out_channels / groups,
-                                         in_channels / groups,
-                                         weight_h,
-                                         weight_w});
+            grad_weight = grad_weight.view({groups,
+                                            out_channels / groups,
+                                            in_channels / groups,
+                                            weight_h,
+                                            weight_w});
+            weight_c = weight_c.view({groups,
+                                      out_channels / groups,
+                                      in_channels / groups,
+                                      weight_h,
+                                      weight_w});
 
             auto columns = at::empty(
                     {in_channels * weight_h * weight_w, n_parallel_imgs * out_h * out_w},

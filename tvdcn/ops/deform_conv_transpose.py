@@ -1,6 +1,5 @@
 import torch
 from torch import nn, Tensor
-import torch.nn.functional as F
 from torch.jit.annotations import List, Optional, Tuple, Union
 from torch.nn import init
 from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t
@@ -64,8 +63,8 @@ def deform_conv_transpose1d(
         >>> kw = 3
         >>> weight = torch.rand(3, 5, kw)
         >>> # offset and mask should have the same spatial size as the input.
-        >>> offset = torch.rand(5, kw, 8)
-        >>> mask = torch.rand(5, kw, 8).sigmoid()
+        >>> offset = torch.rand(1, kw, 8)
+        >>> mask = torch.rand(1, kw, 8).sigmoid()
         >>> out = deform_conv_transpose1d(input, weight, offset, mask)
         >>> print(out.shape)
         Output:
@@ -309,15 +308,15 @@ def deform_conv_transpose3d(
 
     if deformable and n_offset_grps == 0:
         raise RuntimeError(
-            'The shape of the offset tensor at dimension 1 is not valid. It should '
-            'be a multiple of 3 * weight.size[2] * weight.size[3] * weight.size[4].\n'
-            'Got offset.shape[1]={}, while 3 * weight.size[2] * weight.size[3] * weight.size[4]={}'.format(
+            "The shape of the offset tensor at dimension 1 is not valid. It should "
+            "be a multiple of 3 * weight.size[2] * weight.size[3] * weight.size[4].\n"
+            "Got offset.shape[1]={}, while 3 * weight.size[2] * weight.size[3] * weight.size[4]={}".format(
                 offset.shape[1], 3 * weight_d * weight_h * weight_w))
     if modulated and n_mask_grps == 0:
         raise RuntimeError(
-            'The shape of the mask tensor at dimension 1 is not valid. It should '
-            'be a multiple of weight.size[2] * weight.size[3] * weight.size[4].\n'
-            'Got mask.shape[1]={}, while weight.size[2] * weight.size[3] * weight.size[4]={}'.format(
+            "The shape of the mask tensor at dimension 1 is not valid. It should "
+            "be a multiple of weight.size[2] * weight.size[3] * weight.size[4].\n"
+            "Got mask.shape[1]={}, while weight.size[2] * weight.size[3] * weight.size[4]={}".format(
                 mask.shape[1], weight_d * weight_h * weight_w))
 
     return torch.ops.tvdcn.deform_conv_transpose3d(

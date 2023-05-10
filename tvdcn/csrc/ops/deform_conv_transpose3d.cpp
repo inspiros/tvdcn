@@ -223,35 +223,35 @@ namespace tvdcn {
             auto output = at::zeros({batch_sz, out_channels, out_d, out_h, out_w}, input_c.options());
 
             // Separate batches into blocks
-            output = output.reshape({batch_sz / n_parallel_imgs,
-                                     n_parallel_imgs,
-                                     out_channels,
-                                     out_d,
-                                     out_h,
-                                     out_w});
+            output = output.view({batch_sz / n_parallel_imgs,
+                                  n_parallel_imgs,
+                                  out_channels,
+                                  out_d,
+                                  out_h,
+                                  out_w});
             if (deformable)
-                offset_c = offset_c.reshape({batch_sz / n_parallel_imgs,
-                                             n_parallel_imgs,
-                                             offset_groups * 3 * weight_d * weight_h * weight_w,
-                                             in_d,
-                                             in_h,
-                                             in_w});
+                offset_c = offset_c.view({batch_sz / n_parallel_imgs,
+                                          n_parallel_imgs,
+                                          offset_groups * 3 * weight_d * weight_h * weight_w,
+                                          in_d,
+                                          in_h,
+                                          in_w});
             if (modulated)
-                mask_c = mask_c.reshape({batch_sz / n_parallel_imgs,
-                                         n_parallel_imgs,
-                                         mask_groups * weight_d * weight_h * weight_w,
-                                         in_d,
-                                         in_h,
-                                         in_w});
+                mask_c = mask_c.view({batch_sz / n_parallel_imgs,
+                                      n_parallel_imgs,
+                                      mask_groups * weight_d * weight_h * weight_w,
+                                      in_d,
+                                      in_h,
+                                      in_w});
 
             // Separate channels into convolution groups
-            at::Tensor inp_buf = input_c.reshape({batch_sz / n_parallel_imgs,
-                                                  n_parallel_imgs,
-                                                  groups,
-                                                  in_channels / groups,
-                                                  in_d,
-                                                  in_h,
-                                                  in_w}).permute({0, 2, 3, 1, 4, 5, 6}).contiguous();
+            at::Tensor inp_buf = input_c.view({batch_sz / n_parallel_imgs,
+                                               n_parallel_imgs,
+                                               groups,
+                                               in_channels / groups,
+                                               in_d,
+                                               in_h,
+                                               in_w}).permute({0, 2, 3, 1, 4, 5, 6}).contiguous();
             weight_c = weight_c.view({groups,
                                       weight_c.size(0) / groups,
                                       weight_c.size(1),
@@ -375,46 +375,46 @@ namespace tvdcn {
             auto grad_bias = at::ones_like(bias_c);
 
             // Separate into blocks
-            grad_input = grad_input.reshape({batch_sz / n_parallel_imgs,
-                                             n_parallel_imgs,
-                                             in_channels,
-                                             in_d,
-                                             in_h,
-                                             in_w});
-            input_c = input_c.reshape({batch_sz / n_parallel_imgs,
-                                       n_parallel_imgs,
-                                       in_channels,
-                                       in_d,
-                                       in_h,
-                                       in_w});
+            grad_input = grad_input.view({batch_sz / n_parallel_imgs,
+                                          n_parallel_imgs,
+                                          in_channels,
+                                          in_d,
+                                          in_h,
+                                          in_w});
+            input_c = input_c.view({batch_sz / n_parallel_imgs,
+                                    n_parallel_imgs,
+                                    in_channels,
+                                    in_d,
+                                    in_h,
+                                    in_w});
 
             if (deformable) {
-                grad_offset = grad_offset.reshape({batch_sz / n_parallel_imgs,
-                                                   n_parallel_imgs,
-                                                   offset_groups * 3 * weight_d * weight_h * weight_w,
-                                                   in_d,
-                                                   in_h,
-                                                   in_w});
-                offset_c = offset_c.reshape({batch_sz / n_parallel_imgs,
-                                             n_parallel_imgs,
-                                             offset_groups * 3 * weight_d * weight_h * weight_w,
-                                             in_d,
-                                             in_h,
-                                             in_w});
+                grad_offset = grad_offset.view({batch_sz / n_parallel_imgs,
+                                                n_parallel_imgs,
+                                                offset_groups * 3 * weight_d * weight_h * weight_w,
+                                                in_d,
+                                                in_h,
+                                                in_w});
+                offset_c = offset_c.view({batch_sz / n_parallel_imgs,
+                                          n_parallel_imgs,
+                                          offset_groups * 3 * weight_d * weight_h * weight_w,
+                                          in_d,
+                                          in_h,
+                                          in_w});
             }
             if (modulated) {
-                grad_mask = grad_mask.reshape({batch_sz / n_parallel_imgs,
-                                               n_parallel_imgs,
-                                               mask_groups * weight_d * weight_h * weight_w,
-                                               in_d,
-                                               in_h,
-                                               in_w});
-                mask_c = mask_c.reshape({batch_sz / n_parallel_imgs,
-                                         n_parallel_imgs,
-                                         mask_groups * weight_d * weight_h * weight_w,
-                                         in_d,
-                                         in_h,
-                                         in_w});
+                grad_mask = grad_mask.view({batch_sz / n_parallel_imgs,
+                                            n_parallel_imgs,
+                                            mask_groups * weight_d * weight_h * weight_w,
+                                            in_d,
+                                            in_h,
+                                            in_w});
+                mask_c = mask_c.view({batch_sz / n_parallel_imgs,
+                                      n_parallel_imgs,
+                                      mask_groups * weight_d * weight_h * weight_w,
+                                      in_d,
+                                      in_h,
+                                      in_w});
             }
 
             at::Tensor grad_inp_buf = at::zeros({batch_sz / n_parallel_imgs,
@@ -425,13 +425,13 @@ namespace tvdcn {
                                                  in_w}, input_c.options());
 
             // Separate channels into convolution groups
-            at::Tensor inp_buf = input_c.reshape({batch_sz / n_parallel_imgs,
-                                                  n_parallel_imgs,
-                                                  groups,
-                                                  in_channels / groups,
-                                                  in_d,
-                                                  in_h,
-                                                  in_w}).permute({0, 2, 3, 1, 4, 5, 6}).contiguous();
+            at::Tensor inp_buf = input_c.view({batch_sz / n_parallel_imgs,
+                                               n_parallel_imgs,
+                                               groups,
+                                               in_channels / groups,
+                                               in_d,
+                                               in_h,
+                                               in_w}).permute({0, 2, 3, 1, 4, 5, 6}).contiguous();
 
             grad_inp_buf = grad_inp_buf.view({grad_inp_buf.size(0),
                                               groups,
@@ -441,18 +441,18 @@ namespace tvdcn {
                                               grad_inp_buf.size(4),
                                               grad_inp_buf.size(5)});
 
-            grad_weight = grad_weight.reshape({groups,
-                                               in_channels / groups,
-                                               out_channels / groups,
-                                               weight_d,
-                                               weight_h,
-                                               weight_w});
-            weight_c = weight_c.reshape({groups,
-                                         in_channels / groups,
-                                         out_channels / groups,
-                                         weight_d,
-                                         weight_h,
-                                         weight_w});
+            grad_weight = grad_weight.view({groups,
+                                            in_channels / groups,
+                                            out_channels / groups,
+                                            weight_d,
+                                            weight_h,
+                                            weight_w});
+            weight_c = weight_c.view({groups,
+                                      in_channels / groups,
+                                      out_channels / groups,
+                                      weight_d,
+                                      weight_h,
+                                      weight_w});
 
             auto columns = at::empty(
                     {out_channels * weight_d * weight_h * weight_w, n_parallel_imgs * in_d * in_h * in_w},
