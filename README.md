@@ -14,17 +14,20 @@ compute the output; in transposed deformable convolution, it guides the convolut
 
 ## Highlights
 
-**Supported operations:** _(All operations are implemented in C++/Cuda)_
+- **Supported operations:** _(All operations are implemented in C++/Cuda)_
 
-- `tvdcn.ops.deform_conv1d`
-- `tvdcn.ops.deform_conv2d`
-- `tvdcn.ops.deform_conv3d`
-- `tvdcn.ops.deform_conv_transpose1d`
-- `tvdcn.ops.deform_conv_transpose2d`
-- `tvdcn.ops.deform_conv_transpose3d`
+  - `tvdcn.ops.deform_conv1d`
+  - `tvdcn.ops.deform_conv2d`
+  - `tvdcn.ops.deform_conv3d`
+  - `tvdcn.ops.deform_conv_transpose1d`
+  - `tvdcn.ops.deform_conv_transpose2d`
+  - `tvdcn.ops.deform_conv_transpose3d`
 
-Besides, all the `nn.Module` wrappers for these operations are implemented,
-everything is `@torch.jit.script`-able! Please check [Usage](#usage).
+- `offset` and `mask` can be applied in separate groups
+  (following [Deformable Convolution v3](https://arxiv.org/abs/2211.05778)).
+
+- All the `nn.Module` wrappers for these operations are implemented,
+  everything is `@torch.jit.script`-able! Please check [Usage](#usage).
 
 **Note:** We don't care much about `onnx` exportation, but if you do, you can check this repo:
 https://github.com/masamitsu-murase/deform_conv2d_onnx_exporter.

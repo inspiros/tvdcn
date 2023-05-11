@@ -16,7 +16,7 @@ namespace tvdcn {
             }
 
             template<typename scalar_t>
-            static __device__ scalar_t interpolate_sample(
+            static __device__ __forceinline__ scalar_t interpolate_sample(
                     const scalar_t *input,
                     const int width,
                     const scalar_t x) {
@@ -49,7 +49,7 @@ namespace tvdcn {
             }
 
             template<typename scalar_t>
-            static __device__ void interpolate_insert(
+            static __device__ __forceinline__ void interpolate_insert(
                     scalar_t *output,
                     const int width,
                     const scalar_t x,
@@ -68,7 +68,7 @@ namespace tvdcn {
             }
 
             template<typename scalar_t>
-            static __device__ scalar_t linear_coordinate_weight(
+            static __device__ __forceinline__ scalar_t linear_coordinate_weight(
                     const scalar_t *input,
                     const int width,
                     const scalar_t x) {
@@ -129,16 +129,13 @@ namespace tvdcn {
                     const int mask_idx = i;
                     const int offset_idx = mask_idx;
 
-                    const scalar_t offset_w =
-                            deformable ?
-                            offset_ptr[offset_idx * out_w + out_x]
-                                       : static_cast<scalar_t>(0);
-                    const scalar_t x = (out_x * stride_w - pad_w) + i * dilation_w + offset_w;
+                    const int x = (out_x * stride_w - pad_w) + i * dilation_w;
 
                     const scalar_t val =
                             deformable ?
-                            interpolate_sample(input_ptr, width, x)
-                                       : sample(input_ptr, width, static_cast<int>(x));
+                            interpolate_sample(input_ptr, width,
+                                               x + offset_ptr[offset_idx * out_w + out_x])
+                                       : sample(input_ptr, width, x);
 
                     const scalar_t mask_val =
                             modulated ?
@@ -240,13 +237,8 @@ namespace tvdcn {
 
                 const int mask_idx = i;
                 const int offset_idx = mask_idx;
-                const int offset_w_ptr = offset_idx * out_w + out_x;
 
-                const scalar_t offset_w =
-                        deformable ?
-                        offset_ptr[offset_w_ptr]
-                                   : static_cast<scalar_t>(0);
-                const scalar_t x = (out_x * stride_w - pad_w) + i * dilation_w + offset_w;
+                const int x = (out_x * stride_w - pad_w) + i * dilation_w;
 
                 const scalar_t mask_val =
                         modulated ?
@@ -258,7 +250,9 @@ namespace tvdcn {
                 auto grad_input_ptr = grad_input +
                                       (b * in_channels + c) * width;
                 if (deformable)
-                    interpolate_insert(grad_input_ptr, width, x, val);
+                    interpolate_insert(grad_input_ptr, width,
+                                       x + offset_ptr[offset_idx * out_w + out_x],
+                                       val);
                 else
                     insert(grad_input_ptr, width, x, val);
             }
@@ -374,15 +368,16 @@ namespace tvdcn {
                     const int mask_idx = i;
                     const int offset_idx = mask_idx;
 
-                    const scalar_t offset_w = offset_ptr[offset_idx * out_w + out_x];
-                    const scalar_t x = (out_x * stride_w - pad_w) + i * dilation_w + offset_w;
-
-                    const scalar_t weight = linear_coordinate_weight(input_ptr, width, x);
+                    const int x = (out_x * stride_w - pad_w) + i * dilation_w;
 
                     const scalar_t mask_val =
                             modulated ?
                             mask_ptr[mask_idx * out_w + out_x]
                                       : static_cast<scalar_t>(1);
+
+                    const scalar_t weight = linear_coordinate_weight(
+                            input_ptr, width,
+                            x + offset_ptr[offset_idx * out_w + out_x]);
 
                     grad_offset_val += columns_ptr[col_pos] * weight * mask_val;
                     input_ptr += width;
@@ -508,16 +503,13 @@ namespace tvdcn {
                     const int mask_idx = i;
                     const int offset_idx = mask_idx;
 
-                    const scalar_t offset_w =
-                            deformable ?
-                            offset_ptr[offset_idx * out_w + out_x]
-                                       : static_cast<scalar_t>(0);
-                    const scalar_t x = (out_x * stride_w - pad_w) + i * dilation_w + offset_w;
+                    const int x = (out_x * stride_w - pad_w) + i * dilation_w;
 
                     const scalar_t val =
                             deformable ?
-                            interpolate_sample(input_ptr, width, x)
-                                       : sample(input_ptr, width, static_cast<int>(x));
+                            interpolate_sample(input_ptr, width,
+                                               x + offset_ptr[offset_idx * out_w + out_x])
+                                       : sample(input_ptr, width, x);
 
                     grad_mask_val += columns_ptr[col_pos] * val;
                     input_ptr += width;
