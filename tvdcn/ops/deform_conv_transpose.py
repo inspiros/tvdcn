@@ -5,6 +5,7 @@ from torch.nn import init
 from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from torch.nn.modules.utils import _single, _pair, _triple
 
+import tvdcn
 # noinspection PyUnresolvedReferences
 from .deform_conv import _DeformConvNd
 from .._types import _IntTuple
@@ -663,7 +664,10 @@ class PackedDeformConvTranspose1d(DeformConvTranspose1d):
 
     def forward(self, input: Tensor, output_size: Optional[List[int]] = None) -> Tensor:
         offset = self.conv_offset(input) if self.deformable and self.conv_offset is not None else None
-        mask = self.conv_mask(input).sigmoid() if self.modulated and self.conv_mask is not None else None
+        mask = tvdcn.ops.mask_softmax1d(
+            self.conv_mask(input),
+            self.kernel_size,  # type: ignore[arg-type]
+        ) if self.modulated and self.conv_mask is not None else None
         return self._conv_transpose_forward(input, self.weight, offset, mask, self.bias, output_size)
 
 
@@ -748,7 +752,10 @@ class PackedDeformConvTranspose2d(DeformConvTranspose2d):
 
     def forward(self, input: Tensor, output_size: Optional[List[int]] = None) -> Tensor:
         offset = self.conv_offset(input) if self.deformable and self.conv_offset is not None else None
-        mask = self.conv_mask(input).sigmoid() if self.modulated and self.conv_mask is not None else None
+        mask = tvdcn.ops.mask_softmax2d(
+            self.conv_mask(input),
+            self.kernel_size,  # type: ignore[arg-type]
+        ) if self.modulated and self.conv_mask is not None else None
         return self._conv_transpose_forward(input, self.weight, offset, mask, self.bias, output_size)
 
 
@@ -833,5 +840,8 @@ class PackedDeformConvTranspose3d(DeformConvTranspose3d):
 
     def forward(self, input: Tensor, output_size: Optional[List[int]] = None) -> Tensor:
         offset = self.conv_offset(input) if self.deformable and self.conv_offset is not None else None
-        mask = self.conv_mask(input).sigmoid() if self.modulated and self.conv_mask is not None else None
+        mask = tvdcn.ops.mask_softmax3d(
+            self.conv_mask(input),
+            self.kernel_size,  # type: ignore[arg-type]
+        ) if self.modulated and self.conv_mask is not None else None
         return self._conv_transpose_forward(input, self.weight, offset, mask, self.bias, output_size)

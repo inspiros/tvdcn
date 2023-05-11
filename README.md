@@ -14,7 +14,7 @@ compute the output; in transposed deformable convolution, it guides the convolut
 
 ## Highlights
 
-- **Supported operations:** _(All operations are implemented in C++/Cuda)_
+- **Supported operations:** _(All are implemented in C++/Cuda)_
 
   - `tvdcn.ops.deform_conv1d`
   - `tvdcn.ops.deform_conv2d`
@@ -22,6 +22,11 @@ compute the output; in transposed deformable convolution, it guides the convolut
   - `tvdcn.ops.deform_conv_transpose1d`
   - `tvdcn.ops.deform_conv_transpose2d`
   - `tvdcn.ops.deform_conv_transpose3d`
+
+- And the following **supplementary operations** (for activating `mask`):
+  - `tvdcn.ops.mask_softmax1d`
+  - `tvdcn.ops.mask_softmax2d`
+  - `tvdcn.ops.mask_softmax3d`
 
 - `offset` and `mask` can be applied in separate groups
   (following [Deformable Convolution v3](https://arxiv.org/abs/2211.05778)).
