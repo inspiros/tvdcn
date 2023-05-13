@@ -1,5 +1,4 @@
 import torch
-import torchvision
 from torch.autograd.gradcheck import gradcheck
 
 import tvdcn
@@ -38,18 +37,7 @@ def test_deform_conv(dim=2):
                                                  args.weight_groups),
         (args.input, args.weight, args.offset, args.mask, args.bias), nondet_tol=args.tol)
     args.zero_grad()
-    print('tvdcn_grad_check:', grad_ok)
-
-    if dim == 2:
-        grad_ok = gradcheck(
-            lambda inp, wei, off, msk, bi: torchvision.ops.deform_conv.deform_conv2d(inp, off, wei, bi,
-                                                                                     args.stride,
-                                                                                     args.padding,
-                                                                                     args.dilation,
-                                                                                     msk),
-            (args.input, args.weight, args.offset, args.mask, args.bias), nondet_tol=args.tol)
-        args.zero_grad()
-        print('torchvision_grad_check:', grad_ok)
+    print('grad_check:', grad_ok)
 
 
 if __name__ == '__main__':

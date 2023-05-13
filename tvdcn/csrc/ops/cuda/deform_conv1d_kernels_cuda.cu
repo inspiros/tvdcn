@@ -362,22 +362,21 @@ namespace tvdcn {
                     auto mask_ptr = mask +
                                     (b * n_mask_grps + mask_grp) * weight_w * out_w;
 
-                    const int out_x = col_pos % out_w;
                     const int i = (col_pos / (out_w * batch_sz)) % weight_w;
+
+                    const int x = (w * stride_w - pad_w) + i * dilation_w;
 
                     const int mask_idx = i;
                     const int offset_idx = mask_idx;
 
-                    const int x = (out_x * stride_w - pad_w) + i * dilation_w;
-
                     const scalar_t mask_val =
                             modulated ?
-                            mask_ptr[mask_idx * out_w + out_x]
+                            mask_ptr[mask_idx * out_w + w]
                                       : static_cast<scalar_t>(1);
 
                     const scalar_t weight = linear_coordinate_weight(
                             input_ptr, width,
-                            x + offset_ptr[offset_idx * out_w + out_x]);
+                            x + offset_ptr[offset_idx * out_w + w]);
 
                     grad_offset_val += columns_ptr[col_pos] * weight * mask_val;
                     input_ptr += width;
@@ -497,18 +496,17 @@ namespace tvdcn {
                     auto offset_ptr = offset +
                                       (b * n_offset_grps + offset_grp) * weight_w * out_w;
 
-                    const int out_x = col_pos % out_w;
                     const int i = (col_pos / (out_w * batch_sz)) % weight_w;
+
+                    const int x = (w * stride_w - pad_w) + i * dilation_w;
 
                     const int mask_idx = i;
                     const int offset_idx = mask_idx;
 
-                    const int x = (out_x * stride_w - pad_w) + i * dilation_w;
-
                     const scalar_t val =
                             deformable ?
                             interpolate_sample(input_ptr, width,
-                                               x + offset_ptr[offset_idx * out_w + out_x])
+                                               x + offset_ptr[offset_idx * out_w + w])
                                        : sample(input_ptr, width, x);
 
                     grad_mask_val += columns_ptr[col_pos] * val;

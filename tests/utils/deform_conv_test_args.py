@@ -34,7 +34,7 @@ class DeformConvTestArgs(nn.Module):
         self.n_in_channels = 4
         self.n_out_channels = 2
         self.weight_groups = 1
-        self.offset_groups = 1
+        self.offset_groups = 2
         self.mask_groups = 1
 
         # self.stride = tuple(range(1, 1 + self.dim))
