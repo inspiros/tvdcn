@@ -67,7 +67,7 @@
 // https://github.com/open-mmlab/mmdetection/blob/master/mmdet/ops/dcn/src/deform_conv_cuda.cpp
 
 // modified from
-// https://github.com/pytorch/vision/blob/master/torchvision/csrc/cpu/DeformConv_cpu.cpp
+// https://github.com/pytorch/vision/blob/master/torchvision/csrc/cpu/deform_conv2d_kernel.cpp
 
 #include "utils/parallel_helpers.h"
 #include "dispatch/deform_conv3d_kernels.h"
@@ -232,14 +232,21 @@ namespace tvdcn {
             if (deformable)
                 offset_c = offset_c.view({batch_sz / n_parallel_imgs,
                                           n_parallel_imgs,
-                                          offset_groups * 3 * weight_d * weight_h * weight_w,
+                                          offset_groups,
+                                          weight_d,
+                                          weight_h,
+                                          weight_w,
+                                          3,
                                           in_d,
                                           in_h,
                                           in_w});
             if (modulated)
                 mask_c = mask_c.view({batch_sz / n_parallel_imgs,
                                       n_parallel_imgs,
-                                      mask_groups * weight_d * weight_h * weight_w,
+                                      mask_groups,
+                                      weight_d,
+                                      weight_h,
+                                      weight_w,
                                       in_d,
                                       in_h,
                                       in_w});
@@ -260,12 +267,18 @@ namespace tvdcn {
                                       weight_c.size(4)});
 
             // Sample points and perform convolution
-            auto columns = at::empty(
-                    {out_channels * weight_d * weight_h * weight_w, n_parallel_imgs * in_d * in_h * in_w},
-                    input_c.options());
-            columns = columns.view(
-                    {groups, columns.size(0) / groups, columns.size(1)});
-
+            auto columns = at::empty({groups,
+                                      in_channels * weight_d * weight_h * weight_w / groups,
+                                      n_parallel_imgs * in_d * in_h * in_w},
+                                     input_c.options());
+            auto columns_view = columns.view({in_channels,
+                                              weight_d,
+                                              weight_h,
+                                              weight_w,
+                                              n_parallel_imgs,
+                                              in_d,
+                                              in_h,
+                                              in_w});
             for (int b = 0; b < batch_sz / n_parallel_imgs; b++) {
                 columns.zero_();
                 for (int g = 0; g < groups; g++) {
@@ -274,7 +287,7 @@ namespace tvdcn {
 
                 auto output_b = output[b];
                 col2vol(
-                        columns,
+                        columns_view,
                         offset_c[b],
                         mask_c[b],
                         out_channels,
@@ -387,34 +400,30 @@ namespace tvdcn {
                                     in_d,
                                     in_h,
                                     in_w});
-
             if (deformable) {
-                grad_offset = grad_offset.view({batch_sz / n_parallel_imgs,
-                                                n_parallel_imgs,
-                                                offset_groups * 3 * weight_d * weight_h * weight_w,
-                                                in_d,
-                                                in_h,
-                                                in_w});
                 offset_c = offset_c.view({batch_sz / n_parallel_imgs,
                                           n_parallel_imgs,
-                                          offset_groups * 3 * weight_d * weight_h * weight_w,
+                                          offset_groups,
+                                          weight_d,
+                                          weight_h,
+                                          weight_w,
+                                          3,
                                           in_d,
                                           in_h,
                                           in_w});
+                grad_offset = grad_offset.view_as(offset_c);
             }
             if (modulated) {
-                grad_mask = grad_mask.view({batch_sz / n_parallel_imgs,
-                                            n_parallel_imgs,
-                                            mask_groups * weight_d * weight_h * weight_w,
-                                            in_d,
-                                            in_h,
-                                            in_w});
                 mask_c = mask_c.view({batch_sz / n_parallel_imgs,
                                       n_parallel_imgs,
-                                      mask_groups * weight_d * weight_h * weight_w,
+                                      mask_groups,
+                                      weight_d,
+                                      weight_h,
+                                      weight_w,
                                       in_d,
                                       in_h,
                                       in_w});
+                grad_mask = grad_mask.view_as(mask_c);
             }
 
             at::Tensor grad_inp_buf = at::zeros({batch_sz / n_parallel_imgs,
@@ -441,25 +450,26 @@ namespace tvdcn {
                                               grad_inp_buf.size(4),
                                               grad_inp_buf.size(5)});
 
-            grad_weight = grad_weight.view({groups,
-                                            in_channels / groups,
-                                            out_channels / groups,
-                                            weight_d,
-                                            weight_h,
-                                            weight_w});
             weight_c = weight_c.view({groups,
                                       in_channels / groups,
                                       out_channels / groups,
                                       weight_d,
                                       weight_h,
                                       weight_w});
+            grad_weight = grad_weight.view_as(weight_c);
 
-            auto columns = at::empty(
-                    {out_channels * weight_d * weight_h * weight_w, n_parallel_imgs * in_d * in_h * in_w},
-                    input_c.options());
-            columns = columns.view(
-                    {groups, columns.size(0) / groups, columns.size(1)});
-
+            auto columns = at::empty({groups,
+                                      in_channels * weight_d * weight_h * weight_w / groups,
+                                      n_parallel_imgs * in_d * in_h * in_w},
+                                     input_c.options());
+            auto columns_view = columns.view({in_channels,
+                                              weight_d,
+                                              weight_h,
+                                              weight_w,
+                                              n_parallel_imgs,
+                                              in_d,
+                                              in_h,
+                                              in_w});
             for (int b = 0; b < batch_sz / n_parallel_imgs; b++) {
                 columns.zero_();
                 for (int g = 0; g < groups; g++) {
@@ -469,7 +479,7 @@ namespace tvdcn {
 
                 auto grad_offset_b = grad_offset[b];
                 deform_conv3d_compute_grad_offset(
-                        columns,
+                        columns_view,
                         grad_out_c[b],
                         offset_c[b],
                         mask_c[b],
@@ -501,7 +511,7 @@ namespace tvdcn {
 
                 auto grad_mask_b = grad_mask[b];
                 deform_conv3d_compute_grad_mask(
-                        columns,
+                        columns_view,
                         grad_out_c[b],
                         offset_c[b],
                         out_channels,
@@ -559,7 +569,7 @@ namespace tvdcn {
                         mask_groups,
                         deformable,
                         modulated,
-                        columns);
+                        columns_view);
 
                 for (int g = 0; g < groups; g++) {
                     grad_inp_buf[b][g] = grad_inp_buf[b][g]

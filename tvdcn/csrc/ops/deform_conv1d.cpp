@@ -67,7 +67,7 @@
 // https://github.com/open-mmlab/mmdetection/blob/master/mmdet/ops/dcn/src/deform_conv_cuda.cpp
 
 // modified from
-// https://github.com/pytorch/vision/blob/master/torchvision/csrc/cpu/DeformConv_cpu.cpp
+// https://github.com/pytorch/vision/blob/master/torchvision/csrc/cpu/deform_conv2d_kernel.cpp
 
 #include "utils/parallel_helpers.h"
 #include "dispatch/deform_conv1d_kernels.h"
@@ -130,7 +130,7 @@ namespace tvdcn {
             TORCH_CHECK(pad_w >= 0, " pad_w: ", pad_w)
             TORCH_CHECK(dilation_w > 0, " dilation_w: ", dilation_w)
 
-            TORCH_CHECK(weight_c.size(1) * groups == input_c.size(1))
+            TORCH_CHECK(weight_c.size(1) * groups == in_channels)
             TORCH_CHECK(weight_c.size(0) % groups == 0)
             TORCH_CHECK(!deformable || input_c.size(1) % offset_groups == 0)
             TORCH_CHECK(!modulated || input_c.size(1) % mask_groups == 0)
@@ -184,12 +184,15 @@ namespace tvdcn {
             if (deformable)
                 offset_c = offset_c.view({batch_sz / n_parallel_imgs,
                                           n_parallel_imgs,
-                                          offset_groups * weight_w,
+                                          offset_groups,
+                                          weight_w,
+                                          1,
                                           out_w});
             if (modulated)
                 mask_c = mask_c.view({batch_sz / n_parallel_imgs,
                                       n_parallel_imgs,
-                                      mask_groups * weight_w,
+                                      mask_groups,
+                                      weight_w,
                                       out_w});
             out = out.view({batch_sz / n_parallel_imgs,
                             n_parallel_imgs,
@@ -214,11 +217,14 @@ namespace tvdcn {
                                       weight_c.size(2)});
 
             // Sample points and perform convolution
-            auto columns = at::zeros(
-                    {in_channels * weight_w, n_parallel_imgs * out_w},
-                    input_c.options());
-            columns = columns.view(
-                    {groups, columns.size(0) / groups, columns.size(1)});
+            auto columns = at::empty({groups,
+                                      in_channels * weight_w / groups,
+                                      n_parallel_imgs * out_w},
+                                     input_c.options());
+            auto columns_view = columns.view({in_channels,
+                                              weight_w,
+                                              n_parallel_imgs,
+                                              out_w});
             for (int b = 0; b < batch_sz / n_parallel_imgs; b++) {
                 arr2col(
                         input_c[b],
@@ -236,7 +242,7 @@ namespace tvdcn {
                         mask_groups,
                         deformable,
                         modulated,
-                        columns);
+                        columns_view);
 
                 for (int g = 0; g < groups; g++) {
                     out_buf[b][g] = out_buf[b][g]
@@ -307,57 +313,50 @@ namespace tvdcn {
             auto grad_bias = at::ones_like(bias_c);
 
             // Separate into blocks
-            grad_input = grad_input.view({batch_sz / n_parallel_imgs,
-                                          n_parallel_imgs,
-                                          in_channels,
-                                          in_w});
             input_c = input_c.view({batch_sz / n_parallel_imgs,
                                     n_parallel_imgs,
                                     in_channels,
                                     in_w});
-
+            grad_input = grad_input.view_as(input_c);
             if (deformable) {
-                grad_offset = grad_offset.view({batch_sz / n_parallel_imgs,
-                                                n_parallel_imgs,
-                                                offset_groups * weight_w,
-                                                out_w});
                 offset_c = offset_c.view({batch_sz / n_parallel_imgs,
                                           n_parallel_imgs,
-                                          offset_groups * weight_w,
+                                          offset_groups,
+                                          weight_w,
+                                          1,
                                           out_w});
+                grad_offset = grad_offset.view_as(offset_c);
             }
             if (modulated) {
-                grad_mask = grad_mask.view({batch_sz / n_parallel_imgs,
-                                            n_parallel_imgs,
-                                            mask_groups * weight_w,
-                                            out_w});
                 mask_c = mask_c.view({batch_sz / n_parallel_imgs,
                                       n_parallel_imgs,
-                                      mask_groups * weight_w,
+                                      mask_groups,
+                                      weight_w,
                                       out_w});
+                grad_mask = grad_mask.view_as(mask_c);
             }
 
+            // Separate channels into convolution groups
             grad_out_c = grad_out_c.view({batch_sz / n_parallel_imgs,
                                           n_parallel_imgs,
                                           groups,
                                           out_channels / groups,
                                           out_w}).permute({0, 2, 3, 1, 4}).contiguous();
 
-            grad_weight = grad_weight.view({groups,
-                                            out_channels / groups,
-                                            in_channels / groups,
-                                            weight_w});
             weight_c = weight_c.view({groups,
                                       out_channels / groups,
                                       in_channels / groups,
                                       weight_w});
+            grad_weight = grad_weight.view_as(weight_c);
 
-            auto columns = at::empty(
-                    {in_channels * weight_w, n_parallel_imgs * out_w},
-                    input_c.options());
-            columns = columns.view(
-                    {groups, columns.size(0) / groups, columns.size(1)});
-
+            auto columns = at::empty({groups,
+                                      in_channels * weight_w / groups,
+                                      n_parallel_imgs * out_w},
+                                     input_c.options());
+            auto columns_view = columns.view({in_channels,
+                                              weight_w,
+                                              n_parallel_imgs,
+                                              out_w});
             for (int b = 0; b < batch_sz / n_parallel_imgs; b++) {
                 columns.zero_();
                 for (int g = 0; g < groups; g++) {
@@ -367,7 +366,7 @@ namespace tvdcn {
 
                 auto grad_offset_b = grad_offset[b];
                 deform_conv1d_compute_grad_offset(
-                        columns,
+                        columns_view,
                         input_c[b],
                         offset_c[b],
                         mask_c[b],
@@ -387,7 +386,7 @@ namespace tvdcn {
 
                 auto grad_mask_b = grad_mask[b];
                 deform_conv1d_compute_grad_mask(
-                        columns,
+                        columns_view,
                         input_c[b],
                         offset_c[b],
                         in_channels,
@@ -406,7 +405,7 @@ namespace tvdcn {
 
                 auto grad_input_b = grad_input[b];
                 col2arr(
-                        columns,
+                        columns_view,
                         offset_c[b],
                         mask_c[b],
                         in_channels,
@@ -439,7 +438,7 @@ namespace tvdcn {
                         mask_groups,
                         deformable,
                         modulated,
-                        columns);
+                        columns_view);
                 for (int g = 0; g < groups; g++) {
                     grad_weight[g] = grad_weight[g]
                             .flatten(1)

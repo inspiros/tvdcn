@@ -8,8 +8,10 @@ namespace tvdcn {
             constexpr float threadsFraction = 0.5;
 
             template<typename scalar_t>
-            static __device__ __forceinline__ scalar_t sample(
-                    const scalar_t *input,
+            __device__ __forceinline__ scalar_t sample(
+                    const at::GenericPackedTensorAccessor<scalar_t, 5> input,
+                    const int b,
+                    const int c,
                     const int depth,
                     const int height,
                     const int width,
@@ -17,12 +19,14 @@ namespace tvdcn {
                     const int y,
                     const int x) {
                 return (0 <= z && z < depth && 0 <= y && y < height && 0 <= x && x < width) ?
-                       input[z * (width * height) + y * width + x] : static_cast<scalar_t>(0);
+                       input[b][c][z][y][x] : static_cast<scalar_t>(0);
             }
 
             template<typename scalar_t>
-            static __device__ __forceinline__ scalar_t interpolate_sample(
-                    const scalar_t *input,
+            __device__ __forceinline__ scalar_t interpolate_sample(
+                    const at::GenericPackedTensorAccessor<scalar_t, 5> input,
+                    const int b,
+                    const int c,
                     const int depth,
                     const int height,
                     const int width,
@@ -55,27 +59,29 @@ namespace tvdcn {
 
                 scalar_t val = 0;
                 if (valid_z_l && valid_y_l && valid_x_l)
-                    val += dz_l * dy_l * dx_l * input[z_l * (width * height) + y_l * width + x_l];
+                    val += dz_l * dy_l * dx_l * input[b][c][z_l][y_l][x_l];
                 if (valid_z_l && valid_y_l && valid_x_h)
-                    val += dz_l * dy_l * dx_h * input[z_l * (width * height) + y_l * width + x_h];
+                    val += dz_l * dy_l * dx_h * input[b][c][z_l][y_l][x_h];
                 if (valid_z_l && valid_y_h && valid_x_l)
-                    val += dz_l * dy_h * dx_l * input[z_l * (width * height) + y_h * width + x_l];
+                    val += dz_l * dy_h * dx_l * input[b][c][z_l][y_h][x_l];
                 if (valid_z_l && valid_y_h && valid_x_h)
-                    val += dz_l * dy_h * dx_h * input[z_l * (width * height) + y_h * width + x_h];
+                    val += dz_l * dy_h * dx_h * input[b][c][z_l][y_h][x_h];
                 if (valid_z_h && valid_y_l && valid_x_l)
-                    val += dz_h * dy_l * dx_l * input[z_h * (width * height) + y_l * width + x_l];
+                    val += dz_h * dy_l * dx_l * input[b][c][z_h][y_l][x_l];
                 if (valid_z_h && valid_y_l && valid_x_h)
-                    val += dz_h * dy_l * dx_h * input[z_h * (width * height) + y_l * width + x_h];
+                    val += dz_h * dy_l * dx_h * input[b][c][z_h][y_l][x_h];
                 if (valid_z_h && valid_y_h && valid_x_l)
-                    val += dz_h * dy_h * dx_l * input[z_h * (width * height) + y_h * width + x_l];
+                    val += dz_h * dy_h * dx_l * input[b][c][z_h][y_h][x_l];
                 if (valid_z_h && valid_y_h && valid_x_h)
-                    val += dz_h * dy_h * dx_h * input[z_h * (width * height) + y_h * width + x_h];
+                    val += dz_h * dy_h * dx_h * input[b][c][z_h][y_h][x_h];
                 return val;
             }
 
             template<typename scalar_t>
-            static __device__ __forceinline__ void insert(
-                    scalar_t *output,
+            __device__ __forceinline__ void insert(
+                    at::GenericPackedTensorAccessor<scalar_t, 5> output,
+                    const int b,
+                    const int c,
                     const int depth,
                     const int height,
                     const int width,
@@ -84,12 +90,14 @@ namespace tvdcn {
                     const int x,
                     const scalar_t val) {
                 if (0 <= z && z < depth && 0 <= y && y < height && 0 <= x && x < width)
-                    atomicAdd(output + z * height * width + y * width + x, val);
+                    gpuAtomicAdd(&output[b][c][z][y][x], val);
             }
 
             template<typename scalar_t>
-            static __device__ __forceinline__ void interpolate_insert(
-                    scalar_t *output,
+            __device__ __forceinline__ void interpolate_insert(
+                    at::GenericPackedTensorAccessor<scalar_t, 5> output,
+                    const int b,
+                    const int c,
                     const int depth,
                     const int height,
                     const int width,
@@ -119,26 +127,28 @@ namespace tvdcn {
                 bool valid_x_h = 0 <= x_h && x_h < width;
 
                 if (valid_z_l && valid_y_l && valid_x_l)
-                    atomicAdd(output + z_l * height * width + y_l * width + x_l, dz_l * dy_l * dx_l * val);
+                    gpuAtomicAdd(&output[b][c][z_l][y_l][x_l], dz_l * dy_l * dx_l * val);
                 if (valid_z_l && valid_y_l && valid_x_h)
-                    atomicAdd(output + z_l * height * width + y_l * width + x_h, dz_l * dy_l * dx_h * val);
+                    gpuAtomicAdd(&output[b][c][z_l][y_l][x_h], dz_l * dy_l * dx_h * val);
                 if (valid_z_l && valid_y_h && valid_x_l)
-                    atomicAdd(output + z_l * height * width + y_h * width + x_l, dz_l * dy_h * dx_l * val);
+                    gpuAtomicAdd(&output[b][c][z_l][y_h][x_l], dz_l * dy_h * dx_l * val);
                 if (valid_z_l && valid_y_h && valid_x_h)
-                    atomicAdd(output + z_l * height * width + y_h * width + x_h, dz_l * dy_h * dx_h * val);
+                    gpuAtomicAdd(&output[b][c][z_l][y_h][x_h], dz_l * dy_h * dx_h * val);
                 if (valid_z_h && valid_y_l && valid_x_l)
-                    atomicAdd(output + z_h * height * width + y_l * width + x_l, dz_h * dy_l * dx_l * val);
+                    gpuAtomicAdd(&output[b][c][z_h][y_l][x_l], dz_h * dy_l * dx_l * val);
                 if (valid_z_h && valid_y_l && valid_x_h)
-                    atomicAdd(output + z_h * height * width + y_l * width + x_h, dz_h * dy_l * dx_h * val);
+                    gpuAtomicAdd(&output[b][c][z_h][y_l][x_h], dz_h * dy_l * dx_h * val);
                 if (valid_z_h && valid_y_h && valid_x_l)
-                    atomicAdd(output + z_h * height * width + y_h * width + x_l, dz_h * dy_h * dx_l * val);
+                    gpuAtomicAdd(&output[b][c][z_h][y_h][x_l], dz_h * dy_h * dx_l * val);
                 if (valid_z_h && valid_y_h && valid_x_h)
-                    atomicAdd(output + z_h * height * width + y_h * width + x_h, dz_h * dy_h * dx_h * val);
+                    gpuAtomicAdd(&output[b][c][z_h][y_h][x_h], dz_h * dy_h * dx_h * val);
             }
 
             template<typename scalar_t>
-            static __device__ __forceinline__ scalar_t trilinear_coordinate_weight(
-                    const scalar_t *input,
+            __device__ __forceinline__ scalar_t coordinate_weight(
+                    const at::GenericPackedTensorAccessor<scalar_t, 5> input,
+                    const int b,
+                    const int c,
                     const int depth,
                     const int height,
                     const int width,
@@ -169,21 +179,21 @@ namespace tvdcn {
 
                 scalar_t val = 0;
                 if (valid_z_l && valid_y_l && valid_x_l)
-                    val += dz_l * dy_l * dx_l * input[z_l * (width * height) + y_l * width + x_l];
+                    val += dz_l * dy_l * dx_l * input[b][c][z_l][y_l][x_l];
                 if (valid_z_l && valid_y_l && valid_x_h)
-                    val += dz_l * dy_l * dx_h * input[z_l * (width * height) + y_l * width + x_h];
+                    val += dz_l * dy_l * dx_h * input[b][c][z_l][y_l][x_h];
                 if (valid_z_l && valid_y_h && valid_x_l)
-                    val += dz_l * dy_h * dx_l * input[z_l * (width * height) + y_h * width + x_l];
+                    val += dz_l * dy_h * dx_l * input[b][c][z_l][y_h][x_l];
                 if (valid_z_l && valid_y_h && valid_x_h)
-                    val += dz_l * dy_h * dx_h * input[z_l * (width * height) + y_h * width + x_h];
+                    val += dz_l * dy_h * dx_h * input[b][c][z_l][y_h][x_h];
                 if (valid_z_h && valid_y_l && valid_x_l)
-                    val += dz_h * dy_l * dx_l * input[z_h * (width * height) + y_l * width + x_l];
+                    val += dz_h * dy_l * dx_l * input[b][c][z_h][y_l][x_l];
                 if (valid_z_h && valid_y_l && valid_x_h)
-                    val += dz_h * dy_l * dx_h * input[z_h * (width * height) + y_l * width + x_h];
+                    val += dz_h * dy_l * dx_h * input[b][c][z_h][y_l][x_h];
                 if (valid_z_h && valid_y_h && valid_x_l)
-                    val += dz_h * dy_h * dx_l * input[z_h * (width * height) + y_h * width + x_l];
+                    val += dz_h * dy_h * dx_l * input[b][c][z_h][y_h][x_l];
                 if (valid_z_h && valid_y_h && valid_x_h)
-                    val += dz_h * dy_h * dx_h * input[z_h * (width * height) + y_h * width + x_h];
+                    val += dz_h * dy_h * dx_h * input[b][c][z_h][y_h][x_h];
                 return val;
             }
         }
@@ -191,11 +201,9 @@ namespace tvdcn {
         template<bool deformable, bool modulated, typename scalar_t>
         static __global__ void vol2col_kernel(
                 const int n_kernels,
-                const int c_per_offset_grp,
-                const int c_per_mask_grp,
-                const scalar_t *input,
-                const scalar_t *offset,
-                const scalar_t *mask,
+                const at::GenericPackedTensorAccessor<scalar_t, 5> input,
+                const at::GenericPackedTensorAccessor<scalar_t, 9> offset,
+                const at::GenericPackedTensorAccessor<scalar_t, 8> mask,
                 const int depth,
                 const int height,
                 const int width,
@@ -214,65 +222,41 @@ namespace tvdcn {
                 const int out_d,
                 const int out_h,
                 const int out_w,
-                const int batch_sz,
                 const int in_channels,
-                const int n_offset_grps,
-                const int n_mask_grps,
-                scalar_t *columns) {
+                const int c_per_offset_group,
+                const int c_per_mask_group,
+                at::GenericPackedTensorAccessor<scalar_t, 8> columns) {
             CUDA_1D_KERNEL_LOOP(index, n_kernels) {
-                const int out_x = index % out_w;
-                const int out_y = (index / out_w) % out_h;
-                const int out_z = (index / (out_w * out_h)) % out_d;
-                const int out_b = (index / (out_w * out_h * out_d)) % batch_sz;
-                const int in_c = index / (out_w * out_h * out_d * batch_sz);
-                const int out_c = in_c * weight_d * weight_h * weight_w;
+                const int w = index % out_w;
+                const int h = (index / out_w) % out_h;
+                const int d = (index / (out_w * out_h)) % out_d;
+                const int c = (index / (out_w * out_h * out_d)) % in_channels;
+                const int b = index / (out_w * out_h * out_d * in_channels);
 
-                const int offset_grp = in_c / c_per_offset_grp;
-                const int mask_grp = in_c / c_per_mask_grp;
-
-                auto columns_ptr = columns +
-                                   (out_c * (batch_sz * out_d * out_h * out_w) + out_b * (out_d * out_h * out_w) +
-                                    out_z * (out_h * out_w) + out_y * out_w + out_x);
-                auto input_ptr = input +
-                                 (out_b * (in_channels * depth * height * width) + in_c * (depth * height * width));
-                auto offset_ptr = offset +
-                                  (out_b * n_offset_grps + offset_grp) * 3 * weight_d * weight_h * weight_w *
-                                  out_d * out_h * out_w;
-                auto mask_ptr = mask +
-                                (out_b * n_mask_grps + mask_grp) * weight_d * weight_h * weight_w *
-                                out_d * out_h * out_w;
+                const int offset_group_idx = c / c_per_offset_group;
+                const int mask_group_idx = c / c_per_mask_group;
 
                 for (int i = 0; i < weight_d; ++i) {
                     for (int j = 0; j < weight_h; ++j) {
                         for (int k = 0; k < weight_w; ++k) {
-                            const int mask_idx = i * weight_h * weight_w + j * weight_w + k;
-                            const int offset_idx = 3 * mask_idx;
-
-                            const int z = (out_z * stride_d - pad_d) + i * dilation_d;
-                            const int y = (out_y * stride_h - pad_h) + j * dilation_h;
-                            const int x = (out_x * stride_w - pad_w) + k * dilation_w;
+                            const int z = (d * stride_d - pad_d) + i * dilation_d;
+                            const int y = (h * stride_h - pad_h) + j * dilation_h;
+                            const int x = (w * stride_w - pad_w) + k * dilation_w;
 
                             const scalar_t val =
                                     deformable ?
                                     interpolate_sample(
-                                            input_ptr, depth, height, width,
-                                            z +
-                                            offset_ptr[((offset_idx * out_d + out_z) * out_h + out_y) * out_w + out_x],
-                                            y +
-                                            offset_ptr[(((offset_idx + 1) * out_d + out_z) * out_h + out_y) * out_w +
-                                                       out_x],
-                                            x +
-                                            offset_ptr[(((offset_idx + 2) * out_d + out_z) * out_h + out_y) * out_w +
-                                                       out_x])
-                                               : sample(input_ptr, depth, height, width, z, y, x);
+                                            input, b, c, depth, height, width,
+                                            z + offset[b][offset_group_idx][i][j][k][0][d][h][w],
+                                            y + offset[b][offset_group_idx][i][j][k][1][d][h][w],
+                                            x + offset[b][offset_group_idx][i][j][k][2][d][h][w])
+                                               : sample(input, b, c, depth, height, width, z, y, x);
 
                             const scalar_t mask_val =
                                     modulated ?
-                                    mask_ptr[((mask_idx * out_d + out_z) * out_h + out_y) * out_w + out_x]
-                                              : static_cast<scalar_t>(1);
+                                    mask[b][mask_group_idx][i][j][k][d][h][w] : static_cast<scalar_t>(1);
 
-                            *columns_ptr = val * mask_val;
-                            columns_ptr += batch_sz * out_d * out_h * out_w;
+                            columns[c][i][j][k][b][d][h][w] = val * mask_val;
                         }
                     }
                 }
@@ -309,22 +293,21 @@ namespace tvdcn {
                 const bool modulated,
                 at::Tensor &columns) {
             const int n_kernels = in_channels * out_d * out_h * out_w * batch_sz;
-            const int c_per_offset_grp = deformable ? in_channels / n_offset_grps : 1;
-            const int c_per_mask_grp = modulated ? in_channels / n_mask_grps : 1;
+            const int c_per_offset_group = deformable ? in_channels / n_offset_grps : 1;
+            const int c_per_mask_group = modulated ? in_channels / n_mask_grps : 1;
 
             const unsigned int threads = GET_THREADS(threadsFraction);
             const unsigned int blocks = GET_BLOCKS(threads, n_kernels);
 
             AT_DISPATCH_FLOATING_TYPES_AND_HALF(
                     input.scalar_type(), "vol2col_cuda", ([&] {
+                auto columns_accessor = columns.generic_packed_accessor<scalar_t, 8>();
                 TVDCN_DISPATCH_CONDITION2(deformable, modulated, ([&] {
                     vol2col_kernel<deformable, modulated><<<blocks, threads>>>(
                             n_kernels,
-                            c_per_offset_grp,
-                            c_per_mask_grp,
-                            input.data_ptr<scalar_t>(),
-                            offset.data_ptr<scalar_t>(),
-                            mask.data_ptr<scalar_t>(),
+                            input.generic_packed_accessor<scalar_t, 5>(),
+                            offset.generic_packed_accessor<scalar_t, 9>(),
+                            mask.generic_packed_accessor<scalar_t, 8>(),
                             depth,
                             height,
                             width,
@@ -343,11 +326,10 @@ namespace tvdcn {
                             out_d,
                             out_h,
                             out_w,
-                            batch_sz,
                             in_channels,
-                            n_offset_grps,
-                            n_mask_grps,
-                            columns.data_ptr<scalar_t>());
+                            c_per_offset_group,
+                            c_per_mask_group,
+                            columns_accessor);
                 }));
             }));
 
@@ -360,11 +342,9 @@ namespace tvdcn {
         template<bool deformable, bool modulated, typename scalar_t>
         static __global__ void col2vol_kernel(
                 const int n_kernels,
-                const int c_per_offset_grp,
-                const int c_per_mask_grp,
-                const scalar_t *columns,
-                const scalar_t *offset,
-                const scalar_t *mask,
+                const at::GenericPackedTensorAccessor<scalar_t, 8> columns,
+                const at::GenericPackedTensorAccessor<scalar_t, 9> offset,
+                const at::GenericPackedTensorAccessor<scalar_t, 8> mask,
                 const int in_channels,
                 const int depth,
                 const int height,
@@ -384,56 +364,41 @@ namespace tvdcn {
                 const int out_d,
                 const int out_h,
                 const int out_w,
-                const int batch_sz,
-                const int n_offset_grps,
-                const int n_mask_grps,
-                scalar_t *grad_input) {
+                const int c_per_offset_group,
+                const int c_per_mask_group,
+                at::GenericPackedTensorAccessor<scalar_t, 5> grad_input) {
             CUDA_1D_KERNEL_LOOP(index, n_kernels) {
-                const int out_x = index % out_w;
-                const int out_y = (index / out_w) % out_h;
-                const int out_z = (index / (out_w * out_h)) % out_d;
-                const int b = (index / (out_w * out_h * out_d)) % batch_sz;
-                const int k = (index / (out_w * out_h * out_d * batch_sz)) % weight_w;
-                const int j = (index / (out_w * out_h * out_d * batch_sz * weight_w)) % weight_h;
-                const int i = (index / (out_w * out_h * out_d * batch_sz * weight_w * weight_h)) % weight_d;
-                const int c = index / (out_w * out_h * out_d * batch_sz * weight_w * weight_h * weight_d);
+                const int k = index % weight_w;
+                const int j = (index / weight_w) % weight_h;
+                const int i = (index / (weight_w * weight_h)) % weight_d;
+                const int w = (index / (weight_w * weight_h * weight_d)) % out_w;
+                const int h = (index / (weight_w * weight_h * weight_d * out_w)) % out_h;
+                const int d = (index / (weight_w * weight_h * weight_d * out_w * out_h)) % out_d;
+                const int c = (index / (weight_w * weight_h * weight_d * out_w * out_h * out_d)) % in_channels;
+                const int b = (index / (weight_w * weight_h * weight_d * out_w * out_h * out_d * in_channels));
 
-                const int offset_grp = c / c_per_offset_grp;
-                const int mask_grp = c / c_per_mask_grp;
+                const int offset_group_idx = c / c_per_offset_group;
+                const int mask_group_idx = c / c_per_mask_group;
 
-                const int mask_idx = (i * weight_h * weight_w + j * weight_w + k);
-                const int offset_idx = 3 * mask_idx;
-
-                auto offset_ptr = offset +
-                                  (b * n_offset_grps + offset_grp) * 3 * weight_d * weight_h * weight_w *
-                                  out_d * out_h * out_w;
-                auto mask_ptr = mask +
-                                (b * n_mask_grps + mask_grp) * weight_d * weight_h * weight_w * out_d * out_h * out_w;
-
-                const int z = (out_z * stride_d - pad_d) + i * dilation_d;
-                const int y = (out_y * stride_h - pad_h) + j * dilation_h;
-                const int x = (out_x * stride_w - pad_w) + k * dilation_w;
+                const int z = (d * stride_d - pad_d) + i * dilation_d;
+                const int y = (h * stride_h - pad_h) + j * dilation_h;
+                const int x = (w * stride_w - pad_w) + k * dilation_w;
 
                 const scalar_t mask_val =
                         modulated ?
-                        mask_ptr[((mask_idx * out_d + out_z) * out_h + out_y) * out_w + out_x]
-                                  : static_cast<scalar_t>(1);
+                        mask[b][mask_group_idx][i][j][k][d][h][w] : static_cast<scalar_t>(1);
 
-                const scalar_t val = columns[index] * mask_val;
+                const scalar_t val = columns[c][i][j][k][b][d][h][w] * mask_val;
 
-                auto grad_input_ptr = grad_input +
-                                      (b * in_channels + c) * depth * height * width;
                 if (deformable)
-                    interpolate_insert(grad_input_ptr, depth, height, width,
-                                       z +
-                                       offset_ptr[((offset_idx * out_d + out_z) * out_h + out_y) * out_w + out_x],
-                                       y +
-                                       offset_ptr[(((offset_idx + 1) * out_d + out_z) * out_h + out_y) * out_w + out_x],
-                                       x +
-                                       offset_ptr[(((offset_idx + 2) * out_d + out_z) * out_h + out_y) * out_w + out_x],
-                                       val);
+                    interpolate_insert(
+                            grad_input, b, c, depth, height, width,
+                            z + offset[b][offset_group_idx][i][j][k][0][d][h][w],
+                            y + offset[b][offset_group_idx][i][j][k][1][d][h][w],
+                            x + offset[b][offset_group_idx][i][j][k][2][d][h][w],
+                            val);
                 else
-                    insert(grad_input_ptr, depth, height, width, z, y, x, val);
+                    insert(grad_input, b, c, depth, height, width, z, y, x, val);
             }
         }
 
@@ -466,23 +431,22 @@ namespace tvdcn {
                 const bool deformable,
                 const bool modulated,
                 at::Tensor &grad_input) {
-            const int n_kernels = in_channels * weight_d * weight_h * weight_w * out_d * out_h * out_w * batch_sz;
-            const int c_per_offset_grp = deformable ? in_channels / n_offset_grps : 1;
-            const int c_per_mask_grp = modulated ? in_channels / n_mask_grps : 1;
+            const int n_kernels = batch_sz * in_channels * out_d * out_h * out_w * weight_d * weight_h * weight_w;
+            const int c_per_offset_group = deformable ? in_channels / n_offset_grps : 1;
+            const int c_per_mask_group = modulated ? in_channels / n_mask_grps : 1;
 
             const unsigned int threads = GET_THREADS(threadsFraction);
             const unsigned int blocks = GET_BLOCKS(threads, n_kernels);
 
             AT_DISPATCH_FLOATING_TYPES_AND_HALF(
                     columns.scalar_type(), "col2vol_cuda", ([&] {
+                auto grad_input_accessor = grad_input.generic_packed_accessor<scalar_t, 5>();
                 TVDCN_DISPATCH_CONDITION2(deformable, modulated, ([&] {
                     col2vol_kernel<deformable, modulated><<<blocks, threads>>>(
                             n_kernels,
-                            c_per_offset_grp,
-                            c_per_mask_grp,
-                            columns.data_ptr<scalar_t>(),
-                            offset.data_ptr<scalar_t>(),
-                            mask.data_ptr<scalar_t>(),
+                            columns.generic_packed_accessor<scalar_t, 8>(),
+                            offset.generic_packed_accessor<scalar_t, 9>(),
+                            mask.generic_packed_accessor<scalar_t, 8>(),
                             in_channels,
                             depth,
                             height,
@@ -502,10 +466,9 @@ namespace tvdcn {
                             out_d,
                             out_h,
                             out_w,
-                            batch_sz,
-                            n_offset_grps,
-                            n_mask_grps,
-                            grad_input.data_ptr<scalar_t>());
+                            c_per_offset_group,
+                            c_per_mask_group,
+                            grad_input_accessor);
                 }));
             }));
 
@@ -518,15 +481,10 @@ namespace tvdcn {
         template<bool modulated, typename scalar_t>
         static __global__ void deform_conv3d_compute_grad_offset_kernel(
                 const int n_kernels,
-                const int n_offset_kernels,
-                const int offset_channels,
-                const int c_per_offset_grp,
-                const int c_per_mask_grp,
-                const scalar_t *columns,
-                const scalar_t *input,
-                const scalar_t *offset,
-                const scalar_t *mask,
-                const int in_channels,
+                const at::GenericPackedTensorAccessor<scalar_t, 8> columns,
+                const at::GenericPackedTensorAccessor<scalar_t, 5> input,
+                const at::GenericPackedTensorAccessor<scalar_t, 9> offset,
+                const at::GenericPackedTensorAccessor<scalar_t, 8> mask,
                 const int depth,
                 const int height,
                 const int width,
@@ -545,73 +503,48 @@ namespace tvdcn {
                 const int out_d,
                 const int out_h,
                 const int out_w,
-                const int batch_sz,
                 const int n_offset_grps,
-                const int n_mask_grps,
-                scalar_t *grad_offset) {
-            CUDA_1D_KERNEL_LOOP(index, n_offset_kernels) {
+                const int c_per_offset_group,
+                const int c_per_mask_group,
+                at::GenericPackedTensorAccessor<scalar_t, 9> grad_offset) {
+            CUDA_1D_KERNEL_LOOP(index, n_kernels) {
+                const int o = index % 3;
+                const int k = (index / 3) % weight_w;
+                const int j = (index / (3 * weight_w)) % weight_h;
+                const int i = (index / (3 * weight_w * weight_h)) % weight_d;
+                const int w = (index / (3 * weight_w * weight_h * weight_d)) % out_w;
+                const int h = (index / (3 * weight_w * weight_h * weight_d * out_w)) % out_h;
+                const int d = (index / (3 * weight_w * weight_h * weight_d * out_w * out_h)) % out_d;
+                const int g = (index / (3 * weight_w * weight_h * weight_d * out_w * out_h * out_d)) % n_offset_grps;
+                const int b = index / (3 * weight_w * weight_h * weight_d * out_w * out_h * out_d * n_offset_grps);
+
                 scalar_t grad_offset_val = 0;
 
-                const int w = index % out_w;
-                const int h = (index / out_w) % out_h;
-                const int d = (index / (out_w * out_h)) % out_d;
-                const int c = (index / (out_w * out_h * out_d)) % offset_channels;
-                const int b = index / (out_w * out_h * out_d * offset_channels);
-
-                const int offset_grp = c / (3 * weight_d * weight_h * weight_w);
-
-                const int col_offset = offset_grp * c_per_offset_grp * weight_d * weight_h * weight_w * batch_sz *
-                                       out_d * out_h * out_w;
-                auto columns_ptr = columns + col_offset;
-                auto input_ptr = input +
-                                 (b * n_offset_grps + offset_grp) * c_per_offset_grp * depth * height * width;
-                auto offset_ptr = offset +
-                                  (b * n_offset_grps + offset_grp) * 3 * weight_d * weight_h * weight_w *
-                                  out_d * out_h * out_w;
-
-                const int offset_c = c - offset_grp * 3 * weight_d * weight_h * weight_w;
-                const int direction = offset_c % 3;
-
-                const int c_bound = c_per_offset_grp * weight_d * weight_h * weight_w;
-                const int col_step = weight_d * weight_h * weight_w;
-                for (int col_c = (offset_c / 3); col_c < c_bound; col_c += col_step) {
-                    const int col_pos = (((col_c * batch_sz + b) * out_d + d) * out_h + h) * out_w + w;
-                    const int in_c = (col_offset + col_pos) * in_channels / n_kernels;
-
-                    const int mask_grp = in_c / c_per_mask_grp;
-                    auto mask_ptr = mask +
-                                    (b * n_mask_grps + mask_grp) * weight_d * weight_h * weight_w *
-                                    out_d * out_h * out_w;
-
-                    const int k = (col_pos / (out_w * out_h * out_d * batch_sz)) % weight_w;
-                    const int j = (col_pos / (out_w * out_h * out_d * batch_sz * weight_w)) % weight_h;
-                    const int i = (col_pos / (out_w * out_h * out_d * batch_sz * weight_w * weight_h)) % weight_d;
+                const int c_start = g * c_per_offset_group;
+                const int c_end = c_start + c_per_offset_group;
+                for (int c = c_start; c < c_end; ++c) {
+                    const int mask_group_idx = c / c_per_mask_group;
 
                     const int z = (d * stride_d - pad_d) + i * dilation_d;
                     const int y = (h * stride_h - pad_h) + j * dilation_h;
                     const int x = (w * stride_w - pad_w) + k * dilation_w;
 
-                    const int mask_idx = i * weight_h * weight_w + j * weight_w + k;
-                    const int offset_idx = 3 * mask_idx;
-
                     const scalar_t weight =
-                            trilinear_coordinate_weight(
-                                    input_ptr, depth, height, width,
-                                    z + offset_ptr[((offset_idx * out_d + d) * out_h + h) * out_w + w],
-                                    y + offset_ptr[(((offset_idx + 1) * out_d + d) * out_h + h) * out_w + w],
-                                    x + offset_ptr[(((offset_idx + 2) * out_d + d) * out_h + h) * out_w + w],
-                                    direction);
+                            coordinate_weight(
+                                    input, b, c, depth, height, width,
+                                    z + offset[b][g][i][j][k][0][d][h][w],
+                                    y + offset[b][g][i][j][k][1][d][h][w],
+                                    x + offset[b][g][i][j][k][2][d][h][w],
+                                    o);
 
                     const scalar_t mask_val =
                             modulated ?
-                            mask_ptr[((mask_idx * out_d + d) * out_h + h) * out_w + w]
-                                      : static_cast<scalar_t>(1);
+                            mask[b][mask_group_idx][i][j][k][d][h][w] : static_cast<scalar_t>(1);
 
-                    grad_offset_val += columns_ptr[col_pos] * weight * mask_val;
-                    input_ptr += depth * height * width;
+                    grad_offset_val += columns[c][i][j][k][b][d][h][w] * weight * mask_val;
                 }
 
-                grad_offset[index] = grad_offset_val;
+                grad_offset[b][g][i][j][k][o][d][h][w] = grad_offset_val;
             }
         }
 
@@ -646,30 +579,23 @@ namespace tvdcn {
                 const bool modulated,
                 at::Tensor &grad_offset) {
             if (!deformable) return;
-            const int n_kernels = out_d * out_h * out_w * weight_d * weight_h * weight_w * in_channels * batch_sz;
-            const int n_offset_kernels =
-                    out_d * out_h * out_w * 3 * weight_d * weight_h * weight_w * n_offset_grps * batch_sz;
-            const int offset_channels = 3 * weight_d * weight_h * weight_w * n_offset_grps;
-            const int c_per_offset_grp = deformable ? in_channels / n_offset_grps : 1;
-            const int c_per_mask_grp = modulated ? in_channels / n_mask_grps : 1;
+            const int n_kernels = batch_sz * n_offset_grps * out_d * out_h * out_w * weight_d * weight_h * weight_w * 3;
+            const int c_per_offset_group = deformable ? in_channels / n_offset_grps : 1;
+            const int c_per_mask_group = modulated ? in_channels / n_mask_grps : 1;
 
             const unsigned int threads = GET_THREADS(threadsFraction);
             const unsigned int blocks = GET_BLOCKS(threads, n_kernels);
 
             AT_DISPATCH_FLOATING_TYPES_AND_HALF(
                     columns.scalar_type(), "deform_conv3d_compute_grad_offset_cuda", ([&] {
+                auto grad_offset_accessor = grad_offset.generic_packed_accessor<scalar_t, 9>();
                 TVDCN_DISPATCH_CONDITION(modulated, ([&] {
                     deform_conv3d_compute_grad_offset_kernel<modulated><<<blocks, threads>>>(
                             n_kernels,
-                            n_offset_kernels,
-                            offset_channels,
-                            c_per_offset_grp,
-                            c_per_mask_grp,
-                            columns.data_ptr<scalar_t>(),
-                            input.data_ptr<scalar_t>(),
-                            offset.data_ptr<scalar_t>(),
-                            mask.data_ptr<scalar_t>(),
-                            in_channels,
+                            columns.generic_packed_accessor<scalar_t, 8>(),
+                            input.generic_packed_accessor<scalar_t, 5>(),
+                            offset.generic_packed_accessor<scalar_t, 9>(),
+                            mask.generic_packed_accessor<scalar_t, 8>(),
                             depth,
                             height,
                             width,
@@ -688,10 +614,10 @@ namespace tvdcn {
                             out_d,
                             out_h,
                             out_w,
-                            batch_sz,
                             n_offset_grps,
-                            n_mask_grps,
-                            grad_offset.data_ptr<scalar_t>());
+                            c_per_offset_group,
+                            c_per_mask_group,
+                            grad_offset_accessor);
                 }));
             }));
 
@@ -704,14 +630,9 @@ namespace tvdcn {
         template<bool deformable, typename scalar_t>
         static __global__ void deform_conv3d_compute_grad_mask_kernel(
                 const int n_kernels,
-                const int n_mask_kernels,
-                const int mask_channels,
-                const int c_per_offset_grp,
-                const int c_per_mask_grp,
-                const scalar_t *columns,
-                const scalar_t *input,
-                const scalar_t *offset,
-                const int in_channels,
+                const at::GenericPackedTensorAccessor<scalar_t, 8> columns,
+                const at::GenericPackedTensorAccessor<scalar_t, 5> input,
+                const at::GenericPackedTensorAccessor<scalar_t, 9> offset,
                 const int depth,
                 const int height,
                 const int width,
@@ -730,68 +651,44 @@ namespace tvdcn {
                 const int out_d,
                 const int out_h,
                 const int out_w,
-                const int batch_sz,
-                const int n_offset_grps,
                 const int n_mask_grps,
-                scalar_t *grad_mask) {
-            CUDA_1D_KERNEL_LOOP(index, n_mask_kernels) {
+                const int c_per_offset_group,
+                const int c_per_mask_group,
+                at::GenericPackedTensorAccessor<scalar_t, 8> grad_mask) {
+            CUDA_1D_KERNEL_LOOP(index, n_kernels) {
+                const int k = index % weight_w;
+                const int j = (index / weight_w) % weight_h;
+                const int i = (index / (weight_w * weight_h)) % weight_d;
+                const int w = (index / (weight_w * weight_h * weight_d)) % out_w;
+                const int h = (index / (weight_w * weight_h * weight_d * out_w)) % out_h;
+                const int d = (index / (weight_w * weight_h * weight_d * out_w * out_h)) % out_d;
+                const int g = (index / (weight_w * weight_h * weight_d * out_w * out_h * out_d)) % n_mask_grps;
+                const int b = index / (weight_w * weight_h * weight_d * out_w * out_h * out_d * n_mask_grps);
+
                 scalar_t grad_mask_val = 0;
 
-                const int w = index % out_w;
-                const int h = (index / out_w) % out_h;
-                const int d = (index / (out_w * out_h)) % out_d;
-                const int c = (index / (out_w * out_h * out_d)) % mask_channels;
-                const int b = index / (out_w * out_h * out_d * mask_channels);
-
-                const int mask_grp = c / (weight_d * weight_h * weight_w);
-
-                const int col_offset = mask_grp * c_per_mask_grp * weight_d * weight_h * weight_w * batch_sz *
-                                       out_d * out_h * out_w;
-                auto columns_ptr = columns + col_offset;
-                auto input_ptr = input +
-                                 (b * n_mask_grps + mask_grp) * c_per_mask_grp * depth * height * width;
-                auto grad_mask_ptr = grad_mask +
-                                     (b * n_mask_grps + mask_grp) * weight_d * weight_h * weight_w * out_d * out_h *
-                                     out_w;
-
-                const int mask_c = c - mask_grp * weight_d * weight_h * weight_w;
-
-                const int c_bound = c_per_mask_grp * weight_d * weight_h * weight_w;
-                const int col_step = weight_d * weight_h * weight_w;
-                for (int col_c = mask_c; col_c < c_bound; col_c += col_step) {
-                    const int col_pos = (((col_c * batch_sz + b) * out_d + d) * out_h + h) * out_w + w;
-                    const int in_c = (col_offset + col_pos) * in_channels / n_kernels;
-
-                    const int offset_grp = in_c / c_per_offset_grp;
-                    auto offset_ptr = offset +
-                                      (b * n_offset_grps + offset_grp) * 3 * weight_d * weight_h * weight_w *
-                                      out_d * out_h * out_w;
-
-                    const int k = (col_pos / (out_w * out_h * out_d * batch_sz)) % weight_w;
-                    const int j = (col_pos / (out_w * out_h * out_d * batch_sz * weight_w)) % weight_h;
-                    const int i = (col_pos / (out_w * out_h * out_d * batch_sz * weight_w * weight_h)) % weight_d;
+                const int c_start = g * c_per_mask_group;
+                const int c_end = c_start + c_per_mask_group;
+                for (int c = c_start; c < c_end; ++c) {
+                    const int offset_group_idx = c / c_per_offset_group;
 
                     const int z = (d * stride_d - pad_d) + i * dilation_d;
                     const int y = (h * stride_h - pad_h) + j * dilation_h;
                     const int x = (w * stride_w - pad_w) + k * dilation_w;
 
-                    const int mask_idx = i * weight_h * weight_w + j * weight_w + k;
-                    const int offset_idx = 3 * mask_idx;
-
                     const scalar_t val =
                             deformable ?
                             interpolate_sample(
-                                    input_ptr, depth, height, width,
-                                    z + offset_ptr[((offset_idx * out_d + d) * out_h + h) * out_w + w],
-                                    y + offset_ptr[(((offset_idx + 1) * out_d + d) * out_h + h) * out_w + w],
-                                    x + offset_ptr[(((offset_idx + 2) * out_d + d) * out_h + h) * out_w + w])
-                                       : sample(input_ptr, depth, height, width, z, y, x);
+                                    input, b, c, depth, height, width,
+                                    z + offset[b][offset_group_idx][i][j][k][0][d][h][w],
+                                    y + offset[b][offset_group_idx][i][j][k][1][d][h][w],
+                                    x + offset[b][offset_group_idx][i][j][k][2][d][h][w])
+                                       : sample(input, b, c, depth, height, width, z, y, x);
 
-                    grad_mask_val += columns_ptr[col_pos] * val;
-                    input_ptr += depth * height * width;
+                    grad_mask_val += columns[c][i][j][k][b][d][h][w] * val;
                 }
 
-                grad_mask_ptr[((mask_c * out_d + d) * out_h + h) * out_w + w] = grad_mask_val;
+                grad_mask[b][g][i][j][k][d][h][w] = grad_mask_val;
             }
         }
 
@@ -825,29 +722,22 @@ namespace tvdcn {
                 const bool modulated,
                 at::Tensor &grad_mask) {
             if (!modulated) return;
-            const int n_kernels = out_d * out_h * out_w * weight_d * weight_h * weight_w * in_channels * batch_sz;
-            const int n_mask_kernels =
-                    out_d * out_h * out_w * weight_d * weight_h * weight_w * n_mask_grps * batch_sz;
-            const int mask_channels = weight_d * weight_h * weight_w * n_mask_grps;
-            const int c_per_offset_grp = deformable ? in_channels / n_offset_grps : 1;
-            const int c_per_mask_grp = modulated ? in_channels / n_mask_grps : 1;
+            const int n_kernels = batch_sz * n_mask_grps * out_d * out_h * out_w * weight_d * weight_h * weight_w;
+            const int c_per_offset_group = deformable ? in_channels / n_offset_grps : 1;
+            const int c_per_mask_group = modulated ? in_channels / n_mask_grps : 1;
 
             const unsigned int threads = GET_THREADS(threadsFraction);
             const unsigned int blocks = GET_BLOCKS(threads, n_kernels);
 
             AT_DISPATCH_FLOATING_TYPES_AND_HALF(
                     columns.scalar_type(), "deform_conv3d_compute_grad_mask_cuda", ([&] {
+                auto grad_mask_accessor = grad_mask.generic_packed_accessor<scalar_t, 8>();
                 TVDCN_DISPATCH_CONDITION(deformable, ([&] {
                     deform_conv3d_compute_grad_mask_kernel<deformable><<<blocks, threads>>>(
                             n_kernels,
-                            n_mask_kernels,
-                            mask_channels,
-                            c_per_offset_grp,
-                            c_per_mask_grp,
-                            columns.data_ptr<scalar_t>(),
-                            input.data_ptr<scalar_t>(),
-                            offset.data_ptr<scalar_t>(),
-                            in_channels,
+                            columns.generic_packed_accessor<scalar_t, 8>(),
+                            input.generic_packed_accessor<scalar_t, 5>(),
+                            offset.generic_packed_accessor<scalar_t, 9>(),
                             depth,
                             height,
                             width,
@@ -866,10 +756,10 @@ namespace tvdcn {
                             out_d,
                             out_h,
                             out_w,
-                            batch_sz,
-                            n_offset_grps,
                             n_mask_grps,
-                            grad_mask.data_ptr<scalar_t>());
+                            c_per_offset_group,
+                            c_per_mask_group,
+                            grad_mask_accessor);
                 }));
             }));
 

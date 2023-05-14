@@ -8,7 +8,7 @@ from utils.deform_conv_test_args import DeformConvTestArgs
 def test_deform_conv(dim=2):
     torch.manual_seed(12)
     conv_func = getattr(tvdcn, f'deform_conv{dim}d')
-    args = DeformConvTestArgs(dim=dim, device='cuda:0', dtype=torch.float64, batch_size=1)
+    args = DeformConvTestArgs(dim=dim, device='cuda', dtype=torch.float64, batch_size=1)
     print(args)
 
     c_res = conv_func(args.input,
