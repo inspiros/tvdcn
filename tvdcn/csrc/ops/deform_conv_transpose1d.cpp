@@ -199,11 +199,11 @@ namespace tvdcn {
                                       in_w});
 
             // Separate channels into convolution groups
-            at::Tensor inp_buf = input_c.view({batch_sz / n_parallel_imgs,
-                                               n_parallel_imgs,
-                                               groups,
-                                               in_channels / groups,
-                                               in_w}).permute({0, 2, 3, 1, 4}).contiguous();
+            input_c = input_c.view({batch_sz / n_parallel_imgs,
+                                    n_parallel_imgs,
+                                    groups,
+                                    in_channels / groups,
+                                    in_w}).permute({0, 2, 3, 1, 4}).contiguous();
             weight_c = weight_c.view({groups,
                                       weight_c.size(0) / groups,
                                       weight_c.size(1),
@@ -211,17 +211,17 @@ namespace tvdcn {
 
             // Sample points and perform convolution
             auto columns = at::empty({groups,
-                                      in_channels * weight_w / groups,
+                                      out_channels * weight_w / groups,
                                       n_parallel_imgs * in_w},
                                      input_c.options());
-            auto columns_view = columns.view({in_channels,
+            auto columns_view = columns.view({out_channels,
                                               weight_w,
                                               n_parallel_imgs,
                                               in_w});
             for (int b = 0; b < batch_sz / n_parallel_imgs; b++) {
                 columns.zero_();
                 for (int g = 0; g < groups; g++) {
-                    columns[g].addmm_(weight_c[g].flatten(1).transpose(0, 1), inp_buf[b][g].flatten(1));
+                    columns[g].addmm_(weight_c[g].flatten(1).transpose(0, 1), input_c[b][g].flatten(1));
                 }
 
                 auto output_b = output[b];
@@ -301,14 +301,16 @@ namespace tvdcn {
             auto grad_bias = at::ones_like(bias_c);
 
             // Separate into blocks
-            grad_input = grad_input.view({batch_sz / n_parallel_imgs,
+            grad_out_c = grad_out_c.view({batch_sz / n_parallel_imgs,
                                           n_parallel_imgs,
-                                          in_channels,
-                                          in_w});
+                                          out_channels,
+                                          out_w});
+
             input_c = input_c.view({batch_sz / n_parallel_imgs,
                                     n_parallel_imgs,
                                     in_channels,
                                     in_w});
+            grad_input = grad_input.view_as(input_c);
             if (deformable) {
                 offset_c = offset_c.view({batch_sz / n_parallel_imgs,
                                           n_parallel_imgs,
@@ -327,23 +329,23 @@ namespace tvdcn {
                 grad_mask = grad_mask.view_as(mask_c);
             }
 
-            at::Tensor grad_inp_buf = at::zeros({batch_sz / n_parallel_imgs,
-                                                 in_channels,
-                                                 n_parallel_imgs,
-                                                 in_w}, input_c.options());
+            auto grad_input_buf = at::zeros({batch_sz / n_parallel_imgs,
+                                             in_channels,
+                                             n_parallel_imgs,
+                                             in_w}, input_c.options());
 
             // Separate channels into convolution groups
-            at::Tensor inp_buf = input_c.view({batch_sz / n_parallel_imgs,
-                                               n_parallel_imgs,
-                                               groups,
-                                               in_channels / groups,
-                                               in_w}).permute({0, 2, 3, 1, 4}).contiguous();
+            input_c = input_c.view({batch_sz / n_parallel_imgs,
+                                    n_parallel_imgs,
+                                    groups,
+                                    in_channels / groups,
+                                    in_w}).permute({0, 2, 3, 1, 4}).contiguous();
 
-            grad_inp_buf = grad_inp_buf.view({grad_inp_buf.size(0),
-                                              groups,
-                                              grad_inp_buf.size(1) / groups,
-                                              grad_inp_buf.size(2),
-                                              grad_inp_buf.size(3)});
+            grad_input_buf = grad_input_buf.view({grad_input_buf.size(0),
+                                                  groups,
+                                                  grad_input_buf.size(1) / groups,
+                                                  grad_input_buf.size(2),
+                                                  grad_input_buf.size(3)});
 
             weight_c = weight_c.view({groups,
                                       in_channels / groups,
@@ -352,18 +354,17 @@ namespace tvdcn {
             grad_weight = grad_weight.view_as(weight_c);
 
             auto columns = at::empty({groups,
-                                      in_channels * weight_w / groups,
+                                      out_channels * weight_w / groups,
                                       n_parallel_imgs * in_w},
                                      input_c.options());
-            auto columns_view = columns.view({in_channels,
+            auto columns_view = columns.view({out_channels,
                                               weight_w,
                                               n_parallel_imgs,
                                               in_w});
             for (int b = 0; b < batch_sz / n_parallel_imgs; b++) {
                 columns.zero_();
                 for (int g = 0; g < groups; g++) {
-                    columns[g].addmm_(
-                            weight_c[g].flatten(1).transpose(0, 1), inp_buf[b][g].flatten(1));
+                    columns[g].addmm_(weight_c[g].flatten(1).transpose(0, 1), input_c[b][g].flatten(1));
                 }
 
                 auto grad_offset_b = grad_offset[b];
@@ -405,7 +406,6 @@ namespace tvdcn {
                         modulated,
                         grad_mask_b);
 
-                auto grad_input_b = grad_input[b];
                 arr2col(
                         grad_out_c[b],
                         offset_c[b],
@@ -425,23 +425,16 @@ namespace tvdcn {
                         columns_view);
 
                 for (int g = 0; g < groups; g++) {
-                    grad_inp_buf[b][g] = grad_inp_buf[b][g]
-                            .flatten(1)
-                            .addmm_(weight_c[g].flatten(1), columns[g])
-                            .view_as(grad_inp_buf[b][g]);
-
-                    grad_weight[g] = grad_weight[g]
-                            .flatten(1)
-                            .addmm_(inp_buf[b][g].flatten(1), columns[g].transpose(1, 0))
-                            .view_as(grad_weight[g]);
+                    grad_input_buf[b][g].flatten(1).addmm_(weight_c[g].flatten(1), columns[g]);
+                    grad_weight[g].flatten(1).addmm_(input_c[b][g].flatten(1), columns[g].transpose(1, 0));
                 }
             }
 
-            grad_inp_buf = grad_inp_buf.view({batch_sz / n_parallel_imgs,
-                                              in_channels,
-                                              n_parallel_imgs,
-                                              in_w}).transpose_(1, 2);
-            grad_input.copy_(grad_inp_buf);
+            grad_input_buf = grad_input_buf.view({batch_sz / n_parallel_imgs,
+                                                  in_channels,
+                                                  n_parallel_imgs,
+                                                  in_w}).transpose_(1, 2);
+            grad_input.copy_(grad_input_buf);
             grad_input = grad_input.view({batch_sz,
                                           in_channels,
                                           in_w});

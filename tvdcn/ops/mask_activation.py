@@ -1,16 +1,24 @@
 import torch
+import torch.nn as nn
+from torch import Tensor
 from torch.jit.annotations import Tuple
+from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from torch.nn.modules.utils import _single, _pair, _triple
+
+from .._types import _IntTuple
 
 __all__ = [
     'mask_softmax1d',
     'mask_softmax2d',
     'mask_softmax3d',
+    'MaskSoftmax1d',
+    'MaskSoftmax2d',
+    'MaskSoftmax3d',
 ]
 
 
-def mask_softmax1d(mask: torch.Tensor,
-                   kernel_size: Tuple[int]) -> torch.Tensor:
+def mask_softmax1d(mask: Tensor,
+                   kernel_size: Tuple[int]) -> Tensor:
     r"""
     Performs 1D Mask Softmax Normalization.
 
@@ -42,8 +50,8 @@ def mask_softmax1d(mask: torch.Tensor,
     return mask
 
 
-def mask_softmax2d(mask: torch.Tensor,
-                   kernel_size: Tuple[int, int]) -> torch.Tensor:
+def mask_softmax2d(mask: Tensor,
+                   kernel_size: Tuple[int, int]) -> Tensor:
     r"""
     Performs 2D Mask Softmax Normalization.
 
@@ -81,8 +89,8 @@ def mask_softmax2d(mask: torch.Tensor,
     return mask
 
 
-def mask_softmax3d(mask: torch.Tensor,
-                   kernel_size: Tuple[int, int]) -> torch.Tensor:
+def mask_softmax3d(mask: Tensor,
+                   kernel_size: Tuple[int, int]) -> Tensor:
     r"""
     Performs 3D Mask Softmax Normalization.
 
@@ -117,3 +125,58 @@ def mask_softmax3d(mask: torch.Tensor,
                      out_height,
                      out_width)
     return mask
+
+
+################################################################################
+# Modules
+################################################################################
+class _MaskSoftmaxNd(nn.Module):
+    """
+    Base class for MaskSoftmax
+    """
+
+    def __init__(self, kernel_size: _IntTuple):
+        super().__init__()
+        self.kernel_size = kernel_size
+
+    def forward(self, mask: Tensor) -> Tensor:
+        raise NotImplementedError
+
+
+class MaskSoftmax1d(_MaskSoftmaxNd):
+    """
+    See :func:`mask_softmax1d`
+    """
+
+    def __init__(self, kernel_size: _size_1_t) -> None:
+        kernel_size = _single(kernel_size)
+        super().__init__(kernel_size)
+
+    def forward(self, mask: Tensor) -> Tensor:
+        return mask_softmax1d(mask, self.kernel_size)
+
+
+class MaskSoftmax2d(_MaskSoftmaxNd):
+    """
+    See :func:`mask_softmax2d`
+    """
+
+    def __init__(self, kernel_size: _size_2_t) -> None:
+        kernel_size = _pair(kernel_size)
+        super().__init__(kernel_size)
+
+    def forward(self, mask: Tensor) -> Tensor:
+        return mask_softmax2d(mask, self.kernel_size)  # type: ignore[arg-type]
+
+
+class MaskSoftmax3d(_MaskSoftmaxNd):
+    """
+    See :func:`mask_softmax3d`
+    """
+
+    def __init__(self, kernel_size: _size_3_t) -> None:
+        kernel_size = _triple(kernel_size)
+        super().__init__(kernel_size)
+
+    def forward(self, mask: Tensor) -> Tensor:
+        return mask_softmax3d(mask, self.kernel_size)  # type: ignore[arg-type]

@@ -282,10 +282,7 @@ namespace tvdcn {
                         columns_view);
 
                 for (int g = 0; g < groups; g++) {
-                    out_buf[b][g] = out_buf[b][g]
-                            .flatten(1)
-                            .addmm_(weight_c[g].flatten(1), columns[g])
-                            .view_as(out_buf[b][g]);
+                    out_buf[b][g].flatten(1).addmm_(weight_c[g].flatten(1), columns[g]);
                 }
             }
 
@@ -413,8 +410,7 @@ namespace tvdcn {
             for (int b = 0; b < batch_sz / n_parallel_imgs; b++) {
                 columns.zero_();
                 for (int g = 0; g < groups; g++) {
-                    columns[g] = columns[g]
-                            .addmm_(weight_c[g].flatten(1).transpose(0, 1), grad_out_c[b][g].flatten(1));
+                    columns[g].addmm_(weight_c[g].flatten(1).transpose(0, 1), grad_out_c[b][g].flatten(1));
                 }
 
                 auto grad_offset_b = grad_offset[b];
@@ -517,10 +513,7 @@ namespace tvdcn {
                         modulated,
                         columns_view);
                 for (int g = 0; g < groups; g++) {
-                    grad_weight[g] = grad_weight[g]
-                            .flatten(1)
-                            .addmm_(grad_out_c[b][g].flatten(1), columns[g].transpose(1, 0))
-                            .view_as(grad_weight[g]);
+                    grad_weight[g].flatten(1).addmm_(grad_out_c[b][g].flatten(1), columns[g].transpose(1, 0));
                 }
             }
 

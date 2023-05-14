@@ -7,8 +7,8 @@ from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from torch.nn.modules.conv import _ConvNd
 from torch.nn.modules.utils import _single, _pair, _triple
 
-import tvdcn
-from .._types import _IntTuple
+from .mask_activation import MaskSoftmax1d, MaskSoftmax2d, MaskSoftmax3d
+from .._types import _IntTuple, _Activation
 from ..extension import _assert_has_ops
 from ..utils import _log_api_usage_once
 
@@ -544,6 +544,8 @@ class PackedDeformConv1d(DeformConv1d):
                  bias: bool = True,
                  deformable: bool = True,
                  modulated: bool = False,
+                 offset_activation: Union[str, _Activation] = None,
+                 mask_activation: Union[str, _Activation] = 'softmax',
                  padding_mode: str = 'zeros',
                  device=None,
                  dtype=None) -> None:
@@ -561,8 +563,19 @@ class PackedDeformConv1d(DeformConv1d):
         if out_channels % mask_groups != 0:
             raise ValueError('out_channels must be divisible by mask_groups')
 
+        if isinstance(offset_activation, str):
+            raise ValueError('currently, no activation is supported for offset')
+        if isinstance(mask_activation, str):
+            if mask_activation == 'sigmoid':
+                mask_activation = nn.Sigmoid()
+            elif mask_activation == 'softmax':
+                mask_activation = MaskSoftmax1d(self.kernel_size)  # type: ignore[arg-type]
+            else:
+                raise ValueError('only \"sigmoid\" and \"softmax\" activations are supported for mask')
+
         self.offset_groups = offset_groups
         self.mask_groups = mask_groups
+
         self.deformable = deformable
         self.modulated = modulated
 
@@ -580,6 +593,7 @@ class PackedDeformConv1d(DeformConv1d):
                 dtype=dtype)
         else:
             self.register_module('conv_offset', None)
+        self.offset_activation = offset_activation
 
         if self.modulated:
             self.conv_mask = nn.Conv1d(
@@ -595,6 +609,7 @@ class PackedDeformConv1d(DeformConv1d):
                 dtype=dtype)
         else:
             self.register_module('conv_mask', None)
+        self.mask_activation = mask_activation
 
         self.reset_parameters()
 
@@ -612,11 +627,20 @@ class PackedDeformConv1d(DeformConv1d):
                 init.zeros_(self.conv_mask.bias)
 
     def forward(self, input: Tensor) -> Tensor:
-        offset = self.conv_offset(input) if self.deformable and self.conv_offset is not None else None
-        mask = tvdcn.ops.mask_softmax1d(
-            self.conv_mask(input),
-            self.kernel_size,  # type: ignore[arg-type]
-        ) if self.modulated and self.conv_mask is not None else None
+        if self.deformable and self.conv_offset is not None:
+            offset = self.conv_offset(input)
+            if self.offset_activation is not None:
+                offset = self.offset_activation(offset)
+        else:
+            offset = None
+
+        if self.modulated and self.conv_mask is not None:
+            mask = self.conv_mask(input)
+            if self.mask_activation is not None:
+                mask = self.mask_activation(mask)
+        else:
+            mask = None
+
         return self._conv_forward(input, self.weight, offset, mask, self.bias)
 
 
@@ -639,6 +663,8 @@ class PackedDeformConv2d(DeformConv2d):
                  bias: bool = True,
                  deformable: bool = True,
                  modulated: bool = False,
+                 offset_activation: Union[str, _Activation] = None,
+                 mask_activation: Union[str, _Activation] = 'softmax',
                  padding_mode: str = 'zeros',
                  device=None,
                  dtype=None) -> None:
@@ -656,8 +682,19 @@ class PackedDeformConv2d(DeformConv2d):
         if out_channels % mask_groups != 0:
             raise ValueError('out_channels must be divisible by mask_groups')
 
+        if isinstance(offset_activation, str):
+            raise ValueError('currently, no activation is supported for offset')
+        if isinstance(mask_activation, str):
+            if mask_activation == 'sigmoid':
+                mask_activation = nn.Sigmoid()
+            elif mask_activation == 'softmax':
+                mask_activation = MaskSoftmax2d(self.kernel_size)  # type: ignore[arg-type]
+            else:
+                raise ValueError('only \"sigmoid\" and \"softmax\" activations are supported for mask')
+
         self.offset_groups = offset_groups
         self.mask_groups = mask_groups
+
         self.deformable = deformable
         self.modulated = modulated
 
@@ -675,6 +712,7 @@ class PackedDeformConv2d(DeformConv2d):
                 dtype=dtype)
         else:
             self.register_module('conv_offset', None)
+        self.offset_activation = offset_activation
 
         if self.modulated:
             self.conv_mask = nn.Conv2d(
@@ -690,6 +728,7 @@ class PackedDeformConv2d(DeformConv2d):
                 dtype=dtype)
         else:
             self.register_module('conv_mask', None)
+        self.mask_activation = mask_activation
 
         self.reset_parameters()
 
@@ -707,11 +746,20 @@ class PackedDeformConv2d(DeformConv2d):
                 init.zeros_(self.conv_mask.bias)
 
     def forward(self, input: Tensor) -> Tensor:
-        offset = self.conv_offset(input) if self.deformable and self.conv_offset is not None else None
-        mask = tvdcn.ops.mask_softmax2d(
-            self.conv_mask(input),
-            self.kernel_size,  # type: ignore[arg-type]
-        ) if self.modulated and self.conv_mask is not None else None
+        if self.deformable and self.conv_offset is not None:
+            offset = self.conv_offset(input)
+            if self.offset_activation is not None:
+                offset = self.offset_activation(offset)
+        else:
+            offset = None
+
+        if self.modulated and self.conv_mask is not None:
+            mask = self.conv_mask(input)
+            if self.mask_activation is not None:
+                mask = self.mask_activation(mask)
+        else:
+            mask = None
+
         return self._conv_forward(input, self.weight, offset, mask, self.bias)
 
 
@@ -734,6 +782,8 @@ class PackedDeformConv3d(DeformConv3d):
                  bias: bool = True,
                  deformable: bool = True,
                  modulated: bool = False,
+                 offset_activation: Union[str, _Activation] = None,
+                 mask_activation: Union[str, _Activation] = 'softmax',
                  padding_mode: str = 'zeros',
                  device=None,
                  dtype=None) -> None:
@@ -751,8 +801,19 @@ class PackedDeformConv3d(DeformConv3d):
         if out_channels % mask_groups != 0:
             raise ValueError('out_channels must be divisible by mask_groups')
 
+        if isinstance(offset_activation, str):
+            raise ValueError('currently, no activation is supported for offset')
+        if isinstance(mask_activation, str):
+            if mask_activation == 'sigmoid':
+                mask_activation = nn.Sigmoid()
+            elif mask_activation == 'softmax':
+                mask_activation = MaskSoftmax3d(self.kernel_size)  # type: ignore[arg-type]
+            else:
+                raise ValueError('only \"sigmoid\" and \"softmax\" activations are supported for mask')
+
         self.offset_groups = offset_groups
         self.mask_groups = mask_groups
+
         self.deformable = deformable
         self.modulated = modulated
 
@@ -770,6 +831,7 @@ class PackedDeformConv3d(DeformConv3d):
                 dtype=device)
         else:
             self.register_module('conv_offset', None)
+        self.offset_activation = offset_activation
 
         if self.modulated:
             self.conv_mask = nn.Conv3d(
@@ -785,6 +847,7 @@ class PackedDeformConv3d(DeformConv3d):
                 dtype=device)
         else:
             self.register_module('conv_mask', None)
+        self.mask_activation = mask_activation
 
         self.reset_parameters()
 
@@ -802,9 +865,18 @@ class PackedDeformConv3d(DeformConv3d):
                 init.zeros_(self.conv_mask.bias)
 
     def forward(self, input: Tensor) -> Tensor:
-        offset = self.conv_offset(input) if self.deformable and self.conv_offset is not None else None
-        mask = tvdcn.ops.mask_softmax3d(
-            self.conv_mask(input),
-            self.kernel_size,  # type: ignore[arg-type]
-        ) if self.modulated and self.conv_mask is not None else None
+        if self.deformable and self.conv_offset is not None:
+            offset = self.conv_offset(input)
+            if self.offset_activation is not None:
+                offset = self.offset_activation(offset)
+        else:
+            offset = None
+
+        if self.modulated and self.conv_mask is not None:
+            mask = self.conv_mask(input)
+            if self.mask_activation is not None:
+                mask = self.mask_activation(mask)
+        else:
+            mask = None
+
         return self._conv_forward(input, self.weight, offset, mask, self.bias)
