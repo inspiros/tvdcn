@@ -67,7 +67,6 @@ def get_extensions():
         define_macros += [(f'{PACKAGE_ROOT}_EXPORTS', None)]
         define_macros += [('USE_PYTHON', None)]
         extra_compile_args['cxx'].append('/MP')
-        extra_compile_args['cxx'].append('/Zc:preprocessor')
 
     if debug_mode:
         print('Compiling in debug mode')

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch import Tensor
-from torch.jit.annotations import Tuple
+from torch.jit.annotations import Tuple, Optional
 from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from torch.nn.modules.utils import _single, _pair, _triple
 
@@ -90,7 +90,7 @@ def mask_softmax2d(mask: Tensor,
 
 
 def mask_softmax3d(mask: Tensor,
-                   kernel_size: Tuple[int, int]) -> Tensor:
+                   kernel_size: Tuple[int, int, int]) -> Tensor:
     r"""
     Performs 3D Mask Softmax Normalization.
 
@@ -98,7 +98,7 @@ def mask_softmax3d(mask: Tensor,
         mask (Tensor[batch_size, mask_groups * kernel_depth * kernel_height * kernel_width,
             out_depth, out_height, out_width]): modulation masks to be multiplied with each output
             of convolution kernel. Default: None
-        kernel_size (int or Tuple[int, int]): convolution kernel size.
+        kernel_size (int or Tuple[int, int, int]): convolution kernel size.
     """
     batch_size, _, out_depth, out_height, out_width = mask.size()
 
@@ -137,9 +137,9 @@ class _MaskSoftmaxNd(nn.Module):
 
     def __init__(self, kernel_size: _IntTuple):
         super().__init__()
-        self.kernel_size = kernel_size
+        self.kernel_size: Tuple[int, ...] = kernel_size
 
-    def forward(self, mask: Tensor) -> Tensor:
+    def forward(self, mask: Tensor, kernel_size: _IntTuple = None) -> Tensor:
         raise NotImplementedError
 
 
@@ -152,8 +152,13 @@ class MaskSoftmax1d(_MaskSoftmaxNd):
         kernel_size = _single(kernel_size)
         super().__init__(kernel_size)
 
-    def forward(self, mask: Tensor) -> Tensor:
-        return mask_softmax1d(mask, self.kernel_size)
+    def forward(self, mask: Tensor, kernel_size: Optional[Tuple[int]] = None) -> Tensor:
+        if kernel_size is not None:
+            kernel_size_ = _single(kernel_size)
+            kernel_size = (kernel_size_[0],)
+        else:
+            kernel_size = self.kernel_size
+        return mask_softmax1d(mask, kernel_size)
 
 
 class MaskSoftmax2d(_MaskSoftmaxNd):
@@ -165,8 +170,13 @@ class MaskSoftmax2d(_MaskSoftmaxNd):
         kernel_size = _pair(kernel_size)
         super().__init__(kernel_size)
 
-    def forward(self, mask: Tensor) -> Tensor:
-        return mask_softmax2d(mask, self.kernel_size)  # type: ignore[arg-type]
+    def forward(self, mask: Tensor, kernel_size: Optional[Tuple[int, int]] = None) -> Tensor:
+        if kernel_size is not None:
+            kernel_size_ = _pair(kernel_size)
+            kernel_size = (kernel_size_[0], kernel_size_[1])
+        else:
+            kernel_size = self.kernel_size
+        return mask_softmax2d(mask, kernel_size)  # type: ignore[arg-type]
 
 
 class MaskSoftmax3d(_MaskSoftmaxNd):
@@ -178,5 +188,10 @@ class MaskSoftmax3d(_MaskSoftmaxNd):
         kernel_size = _triple(kernel_size)
         super().__init__(kernel_size)
 
-    def forward(self, mask: Tensor) -> Tensor:
-        return mask_softmax3d(mask, self.kernel_size)  # type: ignore[arg-type]
+    def forward(self, mask: Tensor, kernel_size: Optional[Tuple[int, int, int]] = None) -> Tensor:
+        if kernel_size is not None:
+            kernel_size_ = _triple(kernel_size)
+            kernel_size = (kernel_size_[0], kernel_size_[1], kernel_size_[2])
+        else:
+            kernel_size = self.kernel_size
+        return mask_softmax3d(mask, kernel_size)  # type: ignore[arg-type]
