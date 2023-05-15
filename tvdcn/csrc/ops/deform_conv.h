@@ -186,8 +186,8 @@ namespace tvdcn {
                         modulated);
                 auto grad_input = std::get<0>(grads);
                 auto grad_weight = std::get<1>(grads);
-                auto grad_offset = deformable ? std::get<2>(grads) : torch::autograd::Variable();
-                auto grad_mask = modulated ? std::get<3>(grads) : torch::autograd::Variable();
+                auto grad_offset = std::get<2>(grads);
+                auto grad_mask = std::get<3>(grads);
                 auto grad_bias = std::get<4>(grads);
 
                 return {
@@ -302,8 +302,8 @@ namespace tvdcn {
                         modulated);
                 auto grad_input = std::get<0>(grads);
                 auto grad_weight = std::get<1>(grads);
-                auto grad_offset = deformable ? std::get<2>(grads) : torch::autograd::Variable();
-                auto grad_mask = modulated ? std::get<3>(grads) : torch::autograd::Variable();
+                auto grad_offset = std::get<2>(grads);
+                auto grad_mask = std::get<3>(grads);
                 auto grad_bias = std::get<4>(grads);
 
                 return {
@@ -430,8 +430,8 @@ namespace tvdcn {
                         modulated);
                 auto grad_input = std::get<0>(grads);
                 auto grad_weight = std::get<1>(grads);
-                auto grad_offset = deformable ? std::get<2>(grads) : torch::autograd::Variable();
-                auto grad_mask = modulated ? std::get<3>(grads) : torch::autograd::Variable();
+                auto grad_offset = std::get<2>(grads);
+                auto grad_mask = std::get<3>(grads);
                 auto grad_bias = std::get<4>(grads);
 
                 return {

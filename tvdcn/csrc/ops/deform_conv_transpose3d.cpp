@@ -89,6 +89,17 @@ namespace tvdcn {
                 const int mask_groups,
                 const bool deformable,
                 const bool modulated) {
+            at::CheckedFrom c = "deform_conv_transpose3d_forward";
+            auto args = {
+                    at::TensorArg(input, "input", 1),
+                    at::TensorArg(weight, "weight", 2),
+                    at::TensorArg(offset, "offset", 3),
+                    at::TensorArg(mask, "mask", 4),
+                    at::TensorArg(bias, "bias", 5)};
+            at::checkAllSameType(c, args);
+            if (input.device().is_cuda())
+                at::checkAllSameGPU(c, args);
+
             at::Tensor input_c = input.contiguous();
             at::Tensor weight_c = weight.contiguous();
             at::Tensor offset_c = offset.contiguous();

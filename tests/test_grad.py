@@ -8,7 +8,7 @@ from utils.deform_conv_test_args import DeformConvTestArgs
 def test_deform_conv(dim=2,
                      transposed=False,
                      dtype=torch.float64,
-                     device='cpu'):
+                     device='cuda'):
     torch.manual_seed(12)
     conv_func = getattr(tvdcn, f'deform_conv{"_transpose" if transposed else ""}{dim}d')
     args = DeformConvTestArgs(dim=dim, transposed=transposed, dtype=dtype, device=device)

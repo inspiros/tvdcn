@@ -88,6 +88,17 @@ namespace tvdcn {
                 const int mask_groups,
                 const bool deformable,
                 const bool modulated) {
+            at::CheckedFrom c = "deform_conv1d_forward";
+            auto args = {
+                    at::TensorArg(input, "input", 1),
+                    at::TensorArg(weight, "weight", 2),
+                    at::TensorArg(offset, "offset", 3),
+                    at::TensorArg(mask, "mask", 4),
+                    at::TensorArg(bias, "bias", 5)};
+            at::checkAllSameType(c, args);
+            if (input.device().is_cuda())
+                at::checkAllSameGPU(c, args);
+
             at::Tensor input_c = input.contiguous();
             at::Tensor weight_c = weight.contiguous();
             at::Tensor offset_c = offset.contiguous();
@@ -199,6 +210,7 @@ namespace tvdcn {
                 mask_c = mask_c.view({batch_sz / n_parallel_imgs,
                                       n_parallel_imgs,
                                       0, 0, 0});
+
             out = out.view({batch_sz / n_parallel_imgs,
                             n_parallel_imgs,
                             out_channels,
@@ -335,6 +347,10 @@ namespace tvdcn {
                                       mask_groups,
                                       weight_w,
                                       out_w});
+            else
+                mask_c = mask_c.view({batch_sz / n_parallel_imgs,
+                                      n_parallel_imgs,
+                                      0, 0, 0});
             grad_mask = grad_mask.view_as(mask_c);
 
             // Separate channels into convolution groups
