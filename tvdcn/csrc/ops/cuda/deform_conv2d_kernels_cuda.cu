@@ -7,34 +7,34 @@ namespace tvdcn {
         namespace {
             constexpr float threadsFraction = 0.75;
 
-            template<typename scalar_t>
+            template<typename scalar_t, typename index_t>
             __device__ __forceinline__ scalar_t sample(
-                    const at::GenericPackedTensorAccessor<scalar_t, 4> input,
-                    const int b,
-                    const int c,
-                    const int height,
-                    const int width,
-                    const int y,
-                    const int x) {
+                    const at::GenericPackedTensorAccessor<scalar_t, 4, at::RestrictPtrTraits, index_t> input,
+                    const index_t b,
+                    const index_t c,
+                    const index_t height,
+                    const index_t width,
+                    const index_t y,
+                    const index_t x) {
                 return (0 <= y && y < height && 0 <= x && x < width) ? input[b][c][y][x] : static_cast<scalar_t>(0);
             }
 
-            template<typename scalar_t>
+            template<typename scalar_t, typename index_t>
             __device__ __forceinline__ scalar_t interpolate_sample(
-                    const at::GenericPackedTensorAccessor<scalar_t, 4> input,
-                    const int b,
-                    const int c,
-                    const int height,
-                    const int width,
+                    const at::GenericPackedTensorAccessor<scalar_t, 4, at::RestrictPtrTraits, index_t> input,
+                    const index_t b,
+                    const index_t c,
+                    const index_t height,
+                    const index_t width,
                     const scalar_t y,
                     const scalar_t x) {
                 if (y <= -1 || height <= y || x <= -1 || width <= x)
                     return 0;
 
-                int y_l = floor(y);
-                int y_h = y_l + 1;
-                int x_l = floor(x);
-                int x_h = x_l + 1;
+                index_t y_l = floor(y);
+                index_t y_h = y_l + 1;
+                index_t x_l = floor(x);
+                index_t x_h = x_l + 1;
 
                 scalar_t dy_h = y - y_l;
                 scalar_t dx_h = x - x_l;
@@ -54,34 +54,34 @@ namespace tvdcn {
                 return val;
             }
 
-            template<typename scalar_t>
+            template<typename scalar_t, typename index_t>
             __device__ __forceinline__ void insert(
-                    at::GenericPackedTensorAccessor<scalar_t, 4> output,
-                    const int b,
-                    const int c,
-                    const int height,
-                    const int width,
-                    const int y,
-                    const int x,
+                    at::GenericPackedTensorAccessor<scalar_t, 4, at::RestrictPtrTraits, index_t> output,
+                    const index_t b,
+                    const index_t c,
+                    const index_t height,
+                    const index_t width,
+                    const index_t y,
+                    const index_t x,
                     const scalar_t val) {
                 if (0 <= y && y < height && 0 <= x && x < width)
                     gpuAtomicAdd(&output[b][c][y][x], val);
             }
 
-            template<typename scalar_t>
+            template<typename scalar_t, typename index_t>
             __device__ __forceinline__ void interpolate_insert(
-                    at::GenericPackedTensorAccessor<scalar_t, 4> output,
-                    const int b,
-                    const int c,
-                    const int height,
-                    const int width,
+                    at::GenericPackedTensorAccessor<scalar_t, 4, at::RestrictPtrTraits, index_t> output,
+                    const index_t b,
+                    const index_t c,
+                    const index_t height,
+                    const index_t width,
                     const scalar_t y,
                     const scalar_t x,
                     const scalar_t val) {
-                int y_l = floor(y);
-                int y_h = y_l + 1;
-                int x_l = floor(x);
-                int x_h = x_l + 1;
+                index_t y_l = floor(y);
+                index_t y_h = y_l + 1;
+                index_t x_l = floor(x);
+                index_t x_h = x_l + 1;
 
                 scalar_t dy_h = y - y_l;
                 scalar_t dx_h = x - x_l;
@@ -99,20 +99,20 @@ namespace tvdcn {
                 if (valid_y_h && valid_x_h) gpuAtomicAdd(&output[b][c][y_h][x_h], dy_h * dx_h * val);
             }
 
-            template<typename scalar_t>
+            template<typename scalar_t, typename index_t>
             __device__ __forceinline__ scalar_t coordinate_weight(
-                    const at::GenericPackedTensorAccessor<scalar_t, 4> input,
-                    const int b,
-                    const int c,
-                    const int height,
-                    const int width,
+                    const at::GenericPackedTensorAccessor<scalar_t, 4, at::RestrictPtrTraits, index_t> input,
+                    const index_t b,
+                    const index_t c,
+                    const index_t height,
+                    const index_t width,
                     const scalar_t y,
                     const scalar_t x,
-                    const int direction) {
-                int y_l = floor(y);
-                int y_h = y_l + 1;
-                int x_l = floor(x);
-                int x_h = x_l + 1;
+                    const index_t direction) {
+                index_t y_l = floor(y);
+                index_t y_h = y_l + 1;
+                index_t x_l = floor(x);
+                index_t x_h = x_l + 1;
 
                 scalar_t dy_h = (direction == 0) ? static_cast<scalar_t>(1) : y - y_l;
                 scalar_t dy_l = (direction == 0) ? static_cast<scalar_t>(-1) : 1 - dy_h;
@@ -133,41 +133,41 @@ namespace tvdcn {
             }
         }
 
-        template<bool deformable, bool modulated, typename scalar_t>
+        template<bool deformable, bool modulated, typename scalar_t, typename index_t>
         static __global__ void im2col_kernel(
-                const int n_kernels,
-                const at::GenericPackedTensorAccessor<scalar_t, 4> input,
-                const at::GenericPackedTensorAccessor<scalar_t, 7> offset,
-                const at::GenericPackedTensorAccessor<scalar_t, 6> mask,
-                const int height,
-                const int width,
-                const int weight_h,
-                const int weight_w,
-                const int pad_h,
-                const int pad_w,
-                const int stride_h,
-                const int stride_w,
-                const int dilation_h,
-                const int dilation_w,
-                const int out_h,
-                const int out_w,
-                const int in_channels,
-                const int c_per_offset_group,
-                const int c_per_mask_group,
-                at::GenericPackedTensorAccessor<scalar_t, 6> columns) {
-            CUDA_1D_KERNEL_LOOP(index, n_kernels) {
-                const int w = index % out_w;
-                const int h = (index / out_w) % out_h;
-                const int c = (index / (out_w * out_h)) % in_channels;
-                const int b = index / (out_w * out_h * in_channels);
+                const index_t n_kernels,
+                const at::GenericPackedTensorAccessor<scalar_t, 4, at::RestrictPtrTraits, index_t> input,
+                const at::GenericPackedTensorAccessor<scalar_t, 7, at::RestrictPtrTraits, index_t> offset,
+                const at::GenericPackedTensorAccessor<scalar_t, 6, at::RestrictPtrTraits, index_t> mask,
+                const index_t height,
+                const index_t width,
+                const index_t weight_h,
+                const index_t weight_w,
+                const index_t pad_h,
+                const index_t pad_w,
+                const index_t stride_h,
+                const index_t stride_w,
+                const index_t dilation_h,
+                const index_t dilation_w,
+                const index_t out_h,
+                const index_t out_w,
+                const index_t in_channels,
+                const index_t c_per_offset_group,
+                const index_t c_per_mask_group,
+                at::GenericPackedTensorAccessor<scalar_t, 6, at::RestrictPtrTraits, index_t> columns) {
+            CUDA_1D_KERNEL_LOOP_T(index, n_kernels, index_t) {
+                const index_t w = index % out_w;
+                const index_t h = (index / out_w) % out_h;
+                const index_t c = (index / (out_w * out_h)) % in_channels;
+                const index_t b = index / (out_w * out_h * in_channels);
 
-                const int offset_group_idx = c / c_per_offset_group;
-                const int mask_group_idx = c / c_per_mask_group;
+                const index_t offset_group_idx = c / c_per_offset_group;
+                const index_t mask_group_idx = c / c_per_mask_group;
 
-                for (int i = 0; i < weight_h; ++i) {
-                    for (int j = 0; j < weight_w; ++j) {
-                        const int y = (h * stride_h - pad_h) + i * dilation_h;
-                        const int x = (w * stride_w - pad_w) + j * dilation_w;
+                for (index_t i = 0; i < weight_h; ++i) {
+                    for (index_t j = 0; j < weight_w; ++j) {
+                        const index_t y = (h * stride_h - pad_h) + i * dilation_h;
+                        const index_t x = (w * stride_w - pad_w) + j * dilation_w;
 
                         const scalar_t val =
                                 deformable ?
@@ -204,91 +204,90 @@ namespace tvdcn {
                 const int out_h,
                 const int out_w,
                 const int batch_sz,
-                const int n_offset_grps,
-                const int n_mask_grps,
+                const int offset_groups,
+                const int mask_groups,
                 const bool deformable,
                 const bool modulated,
                 at::Tensor &columns) {
-            const int n_kernels = in_channels * out_h * out_w * batch_sz;
-            const int c_per_offset_group = deformable ? in_channels / n_offset_grps : 1;
-            const int c_per_mask_group = modulated ? in_channels / n_mask_grps : 1;
+            at::cuda::CUDAGuard device_guard(input.get_device());
+            const int64_t n_kernels = (int64_t) batch_sz * in_channels * out_h * out_w;
+            const int c_per_offset_group = deformable ? in_channels / offset_groups : 1;
+            const int c_per_mask_group = modulated ? in_channels / mask_groups : 1;
 
             const unsigned int threads = GET_THREADS(threadsFraction);
             const unsigned int blocks = GET_BLOCKS(threads, n_kernels);
 
             AT_DISPATCH_FLOATING_TYPES_AND_HALF(
                     input.scalar_type(), "im2col_cuda", ([&] {
-                auto columns_accessor = columns.generic_packed_accessor<scalar_t, 6>();
-                TVDCN_DISPATCH_CONDITION2(deformable, modulated, ([&] {
-                    im2col_kernel<deformable, modulated><<<blocks, threads>>>(
-                            n_kernels,
-                            input.generic_packed_accessor<scalar_t, 4>(),
-                            offset.generic_packed_accessor<scalar_t, 7>(),
-                            mask.generic_packed_accessor<scalar_t, 6>(),
-                            height,
-                            width,
-                            weight_h,
-                            weight_w,
-                            pad_h,
-                            pad_w,
-                            stride_h,
-                            stride_w,
-                            dilation_h,
-                            dilation_w,
-                            out_h,
-                            out_w,
-                            in_channels,
-                            c_per_offset_group,
-                            c_per_mask_group,
-                            columns_accessor);
+                TVDCN_DISPATCH_INDEX_TYPE2(n_kernels, columns.numel(), ([&] {
+                    auto columns_accessor =
+                            columns.generic_packed_accessor<scalar_t, 6, at::RestrictPtrTraits, index_t>();
+                    TVDCN_DISPATCH_CONDITION2(deformable, modulated, ([&] {
+                        im2col_kernel<deformable, modulated, scalar_t, index_t><<<blocks, threads>>>(
+                                n_kernels,
+                                input.generic_packed_accessor<scalar_t, 4, at::RestrictPtrTraits, index_t>(),
+                                offset.generic_packed_accessor<scalar_t, 7, at::RestrictPtrTraits, index_t>(),
+                                mask.generic_packed_accessor<scalar_t, 6, at::RestrictPtrTraits, index_t>(),
+                                height,
+                                width,
+                                weight_h,
+                                weight_w,
+                                pad_h,
+                                pad_w,
+                                stride_h,
+                                stride_w,
+                                dilation_h,
+                                dilation_w,
+                                out_h,
+                                out_w,
+                                in_channels,
+                                c_per_offset_group,
+                                c_per_mask_group,
+                                columns_accessor);
+                    }));
                 }));
             }));
-
-            cudaError_t err = cudaGetLastError();
-            if (err != cudaSuccess) {
-                printf("error in im2col_cuda: %s\n", cudaGetErrorString(err));
-            }
+            C10_CUDA_KERNEL_LAUNCH_CHECK();
         }
 
-        template<bool deformable, bool modulated, typename scalar_t>
+        template<bool deformable, bool modulated, typename scalar_t, typename index_t>
         static __global__ void col2im_kernel(
-                const int n_kernels,
-                const at::GenericPackedTensorAccessor<scalar_t, 6> columns,
-                const at::GenericPackedTensorAccessor<scalar_t, 7> offset,
-                const at::GenericPackedTensorAccessor<scalar_t, 6> mask,
-                const int in_channels,
-                const int height,
-                const int width,
-                const int weight_h,
-                const int weight_w,
-                const int pad_h,
-                const int pad_w,
-                const int stride_h,
-                const int stride_w,
-                const int dilation_h,
-                const int dilation_w,
-                const int out_h,
-                const int out_w,
-                const int c_per_offset_group,
-                const int c_per_mask_group,
-                at::GenericPackedTensorAccessor<scalar_t, 4> grad_input) {
-            CUDA_1D_KERNEL_LOOP(index, n_kernels) {
-                const int j = index % weight_w;
-                const int i = (index / weight_w) % weight_h;
-                const int w = (index / (weight_w * weight_h)) % out_w;
-                const int h = (index / (weight_w * weight_h * out_w)) % out_h;
-                const int c = (index / (weight_w * weight_h * out_w * out_h)) % in_channels;
-                const int b = (index / (weight_w * weight_h * out_w * out_h * in_channels));
+                const index_t n_kernels,
+                const at::GenericPackedTensorAccessor<scalar_t, 6, at::RestrictPtrTraits, index_t> columns,
+                const at::GenericPackedTensorAccessor<scalar_t, 7, at::RestrictPtrTraits, index_t> offset,
+                const at::GenericPackedTensorAccessor<scalar_t, 6, at::RestrictPtrTraits, index_t> mask,
+                const index_t in_channels,
+                const index_t height,
+                const index_t width,
+                const index_t weight_h,
+                const index_t weight_w,
+                const index_t pad_h,
+                const index_t pad_w,
+                const index_t stride_h,
+                const index_t stride_w,
+                const index_t dilation_h,
+                const index_t dilation_w,
+                const index_t out_h,
+                const index_t out_w,
+                const index_t c_per_offset_group,
+                const index_t c_per_mask_group,
+                at::GenericPackedTensorAccessor<scalar_t, 4, at::RestrictPtrTraits, index_t> grad_input) {
+            CUDA_1D_KERNEL_LOOP_T(index, n_kernels, index_t) {
+                const index_t j = index % weight_w;
+                const index_t i = (index / weight_w) % weight_h;
+                const index_t w = (index / (weight_w * weight_h)) % out_w;
+                const index_t h = (index / (weight_w * weight_h * out_w)) % out_h;
+                const index_t c = (index / (weight_w * weight_h * out_w * out_h)) % in_channels;
+                const index_t b = (index / (weight_w * weight_h * out_w * out_h * in_channels));
 
-                const int offset_group_idx = c / c_per_offset_group;
-                const int mask_group_idx = c / c_per_mask_group;
+                const index_t offset_group_idx = c / c_per_offset_group;
+                const index_t mask_group_idx = c / c_per_mask_group;
 
-                const int y = (h * stride_h - pad_h) + i * dilation_h;
-                const int x = (w * stride_w - pad_w) + j * dilation_w;
+                const index_t y = (h * stride_h - pad_h) + i * dilation_h;
+                const index_t x = (w * stride_w - pad_w) + j * dilation_w;
 
                 const scalar_t mask_val =
-                        modulated ?
-                        mask[b][mask_group_idx][i][j][h][w] : static_cast<scalar_t>(1);
+                        modulated ? mask[b][mask_group_idx][i][j][h][w] : static_cast<scalar_t>(1);
 
                 const scalar_t val = columns[c][i][j][b][h][w] * mask_val;
 
@@ -321,93 +320,93 @@ namespace tvdcn {
                 const int out_h,
                 const int out_w,
                 const int batch_sz,
-                const int n_offset_grps,
-                const int n_mask_grps,
+                const int offset_groups,
+                const int mask_groups,
                 const bool deformable,
                 const bool modulated,
                 at::Tensor &grad_input) {
-            const int n_kernels = batch_sz * in_channels * out_h * out_w * weight_h * weight_w;
-            const int c_per_offset_group = deformable ? in_channels / n_offset_grps : 1;
-            const int c_per_mask_group = modulated ? in_channels / n_mask_grps : 1;
+            at::cuda::CUDAGuard device_guard(columns.get_device());
+            const int64_t n_kernels = (int64_t) batch_sz * in_channels * out_h * out_w * weight_h * weight_w;
+            const int c_per_offset_group = deformable ? in_channels / offset_groups : 1;
+            const int c_per_mask_group = modulated ? in_channels / mask_groups : 1;
 
             const unsigned int threads = GET_THREADS(threadsFraction);
             const unsigned int blocks = GET_BLOCKS(threads, n_kernels);
 
             AT_DISPATCH_FLOATING_TYPES_AND_HALF(
                     columns.scalar_type(), "col2im_cuda", ([&] {
-                auto grad_input_accessor = grad_input.generic_packed_accessor<scalar_t, 4>();
-                TVDCN_DISPATCH_CONDITION2(deformable, modulated, ([&] {
-                    col2im_kernel<deformable, modulated><<<blocks, threads>>>(
-                            n_kernels,
-                            columns.generic_packed_accessor<scalar_t, 6>(),
-                            offset.generic_packed_accessor<scalar_t, 7>(),
-                            mask.generic_packed_accessor<scalar_t, 6>(),
-                            in_channels,
-                            height,
-                            width,
-                            weight_h,
-                            weight_w,
-                            pad_h,
-                            pad_w,
-                            stride_h,
-                            stride_w,
-                            dilation_h,
-                            dilation_w,
-                            out_h,
-                            out_w,
-                            c_per_offset_group,
-                            c_per_mask_group,
-                            grad_input_accessor);
+                TVDCN_DISPATCH_INDEX_TYPE(n_kernels, ([&] {
+                    auto grad_input_accessor =
+                            grad_input.generic_packed_accessor<scalar_t, 4, at::RestrictPtrTraits, index_t>();
+                    TVDCN_DISPATCH_CONDITION2(deformable, modulated, ([&] {
+                        col2im_kernel<deformable, modulated, scalar_t, index_t><<<blocks, threads>>>(
+                                n_kernels,
+                                columns.generic_packed_accessor<scalar_t, 6, at::RestrictPtrTraits, index_t>(),
+                                offset.generic_packed_accessor<scalar_t, 7, at::RestrictPtrTraits, index_t>(),
+                                mask.generic_packed_accessor<scalar_t, 6, at::RestrictPtrTraits, index_t>(),
+                                in_channels,
+                                height,
+                                width,
+                                weight_h,
+                                weight_w,
+                                pad_h,
+                                pad_w,
+                                stride_h,
+                                stride_w,
+                                dilation_h,
+                                dilation_w,
+                                out_h,
+                                out_w,
+                                c_per_offset_group,
+                                c_per_mask_group,
+                                grad_input_accessor);
+                    }));
                 }));
             }));
-
-            cudaError_t err = cudaGetLastError();
-            if (err != cudaSuccess) {
-                printf("error in col2im_cuda: %s\n", cudaGetErrorString(err));
-            }
+            C10_CUDA_KERNEL_LAUNCH_CHECK();
         }
 
-        template<bool modulated, typename scalar_t>
+        template<bool modulated, typename scalar_t, typename index_t>
         static __global__ void deform_conv2d_compute_grad_offset_kernel(
-                const int n_kernels,
-                const at::GenericPackedTensorAccessor<scalar_t, 6> columns,
-                const at::GenericPackedTensorAccessor<scalar_t, 4> input,
-                const at::GenericPackedTensorAccessor<scalar_t, 7> offset,
-                const at::GenericPackedTensorAccessor<scalar_t, 6> mask,
-                const int height,
-                const int width,
-                const int weight_h,
-                const int weight_w,
-                const int pad_h,
-                const int pad_w,
-                const int stride_h,
-                const int stride_w,
-                const int dilation_h,
-                const int dilation_w,
-                const int out_h,
-                const int out_w,
-                const int n_offset_grps,
-                const int c_per_offset_group,
-                const int c_per_mask_group,
-                at::GenericPackedTensorAccessor<scalar_t, 7> grad_offset) {
-            CUDA_1D_KERNEL_LOOP(index, n_kernels) {
-                const int o = index % 2;
-                const int j = (index / 2) % weight_w;
-                const int i = (index / (2 * weight_w)) % weight_h;
-                const int w = (index / (2 * weight_w * weight_h)) % out_w;
-                const int h = (index / (2 * weight_w * weight_h * out_w)) % out_h;
-                const int g = (index / (2 * weight_w * weight_h * out_w * out_h)) % n_offset_grps;
-                const int b = index / (2 * weight_w * weight_h * out_w * out_h * n_offset_grps);
+                const index_t n_kernels,
+                const at::GenericPackedTensorAccessor<scalar_t, 6, at::RestrictPtrTraits, index_t> columns,
+                const at::GenericPackedTensorAccessor<scalar_t, 4, at::RestrictPtrTraits, index_t> input,
+                const at::GenericPackedTensorAccessor<scalar_t, 7, at::RestrictPtrTraits, index_t> offset,
+                const at::GenericPackedTensorAccessor<scalar_t, 6, at::RestrictPtrTraits, index_t> mask,
+                const index_t height,
+                const index_t width,
+                const index_t weight_h,
+                const index_t weight_w,
+                const index_t pad_h,
+                const index_t pad_w,
+                const index_t stride_h,
+                const index_t stride_w,
+                const index_t dilation_h,
+                const index_t dilation_w,
+                const index_t out_h,
+                const index_t out_w,
+                const index_t offset_groups,
+                const index_t c_per_offset_group,
+                const index_t c_per_mask_group,
+                at::GenericPackedTensorAccessor<scalar_t, 7, at::RestrictPtrTraits, index_t> grad_offset) {
+            CUDA_1D_KERNEL_LOOP_T(index, n_kernels, index_t) {
+                const index_t o = index % 2;
+                const index_t j = (index / 2) % weight_w;
+                const index_t i = (index / (2 * weight_w)) % weight_h;
+                const index_t w = (index / (2 * weight_w * weight_h)) % out_w;
+                const index_t h = (index / (2 * weight_w * weight_h * out_w)) % out_h;
+                const index_t g = (index / (2 * weight_w * weight_h * out_w * out_h)) % offset_groups;
+                const index_t b = index / (2 * weight_w * weight_h * out_w * out_h * offset_groups);
 
                 scalar_t grad_offset_val = 0;
 
-                const int c_start = g * c_per_offset_group;
-                const int c_end = c_start + c_per_offset_group;
-                for (int c = c_start; c < c_end; ++c) {
-                    const int mask_group_idx = c / c_per_mask_group;
+                const index_t c_start = g * c_per_offset_group;
+                const index_t c_end = c_start + c_per_offset_group;
+                for (index_t c = c_start; c < c_end; ++c) {
+                    const index_t mask_group_idx = c / c_per_mask_group;
 
-                    const int y = (h * stride_h - pad_h) + i * dilation_h;
-                    const int x = (w * stride_w - pad_w) + j * dilation_w;
+                    const index_t y = (h * stride_h - pad_h) + i * dilation_h;
+                    const index_t x = (w * stride_w - pad_w) + j * dilation_w;
 
                     const scalar_t weight = coordinate_weight(
                             input, b, c, height, width,
@@ -416,8 +415,7 @@ namespace tvdcn {
                             o);
 
                     const scalar_t mask_val =
-                            modulated ?
-                            mask[b][mask_group_idx][i][j][h][w] : static_cast<scalar_t>(1);
+                            modulated ? mask[b][mask_group_idx][i][j][h][w] : static_cast<scalar_t>(1);
 
                     grad_offset_val += columns[c][i][j][b][h][w] * weight * mask_val;
                 }
@@ -445,93 +443,93 @@ namespace tvdcn {
                 const int out_h,
                 const int out_w,
                 const int batch_sz,
-                const int n_offset_grps,
-                const int n_mask_grps,
+                const int offset_groups,
+                const int mask_groups,
                 const bool deformable,
                 const bool modulated,
                 at::Tensor &grad_offset) {
             if (!deformable) return;
-            const int n_kernels = batch_sz * n_offset_grps * out_h * out_w * weight_h * weight_w * 2;
-            const int c_per_offset_group = deformable ? in_channels / n_offset_grps : 1;
-            const int c_per_mask_group = modulated ? in_channels / n_mask_grps : 1;
+            at::cuda::CUDAGuard device_guard(columns.get_device());
+            const int64_t n_kernels = (int64_t) batch_sz * offset_groups * out_h * out_w * weight_h * weight_w * 2;
+            const int c_per_offset_group = deformable ? in_channels / offset_groups : 1;
+            const int c_per_mask_group = modulated ? in_channels / mask_groups : 1;
 
             const unsigned int threads = GET_THREADS(threadsFraction);
             const unsigned int blocks = GET_BLOCKS(threads, n_kernels);
 
             AT_DISPATCH_FLOATING_TYPES_AND_HALF(
                     columns.scalar_type(), "deform_conv2d_compute_grad_offset_cuda", ([&] {
-                auto grad_offset_accessor = grad_offset.generic_packed_accessor<scalar_t, 7>();
-                TVDCN_DISPATCH_CONDITION(modulated, ([&] {
-                    deform_conv2d_compute_grad_offset_kernel<modulated><<<blocks, threads>>>(
-                            n_kernels,
-                            columns.generic_packed_accessor<scalar_t, 6>(),
-                            input.generic_packed_accessor<scalar_t, 4>(),
-                            offset.generic_packed_accessor<scalar_t, 7>(),
-                            mask.generic_packed_accessor<scalar_t, 6>(),
-                            height,
-                            width,
-                            weight_h,
-                            weight_w,
-                            pad_h,
-                            pad_w,
-                            stride_h,
-                            stride_w,
-                            dilation_h,
-                            dilation_w,
-                            out_h,
-                            out_w,
-                            n_offset_grps,
-                            c_per_offset_group,
-                            c_per_mask_group,
-                            grad_offset_accessor);
+                TVDCN_DISPATCH_INDEX_TYPE2(n_kernels, columns.numel(), ([&] {
+                    auto grad_offset_accessor =
+                            grad_offset.generic_packed_accessor<scalar_t, 7, at::RestrictPtrTraits, index_t>();
+                    TVDCN_DISPATCH_CONDITION(modulated, ([&] {
+                        deform_conv2d_compute_grad_offset_kernel<modulated, scalar_t, index_t><<<blocks, threads>>>(
+                                n_kernels,
+                                columns.generic_packed_accessor<scalar_t, 6, at::RestrictPtrTraits, index_t>(),
+                                input.generic_packed_accessor<scalar_t, 4, at::RestrictPtrTraits, index_t>(),
+                                offset.generic_packed_accessor<scalar_t, 7, at::RestrictPtrTraits, index_t>(),
+                                mask.generic_packed_accessor<scalar_t, 6, at::RestrictPtrTraits, index_t>(),
+                                height,
+                                width,
+                                weight_h,
+                                weight_w,
+                                pad_h,
+                                pad_w,
+                                stride_h,
+                                stride_w,
+                                dilation_h,
+                                dilation_w,
+                                out_h,
+                                out_w,
+                                offset_groups,
+                                c_per_offset_group,
+                                c_per_mask_group,
+                                grad_offset_accessor);
+                    }));
                 }));
             }));
-
-            cudaError_t err = cudaGetLastError();
-            if (err != cudaSuccess) {
-                printf("error in deform_conv2d_compute_grad_offset_cuda: %s\n", cudaGetErrorString(err));
-            }
+            C10_CUDA_KERNEL_LAUNCH_CHECK();
         }
 
-        template<bool deformable, typename scalar_t>
+        template<bool deformable, typename scalar_t, typename index_t>
         static __global__ void deform_conv2d_compute_grad_mask_kernel(
-                const int n_kernels,
-                const at::GenericPackedTensorAccessor<scalar_t, 6> columns,
-                const at::GenericPackedTensorAccessor<scalar_t, 4> input,
-                const at::GenericPackedTensorAccessor<scalar_t, 7> offset,
-                const int height,
-                const int width,
-                const int weight_h,
-                const int weight_w,
-                const int pad_h,
-                const int pad_w,
-                const int stride_h,
-                const int stride_w,
-                const int dilation_h,
-                const int dilation_w,
-                const int out_h,
-                const int out_w,
-                const int n_mask_grps,
-                const int c_per_offset_group,
-                const int c_per_mask_group,
-                at::GenericPackedTensorAccessor<scalar_t, 6> grad_mask) {
-            CUDA_1D_KERNEL_LOOP(index, n_kernels) {
-                const int j = index % weight_w;
-                const int i = (index / weight_w) % weight_h;
-                const int w = (index / (weight_w * weight_h)) % out_w;
-                const int h = (index / (weight_w * weight_h * out_w)) % out_h;
-                const int g = (index / (weight_w * weight_h * out_w * out_h)) % n_mask_grps;
-                const int b = index / (out_w * out_h * weight_w * weight_h * n_mask_grps);
+                const index_t n_kernels,
+                const at::GenericPackedTensorAccessor<scalar_t, 6, at::RestrictPtrTraits, index_t> columns,
+                const at::GenericPackedTensorAccessor<scalar_t, 4, at::RestrictPtrTraits, index_t> input,
+                const at::GenericPackedTensorAccessor<scalar_t, 7, at::RestrictPtrTraits, index_t> offset,
+                const index_t height,
+                const index_t width,
+                const index_t weight_h,
+                const index_t weight_w,
+                const index_t pad_h,
+                const index_t pad_w,
+                const index_t stride_h,
+                const index_t stride_w,
+                const index_t dilation_h,
+                const index_t dilation_w,
+                const index_t out_h,
+                const index_t out_w,
+                const index_t mask_groups,
+                const index_t c_per_offset_group,
+                const index_t c_per_mask_group,
+                at::GenericPackedTensorAccessor<scalar_t, 6, at::RestrictPtrTraits, index_t> grad_mask) {
+            CUDA_1D_KERNEL_LOOP_T(index, n_kernels, index_t) {
+                const index_t j = index % weight_w;
+                const index_t i = (index / weight_w) % weight_h;
+                const index_t w = (index / (weight_w * weight_h)) % out_w;
+                const index_t h = (index / (weight_w * weight_h * out_w)) % out_h;
+                const index_t g = (index / (weight_w * weight_h * out_w * out_h)) % mask_groups;
+                const index_t b = index / (out_w * out_h * weight_w * weight_h * mask_groups);
 
                 scalar_t grad_mask_val = 0;
 
-                const int c_start = g * c_per_mask_group;
-                const int c_end = c_start + c_per_mask_group;
-                for (int c = c_start; c < c_end; ++c) {
-                    const int offset_group_idx = c / c_per_offset_group;
+                const index_t c_start = g * c_per_mask_group;
+                const index_t c_end = c_start + c_per_mask_group;
+                for (index_t c = c_start; c < c_end; ++c) {
+                    const index_t offset_group_idx = c / c_per_offset_group;
 
-                    const int y = (h * stride_h - pad_h) + i * dilation_h;
-                    const int x = (w * stride_w - pad_w) + j * dilation_w;
+                    const index_t y = (h * stride_h - pad_h) + i * dilation_h;
+                    const index_t x = (w * stride_w - pad_w) + j * dilation_w;
 
                     const scalar_t val =
                             deformable ?
@@ -566,51 +564,51 @@ namespace tvdcn {
                 const int out_h,
                 const int out_w,
                 const int batch_sz,
-                const int n_offset_grps,
-                const int n_mask_grps,
+                const int offset_groups,
+                const int mask_groups,
                 const bool deformable,
                 const bool modulated,
                 at::Tensor &grad_mask) {
             if (!modulated) return;
-            const int n_kernels = batch_sz * n_mask_grps * out_h * out_w * weight_h * weight_w;
-            const int c_per_offset_group = deformable ? in_channels / n_offset_grps : 1;
-            const int c_per_mask_group = modulated ? in_channels / n_mask_grps : 1;
+            at::cuda::CUDAGuard device_guard(columns.get_device());
+            const int64_t n_kernels = (int64_t) batch_sz * mask_groups * out_h * out_w * weight_h * weight_w;
+            const int c_per_offset_group = deformable ? in_channels / offset_groups : 1;
+            const int c_per_mask_group = modulated ? in_channels / mask_groups : 1;
 
             const unsigned int threads = GET_THREADS(threadsFraction);
             const unsigned int blocks = GET_BLOCKS(threads, n_kernels);
 
             AT_DISPATCH_FLOATING_TYPES_AND_HALF(
                     columns.scalar_type(), "deform_conv2d_compute_grad_mask_cuda", ([&] {
-                auto grad_mask_accessor = grad_mask.generic_packed_accessor<scalar_t, 6>();
-                TVDCN_DISPATCH_CONDITION(deformable, ([&] {
-                    deform_conv2d_compute_grad_mask_kernel<deformable><<<blocks, threads>>>(
-                            n_kernels,
-                            columns.generic_packed_accessor<scalar_t, 6>(),
-                            input.generic_packed_accessor<scalar_t, 4>(),
-                            offset.generic_packed_accessor<scalar_t, 7>(),
-                            height,
-                            width,
-                            weight_h,
-                            weight_w,
-                            pad_h,
-                            pad_w,
-                            stride_h,
-                            stride_w,
-                            dilation_h,
-                            dilation_w,
-                            out_h,
-                            out_w,
-                            n_mask_grps,
-                            c_per_offset_group,
-                            c_per_mask_group,
-                            grad_mask_accessor);
+                TVDCN_DISPATCH_INDEX_TYPE2(n_kernels, columns.numel(), ([&] {
+                    auto grad_mask_accessor =
+                            grad_mask.generic_packed_accessor<scalar_t, 6, at::RestrictPtrTraits, index_t>();
+                    TVDCN_DISPATCH_CONDITION(deformable, ([&] {
+                        deform_conv2d_compute_grad_mask_kernel<deformable, scalar_t, index_t><<<blocks, threads>>>(
+                                n_kernels,
+                                columns.generic_packed_accessor<scalar_t, 6, at::RestrictPtrTraits, index_t>(),
+                                input.generic_packed_accessor<scalar_t, 4, at::RestrictPtrTraits, index_t>(),
+                                offset.generic_packed_accessor<scalar_t, 7, at::RestrictPtrTraits, index_t>(),
+                                height,
+                                width,
+                                weight_h,
+                                weight_w,
+                                pad_h,
+                                pad_w,
+                                stride_h,
+                                stride_w,
+                                dilation_h,
+                                dilation_w,
+                                out_h,
+                                out_w,
+                                mask_groups,
+                                c_per_offset_group,
+                                c_per_mask_group,
+                                grad_mask_accessor);
+                    }));
                 }));
             }));
-
-            cudaError_t err = cudaGetLastError();
-            if (err != cudaSuccess) {
-                printf("error in deform_conv2d_compute_grad_mask_cuda: %s\n", cudaGetErrorString(err));
-            }
+            C10_CUDA_KERNEL_LAUNCH_CHECK();
         }
     }
 }

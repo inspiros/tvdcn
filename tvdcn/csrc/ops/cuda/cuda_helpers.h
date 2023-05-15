@@ -6,14 +6,14 @@
 #define CUDA_1D_KERNEL_LOOP(i, n)                                \
     for (int i = (blockIdx.x * blockDim.x) + threadIdx.x; i < (n); i += (blockDim.x * gridDim.x))
 
+#define CUDA_1D_KERNEL_LOOP_T(i, n, index_t)                     \
+    for (index_t i = (blockIdx.x * blockDim.x) + threadIdx.x; i < (n); i += (blockDim.x * gridDim.x))
+
 inline unsigned int GET_THREADS(
         const float FRACTION = 1.0) {
 #ifdef __HIP_PLATFORM_HCC__
     return (unsigned int) (256 * FRACTION);
 #endif
-    if (at::cuda::getCurrentDeviceProperties()->major >= 6) {
-        return (unsigned int) (1024 * FRACTION);
-    }
     return (unsigned int) (512 * FRACTION);
 }
 

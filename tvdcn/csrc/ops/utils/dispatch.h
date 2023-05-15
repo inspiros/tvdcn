@@ -14,64 +14,42 @@
     static const bool NAME1 = false, NAME2 = false;             \
     return __VA_ARGS__();                                       \
   }                                                             \
-  else if (VAL1 && !VAL2) {                                     \
+  else if (!VAL1 && VAL2) {                                     \
     static const bool NAME1 = false, NAME2 = true;              \
     return __VA_ARGS__();                                       \
   }                                                             \
-  else if (!VAL1 && VAL2) {                                     \
+  else if (VAL1 && !VAL2) {                                     \
     static const bool NAME1 = true, NAME2 = false;              \
     return __VA_ARGS__();                                       \
   }                                                             \
-  else if (VAL1 && VAL2) {                                      \
+  else {                                                        \
     static const bool NAME1 = true, NAME2 = true;               \
     return __VA_ARGS__();                                       \
   }
 
-#define TVDCN_PRIVATE_OPTIONS3(NAME1, VAL1, NAME2, VAL2, NAME3, VAL3, ...)   \
-  if (!VAL1 && !VAL2 && !VAL3) {                                             \
-    static const bool NAME1 = false, NAME2 = false, NAME3 = false;           \
-    return __VA_ARGS__();                                                    \
-  }                                                                          \
-  else if (!VAL1 && !VAL2 && VAL3) {                                         \
-    static const bool NAME1 = false, NAME2 = false, NAME3 = true;            \
-    return __VA_ARGS__();                                                    \
-  }                                                                          \
-  else if (!VAL1 && VAL2 && !VAL3) {                                         \
-    static const bool NAME1 = false, NAME2 = true, NAME3 = false;            \
-    return __VA_ARGS__();                                                    \
-  }                                                                          \
-  else if (!VAL1 && VAL2 && VAL3) {                                          \
-    static const bool NAME1 = false, NAME2 = true, NAME3 = true;             \
-    return __VA_ARGS__();                                                    \
-  }                                                                          \
-  else if (VAL1 && !VAL2 && !VAL3) {                                         \
-    static const bool NAME1 = true, NAME2 = false, NAME3 = false;            \
-    return __VA_ARGS__();                                                    \
-  }                                                                          \
-  else if (VAL1 && !VAL2 && VAL3) {                                          \
-    static const bool NAME1 = true, NAME2 = false, NAME3 = true;             \
-    return __VA_ARGS__();                                                    \
-  }                                                                          \
-  else if (VAL1 && VAL2 && !VAL3) {                                          \
-    static const bool NAME1 = true, NAME2 = true, NAME3 = false;             \
-    return __VA_ARGS__();                                                    \
-  }                                                                          \
-  else if (VAL1 && VAL2 && VAL3) {                                           \
-    static const bool NAME1 = true, NAME2 = true, NAME3 = true;              \
-    return __VA_ARGS__();                                                    \
-  }
-
-#define TVDCN_DISPATCH_CONDITION(ARG1, ...)                 \
-  [&] {                                                     \
-    TVDCN_PRIVATE_OPTION(ARG1, ARG1, __VA_ARGS__)           \
-  }()
+#define TVDCN_DISPATCH_CONDITION(ARG1, ...)           \
+    TVDCN_PRIVATE_OPTION(ARG1, ARG1, __VA_ARGS__)
 
 #define TVDCN_DISPATCH_CONDITION2(ARG1, ARG2, ...)                  \
-  [&] {                                                             \
-    TVDCN_PRIVATE_OPTIONS2(ARG1, ARG1, ARG2, ARG2, __VA_ARGS__)     \
-  }()
+    TVDCN_PRIVATE_OPTIONS2(ARG1, ARG1, ARG2, ARG2, __VA_ARGS__)
 
-#define TVDCN_DISPATCH_CONDITION3(ARG1, ARG2, ARG3, ...)                        \
-  [&] {                                                                         \
-    TVDCN_PRIVATE_OPTIONS3(ARG1, ARG1, ARG2, ARG2, ARG3, ARG3, __VA_ARGS__)     \
-  }()
+// index type
+#define TVDCN_DISPATCH_INDEX_TYPE(N_KERNELS, ...)     \
+  if (((int64_t)N_KERNELS) > (1 << 31)) {             \
+    using index_t = int64_t;                          \
+    return __VA_ARGS__();                             \
+  }                                                   \
+  else {                                              \
+    using index_t = int;                              \
+    return __VA_ARGS__();                             \
+  }
+
+#define TVDCN_DISPATCH_INDEX_TYPE2(N_KERNELS1, N_KERNELS2, ...)                     \
+  if (((int64_t)N_KERNELS1) > (1 << 31) || ((int64_t)N_KERNELS2) > (1 << 31)) {     \
+    using index_t = int64_t;                                                        \
+    return __VA_ARGS__();                                                           \
+  }                                                                                 \
+  else {                                                                            \
+    using index_t = int;                                                            \
+    return __VA_ARGS__();                                                           \
+  }                                                                                 \

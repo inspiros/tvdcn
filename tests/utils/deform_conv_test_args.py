@@ -18,7 +18,7 @@ def _decontiguous(x: torch.Tensor):
 
 class DeformConvTestArgs(nn.Module):
     def __init__(self,
-                 dim,
+                 dim: int = 2,
                  device="cpu",
                  contiguous=True,
                  batch_size=1,

@@ -84,11 +84,11 @@ namespace tvdcn {
                 const std::tuple<int, int, int> &padding,
                 const std::tuple<int, int, int> &output_padding,
                 const std::tuple<int, int, int> &dilation,
-                int groups,
-                int offset_groups,
-                int mask_groups,
-                bool deformable,
-                bool modulated) {
+                const int groups,
+                const int offset_groups,
+                const int mask_groups,
+                const bool deformable,
+                const bool modulated) {
             at::Tensor input_c = input.contiguous();
             at::Tensor weight_c = weight.contiguous();
             at::Tensor offset_c = offset.contiguous();
@@ -99,9 +99,6 @@ namespace tvdcn {
             TORCH_CHECK(!deformable || offset_c.ndimension() == 5)
             TORCH_CHECK(!modulated || mask_c.ndimension() == 5)
             TORCH_CHECK(weight_c.ndimension() == 5)
-
-            if (input_c.is_cuda())
-                at::DeviceGuard guard(input_c.device());
 
             int batch_sz = input_c.size(0);
             int in_channels = input_c.size(1);
@@ -240,6 +237,10 @@ namespace tvdcn {
                                           in_d,
                                           in_h,
                                           in_w});
+            else
+                offset_c = offset_c.view({batch_sz / n_parallel_imgs,
+                                          n_parallel_imgs,
+                                          0, 0, 0, 0, 0, 0, 0, 0});
             if (modulated)
                 mask_c = mask_c.view({batch_sz / n_parallel_imgs,
                                       n_parallel_imgs,
@@ -250,6 +251,10 @@ namespace tvdcn {
                                       in_d,
                                       in_h,
                                       in_w});
+            else
+                mask_c = mask_c.view({batch_sz / n_parallel_imgs,
+                                      n_parallel_imgs,
+                                      0, 0, 0, 0, 0, 0, 0});
 
             // Separate channels into convolution groups
             input_c = input_c.view({batch_sz / n_parallel_imgs,
@@ -333,20 +338,17 @@ namespace tvdcn {
                 const std::tuple<int, int, int> &padding,
                 const std::tuple<int, int, int> &output_padding,
                 const std::tuple<int, int, int> &dilation,
-                int groups,
-                int offset_groups,
-                int mask_groups,
-                bool deformable,
-                bool modulated) {
+                const int groups,
+                const int offset_groups,
+                const int mask_groups,
+                const bool deformable,
+                const bool modulated) {
             at::Tensor grad_out_c = grad_out.contiguous();
             at::Tensor input_c = input.contiguous();
             at::Tensor weight_c = weight.contiguous();
             at::Tensor offset_c = offset.contiguous();
             at::Tensor mask_c = mask.contiguous();
             at::Tensor bias_c = bias.contiguous();
-
-            if (input_c.is_cuda())
-                at::DeviceGuard guard(input_c.device());
 
             int batch_sz = input_c.size(0);
             int in_channels = input_c.size(1);
@@ -402,7 +404,7 @@ namespace tvdcn {
                                     in_h,
                                     in_w});
             grad_input = grad_input.view_as(input_c);
-            if (deformable) {
+            if (deformable)
                 offset_c = offset_c.view({batch_sz / n_parallel_imgs,
                                           n_parallel_imgs,
                                           offset_groups,
@@ -413,9 +415,12 @@ namespace tvdcn {
                                           in_d,
                                           in_h,
                                           in_w});
-                grad_offset = grad_offset.view_as(offset_c);
-            }
-            if (modulated) {
+            else
+                offset_c = offset_c.view({batch_sz / n_parallel_imgs,
+                                          n_parallel_imgs,
+                                          0, 0, 0, 0, 0, 0, 0, 0});
+            grad_offset = grad_offset.view_as(offset_c);
+            if (modulated)
                 mask_c = mask_c.view({batch_sz / n_parallel_imgs,
                                       n_parallel_imgs,
                                       mask_groups,
@@ -425,8 +430,11 @@ namespace tvdcn {
                                       in_d,
                                       in_h,
                                       in_w});
-                grad_mask = grad_mask.view_as(mask_c);
-            }
+            else
+                mask_c = mask_c.view({batch_sz / n_parallel_imgs,
+                                      n_parallel_imgs,
+                                      0, 0, 0, 0, 0, 0, 0});
+            grad_mask = grad_mask.view_as(mask_c);
 
             auto grad_input_buf = at::zeros({batch_sz / n_parallel_imgs,
                                              in_channels,
@@ -584,28 +592,11 @@ namespace tvdcn {
                                                   in_h,
                                                   in_w}).transpose_(1, 2);
             grad_input.copy_(grad_input_buf);
-            grad_input = grad_input.view({batch_sz,
-                                          in_channels,
-                                          in_d,
-                                          in_h,
-                                          in_w});
-            grad_weight = grad_weight.view({in_channels,
-                                            out_channels / groups,
-                                            weight_d,
-                                            weight_h,
-                                            weight_w});
-            if (deformable)
-                grad_offset = grad_offset.view({batch_sz,
-                                                offset_groups * 3 * weight_d * weight_h * weight_w,
-                                                in_d,
-                                                in_h,
-                                                in_w});
-            if (modulated)
-                grad_mask = grad_mask.view({batch_sz,
-                                            mask_groups * weight_d * weight_h * weight_w,
-                                            in_d,
-                                            in_h,
-                                            in_w});
+
+            grad_input = grad_input.view_as(input);
+            grad_weight = grad_weight.view_as(weight);
+            grad_offset = grad_offset.view_as(offset);
+            grad_mask = grad_mask.view_as(mask);
             grad_bias *= grad_out.sum(at::IntArrayRef({0, 2, 3, 4}));
 
             return std::make_tuple(grad_input, grad_weight, grad_offset, grad_mask, grad_bias);

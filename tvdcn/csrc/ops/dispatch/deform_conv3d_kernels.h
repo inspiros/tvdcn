@@ -28,8 +28,8 @@ namespace tvdcn {
                 int out_h,
                 int out_w,
                 int batch_sz,
-                int n_offset_grps,
-                int n_mask_grps,
+                int offset_groups,
+                int mask_groups,
                 bool deformable,
                 bool modulated,
                 at::Tensor &columns);
@@ -58,8 +58,8 @@ namespace tvdcn {
                 int out_h,
                 int out_w,
                 int batch_sz,
-                int n_offset_grps,
-                int n_mask_grps,
+                int offset_groups,
+                int mask_groups,
                 bool deformable,
                 bool modulated,
                 at::Tensor &grad_input);
@@ -89,8 +89,8 @@ namespace tvdcn {
                 int out_h,
                 int out_w,
                 int batch_sz,
-                int n_offset_grps,
-                int n_mask_grps,
+                int offset_groups,
+                int mask_groups,
                 bool deformable,
                 bool modulated,
                 at::Tensor &grad_offset);
@@ -119,8 +119,8 @@ namespace tvdcn {
                 int out_h,
                 int out_w,
                 int batch_sz,
-                int n_offset_grps,
-                int n_mask_grps,
+                int offset_groups,
+                int mask_groups,
                 bool deformable,
                 bool modulated,
                 at::Tensor &grad_mask);
