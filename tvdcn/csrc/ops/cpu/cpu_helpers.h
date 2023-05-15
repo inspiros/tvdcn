@@ -1,10 +1,11 @@
 #pragma once
 #include <cmath>
 
-#define CPU_1D_KERNEL_LOOP(i, n) CPU_1D_KERNEL_LOOP_T(i, n, int)
-
-#define CPU_1D_KERNEL_LOOP_T(i, n, index_t)                     \
+#define CPU_1D_KERNEL_LOOP_T(i, n, index_t)     \
     for (index_t i = 0; i < n; ++i)
+
+#define CPU_1D_KERNEL_LOOP(i, n)     \
+    CPU_1D_KERNEL_LOOP_T(i, n, int)
 
 #if defined(_MSC_VER)
 #define __forceinline__ __forceinline
@@ -14,12 +15,5 @@
 #define __forceinline__ inline
 #endif
 
-template<typename scalar_t>
-inline scalar_t min(scalar_t left, scalar_t right) {
-    return std::min(left, right);
-}
-
-template<typename scalar_t>
-inline scalar_t max(scalar_t left, scalar_t right) {
-    return std::max(left, right);
-}
+using std::min;
+using std::max;

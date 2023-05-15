@@ -3,11 +3,11 @@
 #include <c10/cuda/CUDAGuard.h>
 #include <THC/THCAtomics.cuh>
 
-#define CUDA_1D_KERNEL_LOOP(i, n)                                \
-    for (int i = (blockIdx.x * blockDim.x) + threadIdx.x; i < (n); i += (blockDim.x * gridDim.x))
-
-#define CUDA_1D_KERNEL_LOOP_T(i, n, index_t)                     \
+#define CUDA_1D_KERNEL_LOOP_T(i, n, index_t)     \
     for (index_t i = (blockIdx.x * blockDim.x) + threadIdx.x; i < (n); i += (blockDim.x * gridDim.x))
+
+#define CUDA_1D_KERNEL_LOOP(i, n)     \
+    CUDA_1D_KERNEL_LOOP_T(i, n, int)
 
 inline unsigned int GET_THREADS(
         const float FRACTION = 1.0) {

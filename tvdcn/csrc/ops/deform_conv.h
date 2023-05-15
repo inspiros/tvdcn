@@ -119,6 +119,7 @@ namespace tvdcn {
                     int64_t mask_groups,
                     bool deformable,
                     bool modulated) {
+                at::AutoDispatchBelowADInplaceOrView g;
                 auto output = deform_conv1d_forward(
                         input,
                         weight,
@@ -228,6 +229,7 @@ namespace tvdcn {
                     int64_t mask_groups,
                     bool deformable,
                     bool modulated) {
+                at::AutoDispatchBelowADInplaceOrView g;
                 auto output = deform_conv2d_forward(
                         input,
                         weight,
@@ -349,6 +351,7 @@ namespace tvdcn {
                     int64_t mask_groups,
                     bool deformable,
                     bool modulated) {
+                at::AutoDispatchBelowADInplaceOrView g;
                 auto output = deform_conv3d_forward(
                         input,
                         weight,
