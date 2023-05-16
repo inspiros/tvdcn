@@ -52,4 +52,4 @@
   else {                                                                            \
     using index_t = int;                                                            \
     __VA_ARGS__();                                                                  \
-  }                                                                                 \
+  }

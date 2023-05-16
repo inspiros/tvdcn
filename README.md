@@ -29,8 +29,7 @@ compute the output; in transposed deformable convolution, it guides the convolut
   - `tvdcn.ops.mask_softmax2d`
   - `tvdcn.ops.mask_softmax3d`
 
-- Both `offset` and `mask` can turned off, and can be applied in separate groups
-  ([Deformable Convolution v3](https://arxiv.org/abs/2211.05778)).
+- Both `offset` and `mask` can be turned off, and can be applied in separate groups.
 
 - All the `nn.Module` wrappers for these operations are implemented,
   everything is `@torch.jit.script`-able! Please check [Usage](#usage).
@@ -40,7 +39,7 @@ https://github.com/masamitsu-murase/deform_conv2d_onnx_exporter.
 
 ## Requirements
 
-- `torch>=1.8.0`
+- `torch>=1.9.0`
 
 ## Installation
 
@@ -180,6 +179,9 @@ but that means less customization.
 The only tunable hyperparameters that effect these supplementary conv layers are `offset_groups` and `mask_groups`,
 which have been decoupled from and behave somewhat similar to `groups`.
 
+To use the softmax activation for mask proposed in [Deformable Convolution v3](https://arxiv.org/abs/2211.05778),
+set `mask_activation='softmax'`. `offset_activation` and `mask_activation` also accept any `nn.Module`.
+
 ```python
 import torch
 
@@ -187,7 +189,10 @@ from tvdcn import PackedDeformConv1d
 
 input = torch.rand(2, 3, 128)
 
-conv = PackedDeformConv1d(3, 16, kernel_size=5, modulated=True)
+conv = PackedDeformConv1d(3, 16,
+                          kernel_size=5,
+                          modulated=True,
+                          mask_activation='softmax')
 # jit scripting
 scripted_conv = torch.jit.script(conv)
 print(scripted_conv)
