@@ -645,7 +645,6 @@ class PackedDeformConvTranspose1d(DeformConvTranspose1d):
                 dtype=device)
         else:
             self.register_module('conv_offset', None)
-        self.offset_activation = offset_activation
 
         if self.modulated:
             self.conv_mask = nn.Conv1d(
@@ -657,6 +656,8 @@ class PackedDeformConvTranspose1d(DeformConvTranspose1d):
                 dtype=device)
         else:
             self.register_module('conv_mask', None)
+
+        self.offset_activation = offset_activation
         self.mask_activation = mask_activation
 
         self.reset_parameters()
@@ -670,7 +671,7 @@ class PackedDeformConvTranspose1d(DeformConvTranspose1d):
             if self.conv_offset.bias is not None:
                 init.zeros_(self.conv_offset.bias)
         if self.conv_mask is not None:
-            init.ones_(self.conv_mask.weight)
+            init.zeros_(self.conv_mask.weight)
             if self.conv_mask.bias is not None:
                 init.zeros_(self.conv_mask.bias)
 
@@ -769,6 +770,8 @@ class PackedDeformConvTranspose2d(DeformConvTranspose2d):
                 dtype=device)
         else:
             self.register_module('conv_mask', None)
+
+        self.offset_activation = offset_activation
         self.mask_activation = mask_activation
 
         self.reset_parameters()
@@ -782,7 +785,7 @@ class PackedDeformConvTranspose2d(DeformConvTranspose2d):
             if self.conv_offset.bias is not None:
                 init.zeros_(self.conv_offset.bias)
         if self.conv_mask is not None:
-            init.ones_(self.conv_mask.weight)
+            init.zeros_(self.conv_mask.weight)
             if self.conv_mask.bias is not None:
                 init.zeros_(self.conv_mask.bias)
 
@@ -881,6 +884,8 @@ class PackedDeformConvTranspose3d(DeformConvTranspose3d):
                 dtype=device)
         else:
             self.register_module('conv_mask', None)
+
+        self.offset_activation = offset_activation
         self.mask_activation = mask_activation
 
         self.reset_parameters()
@@ -894,7 +899,7 @@ class PackedDeformConvTranspose3d(DeformConvTranspose3d):
             if self.conv_offset.bias is not None:
                 init.zeros_(self.conv_offset.bias)
         if self.conv_mask is not None:
-            init.ones_(self.conv_mask.weight)
+            init.zeros_(self.conv_mask.weight)
             if self.conv_mask.bias is not None:
                 init.zeros_(self.conv_mask.bias)
 

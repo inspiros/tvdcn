@@ -1,8 +1,12 @@
 #pragma once
+#include <ATen/Parallel.h>
 #include <cmath>
 
+#define CPU_1D_KERNEL_LOOP_BETWEEN_T(i, start, end, index_t)      \
+    for (index_t i = start; i < end; ++i)
+
 #define CPU_1D_KERNEL_LOOP_T(i, n, index_t)     \
-    for (index_t i = 0; i < n; ++i)
+    CPU_1D_KERNEL_LOOP_BETWEEN_T(i, 0, n, index_t)
 
 #define CPU_1D_KERNEL_LOOP(i, n)     \
     CPU_1D_KERNEL_LOOP_T(i, n, int)
