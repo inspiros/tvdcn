@@ -1,5 +1,6 @@
 #include <ATen/ATen.h>
-#include <ATen/Parallel.h>
+#define _OPENMP
+#include <ATen/ParallelOpenMP.h>
 #include "cpu_helpers.h"
 #include "../utils/dispatch.h"
 
@@ -50,6 +51,7 @@ namespace tvdcn {
                     const index_t x,
                     const scalar_t val) {
                 if (0 <= x && x < width)
+#pragma omp atomic
                     output[b][c][x] += val;
             }
 
@@ -70,8 +72,12 @@ namespace tvdcn {
                 bool valid_x_l = 0 <= x_l && x_l < width;
                 bool valid_x_h = 0 <= x_h && x_h < width;
 
-                if (valid_x_l) output[b][c][x_l] += dx_l * val;
-                if (valid_x_h) output[b][c][x_h] += dx_h * val;
+                if (valid_x_l)
+#pragma omp atomic
+                    output[b][c][x_l] += dx_l * val;
+                if (valid_x_h)
+#pragma omp atomic
+                    output[b][c][x_h] += dx_h * val;
             }
 
             template<typename scalar_t, typename index_t>
@@ -114,6 +120,7 @@ namespace tvdcn {
                 const index_t c_per_mask_group,
                 at::TensorAccessor<scalar_t, 4> columns) {
             at::parallel_for(0, n_kernels, 0, [&](int64_t start, int64_t end) {
+                printf("thread: %d", omp_get_thread_num());
                 CPU_1D_KERNEL_LOOP_BETWEEN_T(index, start, end, index_t) {
                     const index_t w = index % out_w;
                     const index_t c = (index / out_w) % in_channels;

@@ -70,7 +70,7 @@ def get_extensions():
     source_cuda += glob.glob(os.path.join(extensions_dir, 'ops', 'autocast', '*.cpp'))
 
     sources = main_file + source_cpu
-    extension = CppExtension
+    extension = CppParallelExtension
     extra_compile_args = {'cxx': []}
     define_macros = []
 
