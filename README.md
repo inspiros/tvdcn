@@ -29,8 +29,8 @@ compute the output; in transposed deformable convolution, it guides the convolut
   - `tvdcn.ops.mask_softmax2d`
   - `tvdcn.ops.mask_softmax3d`
 
-- `offset` and `mask` can be applied in separate groups
-  (following [Deformable Convolution v3](https://arxiv.org/abs/2211.05778)).
+- Both `offset` and `mask` can turned off, and can be applied in separate groups
+  ([Deformable Convolution v3](https://arxiv.org/abs/2211.05778)).
 
 - All the `nn.Module` wrappers for these operations are implemented,
   everything is `@torch.jit.script`-able! Please check [Usage](#usage).
@@ -99,7 +99,8 @@ any possible conflict.
 
 Functionally, the package offers 6 functions (listed in [Highlights](#highlights)) much similar to
 `torchvision.ops.deform_conv2d`.
-However, the order of parameters is slightly different, so be cautious.
+However, the order of parameters is slightly different, so be cautious
+(check [this comparison](tests/test_compatibility_with_torchvision.py)).
 Specifically, the signatures of `deform_conv2d` and `deform_conv_transpose2d` look like this:
 
 ```python

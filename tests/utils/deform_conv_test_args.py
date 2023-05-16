@@ -17,25 +17,20 @@ def _decontiguous(x: torch.Tensor):
 
 
 class DeformConvTestArgs(nn.Module):
-    def __init__(self,
-                 dim: int = 2,
-                 device="cpu",
-                 contiguous=True,
-                 batch_size=1,
-                 dtype=torch.float64,
-                 transposed=False):
+    def __init__(self, **kwargs):
         super().__init__()
-        self.dim = dim
-        self.device = torch.device(device)
-        self.batch_size = batch_size
-        self.dtype = dtype
-        self.transposed = transposed
+        self.dim = kwargs.get('dim', 2)
+        self.device = torch.device(kwargs.get('device', 'cpu'))
+        self.batch_size = kwargs.get('batch_size', 1)
+        self.dtype = kwargs.get('dtype', torch.float64)
+        self.transposed = kwargs.get('transposed', False)
+        contiguous = kwargs.get('contiguous', True)
 
-        self.n_in_channels = 4
-        self.n_out_channels = 2
-        self.weight_groups = 1
-        self.offset_groups = 2
-        self.mask_groups = 1
+        self.n_in_channels = kwargs.get('in_channels', 4)
+        self.n_out_channels = kwargs.get('out_channels', 2)
+        self.groups = kwargs.get('groups', 1)
+        self.offset_groups = kwargs.get('offset_groups', 2)
+        self.mask_groups = kwargs.get('mask_groups', 1)
 
         # self.stride = tuple(range(1, 1 + self.dim))
         # self.padding = tuple(range(0, 0 + self.dim))
@@ -57,34 +52,34 @@ class DeformConvTestArgs(nn.Module):
         # input param
         self.input = nn.Parameter(
             torch.rand(self.batch_size, self.n_in_channels,
-                       *(self.in_size if not transposed else self.out_size),
-                       device=device, dtype=dtype))
+                       *(self.in_size if not self.transposed else self.out_size),
+                       device=self.device, dtype=self.dtype))
         # conv params
-        if not transposed:
+        if not self.transposed:
             self.weight = nn.Parameter(
-                torch.empty(self.n_out_channels, self.n_in_channels // self.weight_groups,
+                torch.empty(self.n_out_channels, self.n_in_channels // self.groups,
                             *self.kernel_size,
-                            device=device, dtype=dtype))
+                            device=self.device, dtype=self.dtype))
         else:
             self.weight = nn.Parameter(
-                torch.empty(self.n_in_channels, self.n_out_channels // self.weight_groups,
+                torch.empty(self.n_in_channels, self.n_out_channels // self.groups,
                             *self.kernel_size,
-                            device=device, dtype=dtype))
+                            device=self.device, dtype=self.dtype))
         self.bias = nn.Parameter(
             torch.empty(self.n_out_channels,
-                        device=device, dtype=dtype, requires_grad=True))
+                        device=self.device, dtype=self.dtype, requires_grad=True))
         # deformable/extensible conv params
         self.offset = nn.Parameter(
             torch.empty(self.batch_size, self.offset_groups * self.dim * math.prod(self.kernel_size),
                         *self.out_size,
-                        device=device, dtype=dtype))
+                        device=self.device, dtype=self.dtype))
         self.mask = nn.Parameter(
             torch.empty(self.batch_size, self.mask_groups * math.prod(self.kernel_size), *self.out_size,
-                        device=device, dtype=dtype))
+                        device=self.device, dtype=self.dtype))
         self.reset_parameters()
         self.set_contiguous(contiguous)
 
-        if transposed:
+        if self.transposed:
             self.in_size, self.out_size = self.out_size, self.in_size
 
     def reset_parameters(self):
@@ -124,7 +119,7 @@ class DeformConvTestArgs(nn.Module):
                       output_padding=self.output_padding,
                       dilation=self.dilation,
                       bias=True,
-                      groups=self.weight_groups,
+                      groups=self.groups,
                       device=self.device,
                       dtype=self.dtype)
         if not self.transposed:
@@ -158,7 +153,7 @@ class DeformConvTestArgs(nn.Module):
         s += f"\n\t{'stride':<15} = {self.stride}"
         s += f"\n\t{'padding':<15} = {self.padding}"
         s += f"\n\t{'dilation':<15} = {self.dilation}"
-        s += f"\n\t{'weight_groups':<15} = {self.weight_groups}"
+        s += f"\n\t{'weight_groups':<15} = {self.groups}"
         s += f"\n\t{'offset_groups':<15} = {self.offset_groups}"
         s += f"\n\t{'mask_groups':<15} = {self.mask_groups}"
         s += f"\n\t{'transposed':<15} = {self.transposed}"
