@@ -182,7 +182,7 @@ namespace tvdcn {
                     "Calculated output size too small - out_w: ",
                     out_w)
 
-            auto out = at::zeros({batch_sz, out_channels, out_w}, input_c.options());
+            auto output = at::zeros({batch_sz, out_channels, out_w}, input_c.options());
 
             // Separate batches into blocks
             input_c = input_c.view({batch_sz / n_parallel_imgs,
@@ -211,23 +211,23 @@ namespace tvdcn {
                                       n_parallel_imgs,
                                       0, 0, 0});
 
-            out = out.view({batch_sz / n_parallel_imgs,
-                            n_parallel_imgs,
-                            out_channels,
-                            out_w});
-            auto out_buf = at::zeros(
+            output = output.view({batch_sz / n_parallel_imgs,
+                                  n_parallel_imgs,
+                                  out_channels,
+                                  out_w});
+            auto output_buf = at::zeros(
                     {batch_sz / n_parallel_imgs,
                      out_channels,
                      n_parallel_imgs,
                      out_w},
-                    out.options());
+                    output.options());
 
             // Separate channels into convolution groups
-            out_buf = out_buf.view({out_buf.size(0),
-                                    groups,
-                                    out_buf.size(1) / groups,
-                                    out_buf.size(2),
-                                    out_buf.size(3)});
+            output_buf = output_buf.view({output_buf.size(0),
+                                          groups,
+                                          output_buf.size(1) / groups,
+                                          output_buf.size(2),
+                                          output_buf.size(3)});
             weight_c = weight_c.view({groups,
                                       weight_c.size(0) / groups,
                                       weight_c.size(1),
@@ -262,19 +262,19 @@ namespace tvdcn {
                         columns_view);
 
                 for (int g = 0; g < groups; g++) {
-                    out_buf[b][g].flatten(1).addmm_(weight_c[g].flatten(1), columns[g]);
+                    output_buf[b][g].flatten(1).addmm_(weight_c[g].flatten(1), columns[g]);
                 }
             }
 
-            out_buf = out_buf.view({batch_sz / n_parallel_imgs,
-                                    out_channels,
-                                    n_parallel_imgs,
-                                    out_w});
-            out_buf.transpose_(1, 2);
-            out.copy_(out_buf);
-            out = out.view({batch_sz, out_channels, out_w});
+            output_buf = output_buf.view({batch_sz / n_parallel_imgs,
+                                          out_channels,
+                                          n_parallel_imgs,
+                                          out_w});
+            output_buf.transpose_(1, 2);
+            output.copy_(output_buf);
+            output = output.view({batch_sz, out_channels, out_w});
 
-            return out + bias_c.view({1, out_channels, 1});
+            return output + bias_c.view({1, out_channels, 1});
         }
 
         std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>

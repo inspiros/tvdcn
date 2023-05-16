@@ -166,7 +166,8 @@ namespace tvdcn {
             TORCH_CHECK(
                     (offset_c.size(0) == input_c.size(0)), "invalid batch size of offset")
             TORCH_CHECK(
-                    (!deformable || offset_c.size(2) == in_h && offset_c.size(3) == in_w),
+                    (!deformable || (offset_c.size(2) == in_h &&
+                                     offset_c.size(3) == in_w)),
                     "offset input dims: (",
                     offset_c.size(2),
                     ", ",
@@ -187,7 +188,8 @@ namespace tvdcn {
             TORCH_CHECK(
                     (mask_c.size(0) == input_c.size(0)), "invalid batch size of mask")
             TORCH_CHECK(
-                    (!modulated || (mask_c.size(2) == in_h && mask_c.size(3) == in_w)),
+                    (!modulated || (mask_c.size(2) == in_h &&
+                                    mask_c.size(3) == in_w)),
                     "mask input dims: (",
                     mask_c.size(2),
                     ", ",
@@ -297,6 +299,7 @@ namespace tvdcn {
             }
 
             output = output.view({batch_sz, out_channels, out_h, out_w});
+
             return output + bias_c.view({1, out_channels, 1, 1});
         }
 

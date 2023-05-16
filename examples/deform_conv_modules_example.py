@@ -22,10 +22,11 @@ def test_packed_wrapper():
     print(conv)
 
     out = conv(x)
-    print(out.shape)
+    print('input_shape: ', x.shape)
+    print('output_shape:', out.shape)
 
     out.sum().backward()
-    print(x.grad)
+    assert x.grad is not None
 
 
 if __name__ == '__main__':

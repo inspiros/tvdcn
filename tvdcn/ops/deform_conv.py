@@ -275,7 +275,7 @@ def deform_conv3d(
         >>> # In this case, for an input of 10, stride of 1 and kernel size of 3,
         >>> # without padding, the output size is 8.
         >>> offset = torch.rand(1, 3 * kd * kh * kw, 8, 8, 8)
-        >>> mask = torch.rand(1, kd * kh * kw, 8, 8, 8)
+        >>> mask = torch.rand(1, kd * kh * kw, 8, 8, 8).sigmoid()
         >>> out = deform_conv3d(input, weight, offset, mask)
         >>> print(out.shape)
         Output:

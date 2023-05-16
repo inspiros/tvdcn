@@ -261,6 +261,7 @@ namespace tvdcn {
             }
 
             output = output.view({batch_sz, out_channels, out_w});
+
             return output + bias_c.view({1, out_channels, 1});
         }
 

@@ -275,7 +275,7 @@ def deform_conv_transpose3d(
         >>> weight = torch.rand(3, 5, kd, kh, kw)
         >>> # offset and mask should have the same spatial size as the input.
         >>> offset = torch.rand(1, 3 * kd * kh * kw, 8, 8, 8)
-        >>> mask = torch.rand(1, kd * kh * kw, 8, 8, 8)
+        >>> mask = torch.rand(1, kd * kh * kw, 8, 8, 8).sigmoid()
         >>> out = deform_conv_transpose3d(input, weight, offset, mask)
         >>> print(out.shape)
         Output:

@@ -162,7 +162,8 @@ namespace tvdcn {
             TORCH_CHECK(
                     (offset_c.size(0) == input_c.size(0)), "invalid batch size of offset")
             TORCH_CHECK(
-                    (!deformable || offset_c.size(2) == out_h && offset_c.size(3) == out_w),
+                    (!deformable || (offset_c.size(2) == out_h &&
+                                     offset_c.size(3) == out_w)),
                     "offset output dims: (",
                     offset_c.size(2),
                     ", ",
@@ -183,7 +184,8 @@ namespace tvdcn {
             TORCH_CHECK(
                     (mask_c.size(0) == input_c.size(0)), "invalid batch size of mask")
             TORCH_CHECK(
-                    (!modulated || (mask_c.size(2) == out_h && mask_c.size(3) == out_w)),
+                    (!modulated || (mask_c.size(2) == out_h &&
+                                    mask_c.size(3) == out_w)),
                     "mask output dims: (",
                     mask_c.size(2),
                     ", ",
@@ -202,7 +204,7 @@ namespace tvdcn {
                     " out_w: ",
                     out_w)
 
-            auto out = at::zeros({batch_sz, out_channels, out_h, out_w}, input_c.options());
+            auto output = at::zeros({batch_sz, out_channels, out_h, out_w}, input_c.options());
 
             // Separate batches into blocks
             input_c = input_c.view({batch_sz / n_parallel_imgs,
@@ -236,26 +238,26 @@ namespace tvdcn {
                                       n_parallel_imgs,
                                       0, 0, 0, 0, 0});
 
-            out = out.view({batch_sz / n_parallel_imgs,
-                            n_parallel_imgs,
-                            out_channels,
-                            out_h,
-                            out_w});
-            auto out_buf = at::zeros(
+            output = output.view({batch_sz / n_parallel_imgs,
+                                  n_parallel_imgs,
+                                  out_channels,
+                                  out_h,
+                                  out_w});
+            auto output_buf = at::zeros(
                     {batch_sz / n_parallel_imgs,
                      out_channels,
                      n_parallel_imgs,
                      out_h,
                      out_w},
-                    out.options());
+                    output.options());
 
             // Separate channels into convolution groups
-            out_buf = out_buf.view({out_buf.size(0),
-                                    groups,
-                                    out_buf.size(1) / groups,
-                                    out_buf.size(2),
-                                    out_buf.size(3),
-                                    out_buf.size(4)});
+            output_buf = output_buf.view({output_buf.size(0),
+                                          groups,
+                                          output_buf.size(1) / groups,
+                                          output_buf.size(2),
+                                          output_buf.size(3),
+                                          output_buf.size(4)});
             weight_c = weight_c.view({groups,
                                       weight_c.size(0) / groups,
                                       weight_c.size(1),
@@ -299,20 +301,20 @@ namespace tvdcn {
                         columns_view);
 
                 for (int g = 0; g < groups; g++) {
-                    out_buf[b][g].flatten(1).addmm_(weight_c[g].flatten(1), columns[g]);
+                    output_buf[b][g].flatten(1).addmm_(weight_c[g].flatten(1), columns[g]);
                 }
             }
 
-            out_buf = out_buf.view({batch_sz / n_parallel_imgs,
-                                    out_channels,
-                                    n_parallel_imgs,
-                                    out_h,
-                                    out_w});
-            out_buf.transpose_(1, 2);
-            out.copy_(out_buf);
-            out = out.view({batch_sz, out_channels, out_h, out_w});
+            output_buf = output_buf.view({batch_sz / n_parallel_imgs,
+                                          out_channels,
+                                          n_parallel_imgs,
+                                          out_h,
+                                          out_w});
+            output_buf.transpose_(1, 2);
+            output.copy_(output_buf);
+            output = output.view({batch_sz, out_channels, out_h, out_w});
 
-            return out + bias_c.view({1, out_channels, 1, 1});
+            return output + bias_c.view({1, out_channels, 1, 1});
         }
 
         std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
