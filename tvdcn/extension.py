@@ -14,7 +14,7 @@ import torch
 def _get_extension_path(lib_name):
     lib_dir = os.path.dirname(__file__)
     if os.name == 'nt':
-        # Register the main torchvision library location on the default DLL path
+        # Register the main library location on the default DLL path
         import ctypes
         import sys
 
@@ -92,7 +92,7 @@ def _assert_has_ops():
 
 def _check_cuda_version(minor=True):
     """
-    Make sure that CUDA versions match between the pytorch install and torchvision install
+    Make sure that CUDA versions match between the pytorch install and tvdcn install
 
     Args:
         minor (bool): If ``False``, ignore minor version difference.
@@ -143,3 +143,29 @@ def _load_library(lib_name):
 
 
 _check_cuda_version(False)
+
+
+###################
+# Exposed functions
+###################
+def has_ops():
+    """
+    Check if C++ extension is successfully compiled.
+    """
+    return _HAS_OPS
+
+
+def cuda_version():
+    """
+    Get compiled Cuda version.
+    """
+    if not _HAS_OPS:
+        return -1
+    return torch.ops.tvdcn._cuda_version()
+
+
+def with_cuda():
+    """
+    Check if C++ extension is compiled with Cuda.
+    """
+    return cuda_version() != -1

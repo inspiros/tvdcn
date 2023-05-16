@@ -83,9 +83,10 @@ A binary (`.so` file for Unix and `.pyd` file for Windows) should be compiled in
 To check if installation is successful, try:
 
 ```python
-from tvdcn import _HAS_OPS
+import tvdcn
 
-assert _HAS_OPS
+print('Library loaded successfully:', tvdcn.has_ops())
+print('Compiled with Cuda:', tvdcn.with_cuda())
 ```
 
 **Note:** We use soft Cuda version compatibility checking between the built binary and the installed PyTorch,

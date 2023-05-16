@@ -670,7 +670,7 @@ class PackedDeformConvTranspose1d(DeformConvTranspose1d):
             if self.conv_offset.bias is not None:
                 init.zeros_(self.conv_offset.bias)
         if self.conv_mask is not None:
-            init.zeros_(self.conv_mask.weight)
+            init.ones_(self.conv_mask.weight)
             if self.conv_mask.bias is not None:
                 init.zeros_(self.conv_mask.bias)
 
@@ -782,7 +782,7 @@ class PackedDeformConvTranspose2d(DeformConvTranspose2d):
             if self.conv_offset.bias is not None:
                 init.zeros_(self.conv_offset.bias)
         if self.conv_mask is not None:
-            init.zeros_(self.conv_mask.weight)
+            init.ones_(self.conv_mask.weight)
             if self.conv_mask.bias is not None:
                 init.zeros_(self.conv_mask.bias)
 
@@ -894,7 +894,7 @@ class PackedDeformConvTranspose3d(DeformConvTranspose3d):
             if self.conv_offset.bias is not None:
                 init.zeros_(self.conv_offset.bias)
         if self.conv_mask is not None:
-            init.zeros_(self.conv_mask.weight)
+            init.ones_(self.conv_mask.weight)
             if self.conv_mask.bias is not None:
                 init.zeros_(self.conv_mask.bias)
 
