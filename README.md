@@ -40,7 +40,7 @@ https://github.com/masamitsu-murase/deform_conv2d_onnx_exporter.
 
 ## Requirements
 
-- `torch>=1.8`
+- `torch>=1.8.0`
 
 ## Installation
 
@@ -53,14 +53,14 @@ Run this command to install:
 pip install tvdcn
 ```
 
-The Linux and Windows wheels are built with **Cuda 11.8**, which is compatible with `torch==2.0.0`.
+The Linux and Windows wheels are built with **Cuda 11.8**.
 If you cannot find a wheel for your Arch/Python/Cuda, or there is any problem with library linking when importing,
 please proceed to [instructions to build from source](#from-source), all steps are super easy.
 
 |                  |     Linux/Windows     |     MacOS      |
 |------------------|:---------------------:|:--------------:|
 | Python version:  |       3.8-3.11        |    3.8-3.11    |
-| PyTorch version: |    `torch==2.0.0`     | `torch==2.0.0` |
+| PyTorch version: |    `torch==2.0.1`     | `torch==2.0.1` |
 | Cuda version:    |         11.8          |       -        |
 | GPU CCs:         | `6.1,7.5,8.6,8.9+PTX` |       -        |
 

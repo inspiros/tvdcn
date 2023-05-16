@@ -14,23 +14,23 @@ def test_deform_conv_grad(dim=1,
     args = DeformConvTestArgs(dim=dim, transposed=transposed, dtype=dtype, device=device)
     print(args)
 
-    c_res = conv_func(args.input,
-                      args.weight,
-                      args.offset,
-                      args.mask,
-                      args.bias,
-                      args.stride,
-                      args.padding,
-                      args.dilation,
-                      args.groups)
-    c_res.sum().backward()
+    c_output = conv_func(args.input,
+                         args.weight,
+                         args.offset,
+                         args.mask,
+                         args.bias,
+                         args.stride,
+                         args.padding,
+                         args.dilation,
+                         args.groups)
+    c_output.sum().backward()
     c_input_grad = args.input.grad.clone()
     c_weight_grad = args.weight.grad.clone()
     c_offset_grad = args.offset.grad.clone()
     c_mask_grad = args.mask.grad.clone()
     c_bias_grad = args.bias.grad.clone()
     args.zero_grad()
-    print(c_res)
+    print(c_output)
 
     grad_ok = gradcheck(
         lambda inp, wei, off, msk, bi: conv_func(inp, wei, off, msk, bi,

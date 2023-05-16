@@ -1,11 +1,12 @@
+from typing import Tuple, Optional
+
 import torch
 import torch.nn as nn
 from torch import Tensor
-from torch.jit.annotations import Tuple, Optional
 from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from torch.nn.modules.utils import _single, _pair, _triple
 
-from .._types import _IntTuple
+from tvdcn._types import _IntTuple
 
 __all__ = [
     'mask_softmax1d',
@@ -36,8 +37,8 @@ def mask_softmax1d(mask: Tensor,
         raise RuntimeError(
             "The shape of the mask tensor at dimension 1 is not valid. It should "
             "be a multiple of kernel_size[0].\n"
-            "Got mask.shape[1]={}, while kernel_size[0]={}".format(
-                mask.shape[1], weight_w))
+            "Got mask.size(1)={}, while kernel_size[0]={}".format(
+                mask.size(1), weight_w))
 
     mask = mask.view(batch_size,
                      mask_groups,
@@ -73,8 +74,8 @@ def mask_softmax2d(mask: Tensor,
         raise RuntimeError(
             "The shape of the mask tensor at dimension 1 is not valid. It should "
             "be a multiple of kernel_size[0] * kernel_size[1].\n"
-            "Got mask.shape[1]={}, while kernel_size[0] * kernel_size[1]={}".format(
-                mask.shape[1], weight_h * weight_w))
+            "Got mask.size(1)={}, while kernel_size[0] * kernel_size[1]={}".format(
+                mask.size(1), weight_h * weight_w))
 
     mask = mask.view(batch_size,
                      mask_groups,
@@ -109,8 +110,8 @@ def mask_softmax3d(mask: Tensor,
         raise RuntimeError(
             "The shape of the mask tensor at dimension 1 is not valid. It should "
             "be a multiple of kernel_size[0] * kernel_size[1] * kernel_size[2].\n"
-            "Got mask.shape[1]={}, while kernel_size[0] * kernel_size[1] * kernel_size[2]={}".format(
-                mask.shape[1], weight_d * weight_h * weight_w))
+            "Got mask.size(1)={}, while kernel_size[0] * kernel_size[1] * kernel_size[2]={}".format(
+                mask.size(1), weight_d * weight_h * weight_w))
 
     mask = mask.view(batch_size,
                      mask_groups,

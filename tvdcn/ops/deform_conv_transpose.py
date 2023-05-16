@@ -1,13 +1,16 @@
+from typing import List, Tuple, Optional, Union
+
 import torch
 from torch import nn, Tensor
-from torch.jit.annotations import List, Optional, Tuple, Union
 from torch.nn import init
 from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from torch.nn.modules.utils import _single, _pair, _triple
 
-from .deform_conv import _DeformConvNd
 # noinspection PyUnresolvedReferences
-from .mask_activation import MaskSoftmax1d, MaskSoftmax2d, MaskSoftmax3d
+from .activations import (
+    MaskSigmoid, MaskSoftmax1d, MaskSoftmax2d, MaskSoftmax3d,
+)
+from .deform_conv import _DeformConvNd
 from .._types import _IntTuple, _Activation
 from ..extension import _assert_has_ops
 from ..utils import _log_api_usage_once
@@ -74,15 +77,15 @@ def deform_conv_transpose1d(
     if not torch.jit.is_scripting() and not torch.jit.is_tracing():
         _log_api_usage_once(deform_conv_transpose1d)
     _assert_has_ops()
-    out_channels = weight.shape[1] // groups
+    out_channels = weight.size(1) // groups
 
     deformable = offset is not None
     modulated = mask is not None
 
     if offset is None:
-        offset = torch.zeros((input.shape[0], 0), device=input.device, dtype=input.dtype)
+        offset = torch.zeros((input.size(0), 0), device=input.device, dtype=input.dtype)
     if mask is None:
-        mask = torch.zeros((input.shape[0], 0), device=input.device, dtype=input.dtype)
+        mask = torch.zeros((input.size(0), 0), device=input.device, dtype=input.dtype)
     if bias is None:
         bias = torch.zeros(out_channels, device=input.device, dtype=input.dtype)
 
@@ -91,24 +94,24 @@ def deform_conv_transpose1d(
     out_pad = _single(output_padding)
     dil = _single(dilation)
 
-    weight_w = weight.shape[-1]
-    _, _, in_w = input.shape
+    weight_w = weight.size(-1)
+    _, _, in_w = input.size()
 
-    offset_groups = offset.shape[1] // weight_w
-    mask_groups = mask.shape[1] // weight_w
+    offset_groups = offset.size(1) // weight_w
+    mask_groups = mask.size(1) // weight_w
 
     if deformable and offset_groups == 0:
         raise RuntimeError(
             "The shape of the offset tensor at dimension 1 is not valid. It should "
-            "be a multiple of weight.size[2].\n"
-            "Got offset.shape[1]={}, while weight.size[2]={}".format(
-                offset.shape[1], weight_w))
+            "be a multiple of weight.size(2).\n"
+            "Got offset.size(1)={}, while weight.size(2)={}".format(
+                offset.size(1), weight_w))
     if modulated and mask_groups == 0:
         raise RuntimeError(
             "The shape of the mask tensor at dimension 1 is not valid. It should "
-            "be a multiple of weight.size[2].\n"
-            "Got mask.shape[1]={}, while weight.size[2]={}".format(
-                mask.shape[1], weight_w))
+            "be a multiple of weight.size(2).\n"
+            "Got mask.size(1)={}, while weight.size(2)={}".format(
+                mask.size(1), weight_w))
 
     return torch.ops.tvdcn.deform_conv_transpose1d(
         input,
@@ -178,15 +181,15 @@ def deform_conv_transpose2d(
     if not torch.jit.is_scripting() and not torch.jit.is_tracing():
         _log_api_usage_once(deform_conv_transpose2d)
     _assert_has_ops()
-    out_channels = weight.shape[1] // groups
+    out_channels = weight.size(1) // groups
 
     deformable = offset is not None
     modulated = mask is not None
 
     if offset is None:
-        offset = torch.zeros((input.shape[0], 0), device=input.device, dtype=input.dtype)
+        offset = torch.zeros((input.size(0), 0), device=input.device, dtype=input.dtype)
     if mask is None:
-        mask = torch.zeros((input.shape[0], 0), device=input.device, dtype=input.dtype)
+        mask = torch.zeros((input.size(0), 0), device=input.device, dtype=input.dtype)
     if bias is None:
         bias = torch.zeros(out_channels, device=input.device, dtype=input.dtype)
 
@@ -194,24 +197,24 @@ def deform_conv_transpose2d(
     pad_h, pad_w = _pair(padding)
     out_pad_h, out_pad_w = _pair(output_padding)
     dil_h, dil_w = _pair(dilation)
-    weight_h, weight_w = weight.shape[-2:]
-    _, _, in_h, in_w = input.shape
+    weight_h, weight_w = weight.size()[-2:]
+    _, _, in_h, in_w = input.size()
 
-    offset_groups = offset.shape[1] // (2 * weight_h * weight_w)
-    mask_groups = mask.shape[1] // (weight_h * weight_w)
+    offset_groups = offset.size(1) // (2 * weight_h * weight_w)
+    mask_groups = mask.size(1) // (weight_h * weight_w)
 
     if deformable and offset_groups == 0:
         raise RuntimeError(
             "The shape of the offset tensor at dimension 1 is not valid. It should "
-            "be a multiple of 2 * weight.size[2] * weight.size[3].\n"
-            "Got offset.shape[1]={}, while 2 * weight.size[2] * weight.size[3]={}".format(
-                offset.shape[1], 2 * weight_h * weight_w))
+            "be a multiple of 2 * weight.size(2) * weight.size(3).\n"
+            "Got offset.size(1)={}, while 2 * weight.size(2) * weight.size(3)={}".format(
+                offset.size(1), 2 * weight_h * weight_w))
     if modulated and mask_groups == 0:
         raise RuntimeError(
             "The shape of the mask tensor at dimension 1 is not valid. It should "
-            "be a multiple of weight.size[2] * weight.size[3].\n"
-            "Got mask.shape[1]={}, while weight.size[2] * weight.size[3]={}".format(
-                mask.shape[1], weight_h * weight_w))
+            "be a multiple of weight.size(2) * weight.size(3).\n"
+            "Got mask.size(1)={}, while weight.size(2) * weight.size(3)={}".format(
+                mask.size(1), weight_h * weight_w))
 
     return torch.ops.tvdcn.deform_conv_transpose2d(
         input,
@@ -282,15 +285,15 @@ def deform_conv_transpose3d(
     if not torch.jit.is_scripting() and not torch.jit.is_tracing():
         _log_api_usage_once(deform_conv_transpose3d)
     _assert_has_ops()
-    out_channels = weight.shape[1] // groups
+    out_channels = weight.size(1) // groups
 
     deformable = offset is not None
     modulated = mask is not None
 
     if offset is None:
-        offset = torch.zeros((input.shape[0], 0), device=input.device, dtype=input.dtype)
+        offset = torch.zeros((input.size(0), 0), device=input.device, dtype=input.dtype)
     if mask is None:
-        mask = torch.zeros((input.shape[0], 0), device=input.device, dtype=input.dtype)
+        mask = torch.zeros((input.size(0), 0), device=input.device, dtype=input.dtype)
     if bias is None:
         bias = torch.zeros(out_channels, device=input.device, dtype=input.dtype)
 
@@ -298,24 +301,24 @@ def deform_conv_transpose3d(
     pad_d, pad_h, pad_w = _triple(padding)
     out_pad_d, out_pad_h, out_pad_w = _triple(output_padding)
     dil_d, dil_h, dil_w = _triple(dilation)
-    weight_d, weight_h, weight_w = weight.shape[-3:]
-    _, _, in_d, in_h, in_w = input.shape
+    weight_d, weight_h, weight_w = weight.size()[-3:]
+    _, _, in_d, in_h, in_w = input.size()
 
-    offset_groups = offset.shape[1] // (3 * weight_d * weight_h * weight_w)
-    mask_groups = mask.shape[1] // (weight_d * weight_h * weight_w)
+    offset_groups = offset.size(1) // (3 * weight_d * weight_h * weight_w)
+    mask_groups = mask.size(1) // (weight_d * weight_h * weight_w)
 
     if deformable and offset_groups == 0:
         raise RuntimeError(
             "The shape of the offset tensor at dimension 1 is not valid. It should "
-            "be a multiple of 3 * weight.size[2] * weight.size[3] * weight.size[4].\n"
-            "Got offset.shape[1]={}, while 3 * weight.size[2] * weight.size[3] * weight.size[4]={}".format(
-                offset.shape[1], 3 * weight_d * weight_h * weight_w))
+            "be a multiple of 3 * weight.size(2) * weight.size(3) * weight.size(4).\n"
+            "Got offset.size(1)={}, while 3 * weight.size(2) * weight.size(3) * weight.size(4)={}".format(
+                offset.size(1), 3 * weight_d * weight_h * weight_w))
     if modulated and mask_groups == 0:
         raise RuntimeError(
             "The shape of the mask tensor at dimension 1 is not valid. It should "
-            "be a multiple of weight.size[2] * weight.size[3] * weight.size[4].\n"
-            "Got mask.shape[1]={}, while weight.size[2] * weight.size[3] * weight.size[4]={}".format(
-                mask.shape[1], weight_d * weight_h * weight_w))
+            "be a multiple of weight.size(2) * weight.size(3) * weight.size(4).\n"
+            "Got mask.size(1)={}, while weight.size(2) * weight.size(3) * weight.size(4)={}".format(
+                mask.size(1), weight_d * weight_h * weight_w))
 
     return torch.ops.tvdcn.deform_conv_transpose3d(
         input,
@@ -424,7 +427,7 @@ class _DeformConvTransposeNd(_DeformConvNd):
 
 class DeformConvTranspose1d(_DeformConvTransposeNd):
     """
-    See :func:`deform_conv_transpose1d`
+    See :func:`deform_conv_transpose1d`.
     """
 
     def __init__(self,
@@ -475,7 +478,7 @@ class DeformConvTranspose1d(_DeformConvTransposeNd):
 
 class DeformConvTranspose2d(_DeformConvTransposeNd):
     """
-    See :func:`deform_conv_transpose2d`
+    See :func:`deform_conv_transpose2d`.
     """
 
     def __init__(self,
@@ -527,7 +530,7 @@ class DeformConvTranspose2d(_DeformConvTransposeNd):
 
 class DeformConvTranspose3d(_DeformConvTransposeNd):
     """
-    See :func:`deform_conv_transpose3d`
+    See :func:`deform_conv_transpose3d`.
     """
 
     def __init__(self,
@@ -583,7 +586,7 @@ class DeformConvTranspose3d(_DeformConvTransposeNd):
 # noinspection PyMethodOverriding
 class PackedDeformConvTranspose1d(DeformConvTranspose1d):
     """
-    Packed version of :class:`DeformConvTranspose1d`
+    Packed version of :class:`DeformConvTranspose1d`.
     """
 
     def __init__(self,
@@ -601,7 +604,7 @@ class PackedDeformConvTranspose1d(DeformConvTranspose1d):
                  deformable: bool = True,
                  modulated: bool = False,
                  offset_activation: Union[str, _Activation] = None,
-                 mask_activation: Union[str, _Activation] = 'softmax',
+                 mask_activation: Union[str, _Activation] = 'sigmoid',
                  padding_mode: str = 'zeros',
                  device=None,
                  dtype=None) -> None:
@@ -623,7 +626,7 @@ class PackedDeformConvTranspose1d(DeformConvTranspose1d):
             raise ValueError('currently, no activation is supported for offset')
         if isinstance(mask_activation, str):
             if mask_activation == 'sigmoid':
-                mask_activation = nn.Sigmoid()
+                mask_activation = MaskSigmoid(scale=2.)
             elif mask_activation == 'softmax':
                 mask_activation = MaskSoftmax1d(self.kernel_size)  # type: ignore[arg-type]
             else:
@@ -696,7 +699,7 @@ class PackedDeformConvTranspose1d(DeformConvTranspose1d):
 # noinspection PyMethodOverriding
 class PackedDeformConvTranspose2d(DeformConvTranspose2d):
     """
-    Packed version of :class:`DeformConvTranspose2d`
+    Packed version of :class:`DeformConvTranspose2d`.
     """
 
     def __init__(self,
@@ -714,7 +717,7 @@ class PackedDeformConvTranspose2d(DeformConvTranspose2d):
                  deformable: bool = True,
                  modulated: bool = False,
                  offset_activation: Union[str, _Activation] = None,
-                 mask_activation: Union[str, _Activation] = 'softmax',
+                 mask_activation: Union[str, _Activation] = 'sigmoid',
                  padding_mode: str = 'zeros',
                  device=None,
                  dtype=None) -> None:
@@ -736,7 +739,7 @@ class PackedDeformConvTranspose2d(DeformConvTranspose2d):
             raise ValueError('currently, no activation is supported for offset')
         if isinstance(mask_activation, str):
             if mask_activation == 'sigmoid':
-                mask_activation = nn.Sigmoid()
+                mask_activation = MaskSigmoid(scale=2.)
             elif mask_activation == 'softmax':
                 mask_activation = MaskSoftmax2d(self.kernel_size)  # type: ignore[arg-type]
             else:
@@ -810,7 +813,7 @@ class PackedDeformConvTranspose2d(DeformConvTranspose2d):
 # noinspection PyMethodOverriding
 class PackedDeformConvTranspose3d(DeformConvTranspose3d):
     """
-    Packed version of :class:`DeformConvTranspose3d`
+    Packed version of :class:`DeformConvTranspose3d`.
     """
 
     def __init__(self,
@@ -828,7 +831,7 @@ class PackedDeformConvTranspose3d(DeformConvTranspose3d):
                  deformable: bool = True,
                  modulated: bool = False,
                  offset_activation: Union[str, _Activation] = None,
-                 mask_activation: Union[str, _Activation] = 'softmax',
+                 mask_activation: Union[str, _Activation] = 'sigmoid',
                  padding_mode: str = 'zeros',
                  device=None,
                  dtype=None) -> None:
@@ -850,7 +853,7 @@ class PackedDeformConvTranspose3d(DeformConvTranspose3d):
             raise ValueError('currently, no activation is supported for offset')
         if isinstance(mask_activation, str):
             if mask_activation == 'sigmoid':
-                mask_activation = nn.Sigmoid()
+                mask_activation = MaskSigmoid(scale=2.)
             elif mask_activation == 'softmax':
                 mask_activation = MaskSoftmax3d(self.kernel_size)  # type: ignore[arg-type]
             else:

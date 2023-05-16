@@ -3,7 +3,7 @@ requires = [
     "setuptools>=42",
     "wheel",
 #    "--find-links https://download.pytorch.org/whl/cu118; sys_platform == \"linux\" or sys_platform == \"win32\"",
-    "torch>=1.8",
+    "torch>=1.8.0",
 ]
 
 [tool.cibuildwheel]
@@ -21,7 +21,7 @@ repair-wheel-command = [
 
 [tool.cibuildwheel.windows]
 before-all = "bash tools/packaging/prepare_build_environment_windows.sh"
-before-build = "pip install torch>=1.8 --index-url https://download.pytorch.org/whl/cu118"
+before-build = "pip install torch>=1.8.0 --index-url https://download.pytorch.org/whl/cu118"
 environment = "FORCE_CUDA='1' PIP_NO_BUILD_ISOLATION='0' TORCH_CUDA_ARCH_LIST='6.1 7.5 8.6 8.9+PTX'"
 repair-wheel-command = ""
 

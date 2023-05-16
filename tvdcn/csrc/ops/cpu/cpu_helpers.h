@@ -1,5 +1,4 @@
 #pragma once
-#include <ATen/Parallel.h>
 #include <cmath>
 
 #define CPU_1D_KERNEL_LOOP_BETWEEN_T(i, start, end, index_t)      \

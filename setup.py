@@ -23,36 +23,6 @@ def get_version(version_file='_version.py'):
         return '0.0.0'
 
 
-def get_parallel_backend():
-    from torch.__config__ import parallel_info
-    parallel_info_string = parallel_info()
-    parallel_info_array = parallel_info_string.splitlines()
-    backend_lines = [line for line in parallel_info_array if line.startswith('ATen parallel backend:')]
-    if len(backend_lines) is not 1:
-        return None
-    backend = backend_lines[0].rsplit(': ')[1]
-    return backend
-
-
-def CppParallelExtension(name, sources, *args, **kwargs):
-    parallel_extra_compile_args = []
-
-    backend = get_parallel_backend()
-
-    if backend == 'OpenMP':
-        parallel_extra_compile_args = ['-DAT_PARALLEL_OPENMP', '-fopenmp']
-    elif backend == 'native thread pool':
-        parallel_extra_compile_args = ['-DAT_PARALLEL_NATIVE']
-    elif backend == 'native thread pool and TBB':
-        parallel_extra_compile_args = ['-DAT_PARALLEL_NATIVE_TBB']
-
-    extra_compile_args = kwargs.get('extra_compile_args', [])
-    extra_compile_args += parallel_extra_compile_args
-    kwargs['extra_compile_args'] = extra_compile_args
-
-    return CppExtension(name, sources, *args, **kwargs)
-
-
 def get_extensions():
     extensions_dir = os.path.join(PACKAGE_ROOT, 'csrc')
 
@@ -70,7 +40,7 @@ def get_extensions():
     source_cuda += glob.glob(os.path.join(extensions_dir, 'ops', 'autocast', '*.cpp'))
 
     sources = main_file + source_cpu
-    extension = CppParallelExtension
+    extension = CppExtension
     extra_compile_args = {'cxx': []}
     define_macros = []
 
