@@ -542,6 +542,7 @@ class PackedDeformConv1d(DeformConv1d):
                  offset_groups: int = 1,
                  mask_groups: int = 1,
                  bias: bool = True,
+                 auxiliary_bias: bool = False,
                  deformable: bool = True,
                  modulated: bool = False,
                  offset_activation: Union[str, _Activation] = None,
@@ -588,7 +589,7 @@ class PackedDeformConv1d(DeformConv1d):
                 padding=self.padding,
                 dilation=self.dilation,
                 groups=self.groups,
-                bias=self.bias is not None,
+                bias=auxiliary_bias,
                 device=device,
                 dtype=dtype)
         else:
@@ -603,7 +604,7 @@ class PackedDeformConv1d(DeformConv1d):
                 padding=self.padding,
                 dilation=self.dilation,
                 groups=self.groups,
-                bias=self.bias is not None,
+                bias=auxiliary_bias,
                 device=device,
                 dtype=dtype)
         else:
@@ -662,6 +663,7 @@ class PackedDeformConv2d(DeformConv2d):
                  offset_groups: int = 1,
                  mask_groups: int = 1,
                  bias: bool = True,
+                 auxiliary_bias: bool = False,
                  deformable: bool = True,
                  modulated: bool = False,
                  offset_activation: Union[str, _Activation] = None,
@@ -708,7 +710,7 @@ class PackedDeformConv2d(DeformConv2d):
                 padding=self.padding,
                 dilation=self.dilation,  # type: ignore[arg-type]
                 groups=self.groups,
-                bias=self.bias is not None,
+                bias=auxiliary_bias,
                 device=device,
                 dtype=dtype)
         else:
@@ -723,7 +725,7 @@ class PackedDeformConv2d(DeformConv2d):
                 padding=self.padding,
                 dilation=self.dilation,  # type: ignore[arg-type]
                 groups=self.groups,
-                bias=self.bias is not None,
+                bias=auxiliary_bias,
                 device=device,
                 dtype=dtype)
         else:
@@ -782,6 +784,7 @@ class PackedDeformConv3d(DeformConv3d):
                  offset_groups: int = 1,
                  mask_groups: int = 1,
                  bias: bool = True,
+                 auxiliary_bias: bool = False,
                  deformable: bool = True,
                  modulated: bool = False,
                  offset_activation: Union[str, _Activation] = None,
@@ -828,7 +831,7 @@ class PackedDeformConv3d(DeformConv3d):
                 padding=self.padding,
                 dilation=self.dilation,  # type: ignore[arg-type]
                 groups=self.groups,
-                bias=self.bias is not None,
+                bias=auxiliary_bias,
                 device=dtype,
                 dtype=device)
         else:
@@ -843,7 +846,7 @@ class PackedDeformConv3d(DeformConv3d):
                 padding=self.padding,
                 dilation=self.dilation,  # type: ignore[arg-type]
                 groups=self.groups,
-                bias=self.bias is not None,
+                bias=auxiliary_bias,
                 device=dtype,
                 dtype=device)
         else:

@@ -56,12 +56,12 @@ The Linux and Windows wheels are built with **Cuda 11.8**.
 If you cannot find a wheel for your Arch/Python/Cuda, or there is any problem with library linking when importing,
 please proceed to [instructions to build from source](#from-source), all steps are super easy.
 
-|                  |     Linux/Windows     |     MacOS      |
-|------------------|:---------------------:|:--------------:|
-| Python version:  |       3.8-3.11        |    3.8-3.11    |
-| PyTorch version: |    `torch==2.0.1`     | `torch==2.0.1` |
-| Cuda version:    |         11.8          |       -        |
-| GPU CCs:         | `6.1,7.5,8.6,8.9+PTX` |       -        |
+|                  |                 Linux/Windows                 |     MacOS      |
+|------------------|:---------------------------------------------:|:--------------:|
+| Python version:  |                   3.8-3.11                    |    3.8-3.11    |
+| PyTorch version: |                `torch==2.0.1`                 | `torch==2.0.1` |
+| Cuda version:    |                     11.8                      |       -        |
+| GPU CCs:         | `3.7,5.0,6.0,6.1,7.0,7.5,8.0,8.6,8.9,9.0+PTX` |       -        |
 
 #### From Source:
 

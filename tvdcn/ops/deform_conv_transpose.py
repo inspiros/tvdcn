@@ -601,6 +601,7 @@ class PackedDeformConvTranspose1d(DeformConvTranspose1d):
                  offset_groups: int = 1,
                  mask_groups: int = 1,
                  bias: bool = True,
+                 auxiliary_bias: bool = False,
                  deformable: bool = True,
                  modulated: bool = False,
                  offset_activation: Union[str, _Activation] = None,
@@ -643,7 +644,7 @@ class PackedDeformConvTranspose1d(DeformConvTranspose1d):
                 self.in_channels,
                 self.kernel_size[0] * self.offset_groups,
                 kernel_size=1,
-                bias=self.bias is not None,
+                bias=auxiliary_bias,
                 device=dtype,
                 dtype=device)
         else:
@@ -654,7 +655,7 @@ class PackedDeformConvTranspose1d(DeformConvTranspose1d):
                 self.in_channels,
                 self.kernel_size[0] * self.mask_groups,
                 kernel_size=1,
-                bias=self.bias is not None,
+                bias=auxiliary_bias,
                 device=dtype,
                 dtype=device)
         else:
@@ -714,6 +715,7 @@ class PackedDeformConvTranspose2d(DeformConvTranspose2d):
                  offset_groups: int = 1,
                  mask_groups: int = 1,
                  bias: bool = True,
+                 auxiliary_bias: bool = False,
                  deformable: bool = True,
                  modulated: bool = False,
                  offset_activation: Union[str, _Activation] = None,
@@ -756,7 +758,7 @@ class PackedDeformConvTranspose2d(DeformConvTranspose2d):
                 self.in_channels,
                 2 * self.kernel_size[0] * self.kernel_size[1] * self.offset_groups,
                 kernel_size=1,
-                bias=self.bias is not None,
+                bias=auxiliary_bias,
                 device=dtype,
                 dtype=device)
         else:
@@ -768,7 +770,7 @@ class PackedDeformConvTranspose2d(DeformConvTranspose2d):
                 self.in_channels,
                 self.kernel_size[0] * self.kernel_size[1] * self.mask_groups,
                 kernel_size=1,
-                bias=self.bias is not None,
+                bias=auxiliary_bias,
                 device=dtype,
                 dtype=device)
         else:
@@ -828,6 +830,7 @@ class PackedDeformConvTranspose3d(DeformConvTranspose3d):
                  offset_groups: int = 1,
                  mask_groups: int = 1,
                  bias: bool = True,
+                 auxiliary_bias: bool = False,
                  deformable: bool = True,
                  modulated: bool = False,
                  offset_activation: Union[str, _Activation] = None,
@@ -870,7 +873,7 @@ class PackedDeformConvTranspose3d(DeformConvTranspose3d):
                 self.in_channels,
                 3 * self.kernel_size[0] * self.kernel_size[1] * self.kernel_size[2] * self.offset_groups,
                 kernel_size=1,
-                bias=self.bias is not None,
+                bias=auxiliary_bias,
                 device=dtype,
                 dtype=device)
         else:
@@ -882,7 +885,7 @@ class PackedDeformConvTranspose3d(DeformConvTranspose3d):
                 self.in_channels,
                 self.kernel_size[0] * self.kernel_size[1] * self.kernel_size[2] * self.mask_groups,
                 kernel_size=1,
-                bias=self.bias is not None,
+                bias=auxiliary_bias,
                 device=dtype,
                 dtype=device)
         else:

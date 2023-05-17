@@ -13,7 +13,7 @@ skip = ["*-musllinux_*", "*-win32", "*-manylinux_i686"]
 
 [tool.cibuildwheel.linux]
 before-all = "tools/packaging/prepare_build_environment_linux.sh"
-environment = "FORCE_CUDA='1' TORCH_CUDA_ARCH_LIST='6.1 7.5 8.6 8.9+PTX'"
+environment = "FORCE_CUDA='1' TORCH_CUDA_ARCH_LIST='3.7 5.0 6.0 6.1 7.0 7.5 8.0 8.6 8.9 9.0+PTX'"
 repair-wheel-command = [
     "pip install auditwheel patchelf",
     "python tools/packaging/audit_torch_extension.py repair -w {dest_dir} {wheel}"
@@ -22,7 +22,7 @@ repair-wheel-command = [
 [tool.cibuildwheel.windows]
 before-all = "bash tools/packaging/prepare_build_environment_windows.sh"
 before-build = "pip install torch>=1.9.0 --index-url https://download.pytorch.org/whl/cu118"
-environment = "FORCE_CUDA='1' PIP_NO_BUILD_ISOLATION='0' TORCH_CUDA_ARCH_LIST='6.1 7.5 8.6 8.9+PTX'"
+environment = "FORCE_CUDA='1' PIP_NO_BUILD_ISOLATION='0' TORCH_CUDA_ARCH_LIST='3.7 5.0 6.0 6.1 7.0 7.5 8.0 8.6 8.9 9.0+PTX'"
 repair-wheel-command = ""
 
 [tool.cibuildwheel.macos]
