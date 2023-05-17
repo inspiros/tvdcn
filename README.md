@@ -1,8 +1,8 @@
 Torchvision+ Deformable Convolution Networks
 ========
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/inspiros/tvdcn/build_wheels.yml)
-![PyPI](https://img.shields.io/pypi/v/tvdcn)
-![GitHub](https://img.shields.io/github/license/inspiros/tvdcn)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/inspiros/tvdcn/build_wheels.yml)](https://github.com/inspiros/tvdcn/actions)
+[![PyPI](https://img.shields.io/pypi/v/tvdcn)](https://pypi.org/project/tvdcn)
+[![GitHub](https://img.shields.io/github/license/inspiros/tvdcn)](LICENSE.txt)
 
 This package contains the PyTorch implementations of the **2D Deformable Convolution** operation
 (the commonly used  `torchvision.ops.deform_conv2d`) proposed in https://arxiv.org/abs/1811.11168,
