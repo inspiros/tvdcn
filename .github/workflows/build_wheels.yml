@@ -12,6 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Check gcc version
+        run: x86_64-linux-gnu-gcc -v
+
       - name: Build sdist
         run: pipx run build --sdist
 
