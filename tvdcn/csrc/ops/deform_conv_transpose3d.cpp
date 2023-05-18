@@ -171,7 +171,7 @@ namespace tvdcn {
 
             TORCH_CHECK(
                     (!deformable || offset_c.size(1) == offset_groups * 3 * weight_d * weight_h * weight_w),
-                    "offset.shape[1] is not valid: got: ",
+                    "offset.shape[1] is not valid. got: ",
                     offset_c.size(1),
                     " expected: ",
                     offset_groups * 3 * weight_d * weight_h * weight_w)
@@ -181,7 +181,7 @@ namespace tvdcn {
                     (!deformable || (offset_c.size(2) == in_d &&
                                      offset_c.size(3) == in_h &&
                                      offset_c.size(4) == in_w)),
-                    "offset output dims: (",
+                    "offset input dims: (",
                     offset_c.size(2),
                     ", ",
                     offset_c.size(3),
@@ -198,7 +198,7 @@ namespace tvdcn {
 
             TORCH_CHECK(
                     (!modulated || mask_c.size(1) == mask_groups * weight_d * weight_h * weight_w),
-                    "mask.shape[1] is not valid: got: ",
+                    "mask.shape[1] is not valid. got: ",
                     mask_c.size(1),
                     " expected: ",
                     mask_groups * weight_d * weight_h * weight_w)
@@ -208,7 +208,7 @@ namespace tvdcn {
                     (!modulated || (mask_c.size(2) == in_d &&
                                     mask_c.size(3) == in_h &&
                                     mask_c.size(4) == in_w)),
-                    "mask output dims: (",
+                    "mask input dims: (",
                     mask_c.size(2),
                     ", ",
                     mask_c.size(3),

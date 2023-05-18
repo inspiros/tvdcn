@@ -159,7 +159,7 @@ namespace tvdcn {
 
             TORCH_CHECK(
                     (!deformable || offset_c.size(1) == offset_groups * 2 * weight_h * weight_w),
-                    "offset.shape[1] is not valid: got: ",
+                    "offset.shape[1] is not valid. got: ",
                     offset_c.size(1),
                     " expected: ",
                     offset_groups * 2 * weight_h * weight_w)
@@ -181,7 +181,7 @@ namespace tvdcn {
 
             TORCH_CHECK(
                     (!modulated || mask_c.size(1) == mask_groups * weight_h * weight_w),
-                    "mask.shape[1] is not valid: got: ",
+                    "mask.shape[1] is not valid. got: ",
                     mask_c.size(1),
                     " expected: ",
                     mask_groups * weight_h * weight_w)
