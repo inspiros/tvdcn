@@ -26,8 +26,8 @@ class DeformConvTestArgs(nn.Module):
         self.transposed = kwargs.get('transposed', False)
         contiguous = kwargs.get('contiguous', True)
 
-        self.n_in_channels = kwargs.get('in_channels', 4)
-        self.n_out_channels = kwargs.get('out_channels', 2)
+        self.in_channels = kwargs.get('in_channels', 4)
+        self.out_channels = kwargs.get('out_channels', 2)
         self.groups = kwargs.get('groups', 1)
         self.offset_groups = kwargs.get('offset_groups', 2)
         self.mask_groups = kwargs.get('mask_groups', 1)
@@ -51,24 +51,24 @@ class DeformConvTestArgs(nn.Module):
 
         # input param
         self.input = nn.Parameter(
-            torch.rand(self.batch_size, self.n_in_channels,
+            torch.rand(self.batch_size, self.in_channels,
                        *(self.in_size if not self.transposed else self.out_size),
                        device=self.device, dtype=self.dtype))
         # conv params
         if not self.transposed:
             self.weight = nn.Parameter(
-                torch.empty(self.n_out_channels, self.n_in_channels // self.groups,
+                torch.empty(self.out_channels, self.in_channels // self.groups,
                             *self.kernel_size,
                             device=self.device, dtype=self.dtype))
         else:
             self.weight = nn.Parameter(
-                torch.empty(self.n_in_channels, self.n_out_channels // self.groups,
+                torch.empty(self.in_channels, self.out_channels // self.groups,
                             *self.kernel_size,
                             device=self.device, dtype=self.dtype))
         self.bias = nn.Parameter(
-            torch.empty(self.n_out_channels,
-                        device=self.device, dtype=self.dtype, requires_grad=True))
-        # deformable/extensible conv params
+            torch.empty(self.out_channels,
+                        device=self.device, dtype=self.dtype))
+        # deformable conv params
         self.offset = nn.Parameter(
             torch.empty(self.batch_size, self.offset_groups * self.dim * math.prod(self.kernel_size),
                         *self.out_size,
@@ -111,8 +111,8 @@ class DeformConvTestArgs(nn.Module):
             cls = torch.nn.Conv2d if not self.transposed else torch.nn.ConvTranspose2d
         else:
             cls = torch.nn.Conv3d if not self.transposed else torch.nn.ConvTranspose3d
-        params = dict(in_channels=self.n_in_channels,
-                      out_channels=self.n_out_channels,
+        params = dict(in_channels=self.in_channels,
+                      out_channels=self.out_channels,
                       kernel_size=self.kernel_size,
                       stride=self.stride,
                       padding=self.padding,
@@ -131,14 +131,14 @@ class DeformConvTestArgs(nn.Module):
 
     @property
     def expected_cols_size(self, n_parallel_imgs=1):
-        return torch.Size([self.n_in_channels if not self.transposed else
-                           self.n_out_channels * math.prod(self.kernel_size),
+        return torch.Size([self.in_channels if not self.transposed else
+                           self.out_channels * math.prod(self.kernel_size),
                            n_parallel_imgs * math.prod(self.expected_output_size[2:])])
 
     @property
     def expected_output_size(self):
         out_size = (self.out_size[_] + self.output_padding[_] for _ in range(self.dim))
-        return torch.Size([self.batch_size, self.n_out_channels, *out_size])
+        return torch.Size([self.batch_size, self.out_channels, *out_size])
 
     @property
     def tol(self):
@@ -147,8 +147,8 @@ class DeformConvTestArgs(nn.Module):
     def __repr__(self):
         s = f"{self.__class__.__name__}(spatial_dim={self.dim}"
         s += "\n- conv_params:"
-        s += f"\n\t{'in_channels':<15} = {self.n_in_channels}"
-        s += f"\n\t{'out_channels':<15} = {self.n_out_channels}"
+        s += f"\n\t{'in_channels':<15} = {self.in_channels}"
+        s += f"\n\t{'out_channels':<15} = {self.out_channels}"
         s += f"\n\t{'kernel_size':<15} = {self.kernel_size}"
         s += f"\n\t{'stride':<15} = {self.stride}"
         s += f"\n\t{'padding':<15} = {self.padding}"
