@@ -542,7 +542,7 @@ class PackedDeformConv1d(DeformConv1d):
                  offset_groups: int = 1,
                  mask_groups: int = 1,
                  bias: bool = True,
-                 auxiliary_bias: bool = False,
+                 generator_bias: bool = False,
                  deformable: bool = True,
                  modulated: bool = False,
                  offset_activation: Union[str, _Activation] = None,
@@ -581,34 +581,34 @@ class PackedDeformConv1d(DeformConv1d):
         self.modulated = modulated
 
         if self.deformable:
-            self.conv_offset = nn.Conv1d(
+            self.offset_generator = nn.Conv1d(
                 self.in_channels,
                 self.kernel_size[0] * self.offset_groups,
                 kernel_size=self.kernel_size,
                 stride=self.stride,
                 padding=self.padding,
                 dilation=self.dilation,
-                groups=self.groups,
-                bias=auxiliary_bias,
+                groups=self.offset_groups,
+                bias=generator_bias,
                 device=device,
                 dtype=dtype)
         else:
-            self.register_module('conv_offset', None)
+            self.register_module('offset_generator', None)
 
         if self.modulated:
-            self.conv_mask = nn.Conv1d(
+            self.mask_generator = nn.Conv1d(
                 self.in_channels,
                 self.kernel_size[0] * self.mask_groups,
                 kernel_size=self.kernel_size,
                 stride=self.stride,
                 padding=self.padding,
                 dilation=self.dilation,
-                groups=self.groups,
-                bias=auxiliary_bias,
+                groups=self.mask_groups,
+                bias=generator_bias,
                 device=device,
                 dtype=dtype)
         else:
-            self.register_module('conv_mask', None)
+            self.register_module('mask_generator', None)
 
         self.offset_activation = offset_activation
         self.mask_activation = mask_activation
@@ -619,25 +619,25 @@ class PackedDeformConv1d(DeformConv1d):
         if not hasattr(self, 'modulated'):
             return
         super().reset_parameters()
-        if self.conv_offset is not None:
-            init.zeros_(self.conv_offset.weight)
-            if self.conv_offset.bias is not None:
-                init.zeros_(self.conv_offset.bias)
-        if self.conv_mask is not None:
-            init.zeros_(self.conv_mask.weight)
-            if self.conv_mask.bias is not None:
-                init.zeros_(self.conv_mask.bias)
+        if self.offset_generator is not None:
+            init.zeros_(self.offset_generator.weight)
+            if self.offset_generator.bias is not None:
+                init.zeros_(self.offset_generator.bias)
+        if self.mask_generator is not None:
+            init.zeros_(self.mask_generator.weight)
+            if self.mask_generator.bias is not None:
+                init.zeros_(self.mask_generator.bias)
 
     def forward(self, input: Tensor) -> Tensor:
-        if self.deformable and self.conv_offset is not None:
-            offset = self.conv_offset(input)
+        if self.deformable and self.offset_generator is not None:
+            offset = self.offset_generator(input)
             if self.offset_activation is not None:
                 offset = self.offset_activation(offset)
         else:
             offset = None
 
-        if self.modulated and self.conv_mask is not None:
-            mask = self.conv_mask(input)
+        if self.modulated and self.mask_generator is not None:
+            mask = self.mask_generator(input)
             if self.mask_activation is not None:
                 mask = self.mask_activation(mask)
         else:
@@ -663,7 +663,7 @@ class PackedDeformConv2d(DeformConv2d):
                  offset_groups: int = 1,
                  mask_groups: int = 1,
                  bias: bool = True,
-                 auxiliary_bias: bool = False,
+                 generator_bias: bool = False,
                  deformable: bool = True,
                  modulated: bool = False,
                  offset_activation: Union[str, _Activation] = None,
@@ -702,34 +702,34 @@ class PackedDeformConv2d(DeformConv2d):
         self.modulated = modulated
 
         if self.deformable:
-            self.conv_offset = nn.Conv2d(
+            self.offset_generator = nn.Conv2d(
                 self.in_channels,
                 2 * self.kernel_size[0] * self.kernel_size[1] * self.offset_groups,
                 kernel_size=self.kernel_size,  # type: ignore[arg-type]
                 stride=self.stride,  # type: ignore[arg-type]
                 padding=self.padding,
                 dilation=self.dilation,  # type: ignore[arg-type]
-                groups=self.groups,
-                bias=auxiliary_bias,
+                groups=self.offset_groups,
+                bias=generator_bias,
                 device=device,
                 dtype=dtype)
         else:
-            self.register_module('conv_offset', None)
+            self.register_module('offset_generator', None)
 
         if self.modulated:
-            self.conv_mask = nn.Conv2d(
+            self.mask_generator = nn.Conv2d(
                 self.in_channels,
                 self.kernel_size[0] * self.kernel_size[1] * self.mask_groups,
                 kernel_size=self.kernel_size,  # type: ignore[arg-type]
                 stride=self.stride,  # type: ignore[arg-type]
                 padding=self.padding,
                 dilation=self.dilation,  # type: ignore[arg-type]
-                groups=self.groups,
-                bias=auxiliary_bias,
+                groups=self.mask_groups,
+                bias=generator_bias,
                 device=device,
                 dtype=dtype)
         else:
-            self.register_module('conv_mask', None)
+            self.register_module('mask_generator', None)
 
         self.offset_activation = offset_activation
         self.mask_activation = mask_activation
@@ -740,25 +740,25 @@ class PackedDeformConv2d(DeformConv2d):
         if not hasattr(self, 'modulated'):
             return
         super().reset_parameters()
-        if self.conv_offset is not None:
-            init.zeros_(self.conv_offset.weight)
-            if self.conv_offset.bias is not None:
-                init.zeros_(self.conv_offset.bias)
-        if self.conv_mask is not None:
-            init.zeros_(self.conv_mask.weight)
-            if self.conv_mask.bias is not None:
-                init.zeros_(self.conv_mask.bias)
+        if self.offset_generator is not None:
+            init.zeros_(self.offset_generator.weight)
+            if self.offset_generator.bias is not None:
+                init.zeros_(self.offset_generator.bias)
+        if self.mask_generator is not None:
+            init.zeros_(self.mask_generator.weight)
+            if self.mask_generator.bias is not None:
+                init.zeros_(self.mask_generator.bias)
 
     def forward(self, input: Tensor) -> Tensor:
-        if self.deformable and self.conv_offset is not None:
-            offset = self.conv_offset(input)
+        if self.deformable and self.offset_generator is not None:
+            offset = self.offset_generator(input)
             if self.offset_activation is not None:
                 offset = self.offset_activation(offset)
         else:
             offset = None
 
-        if self.modulated and self.conv_mask is not None:
-            mask = self.conv_mask(input)
+        if self.modulated and self.mask_generator is not None:
+            mask = self.mask_generator(input)
             if self.mask_activation is not None:
                 mask = self.mask_activation(mask)
         else:
@@ -784,7 +784,7 @@ class PackedDeformConv3d(DeformConv3d):
                  offset_groups: int = 1,
                  mask_groups: int = 1,
                  bias: bool = True,
-                 auxiliary_bias: bool = False,
+                 generator_bias: bool = False,
                  deformable: bool = True,
                  modulated: bool = False,
                  offset_activation: Union[str, _Activation] = None,
@@ -823,34 +823,34 @@ class PackedDeformConv3d(DeformConv3d):
         self.modulated = modulated
 
         if self.deformable:
-            self.conv_offset = nn.Conv3d(
+            self.offset_generator = nn.Conv3d(
                 self.in_channels,
                 3 * self.kernel_size[0] * self.kernel_size[1] * self.kernel_size[2] * self.offset_groups,
                 kernel_size=self.kernel_size,  # type: ignore[arg-type]
                 stride=self.stride,  # type: ignore[arg-type]
                 padding=self.padding,
                 dilation=self.dilation,  # type: ignore[arg-type]
-                groups=self.groups,
-                bias=auxiliary_bias,
+                groups=self.offset_groups,
+                bias=generator_bias,
                 device=dtype,
                 dtype=device)
         else:
-            self.register_module('conv_offset', None)
+            self.register_module('offset_generator', None)
 
         if self.modulated:
-            self.conv_mask = nn.Conv3d(
+            self.mask_generator = nn.Conv3d(
                 self.in_channels,
                 self.kernel_size[0] * self.kernel_size[1] * self.kernel_size[2] * self.mask_groups,
                 kernel_size=self.kernel_size,  # type: ignore[arg-type]
                 stride=self.stride,  # type: ignore[arg-type]
                 padding=self.padding,
                 dilation=self.dilation,  # type: ignore[arg-type]
-                groups=self.groups,
-                bias=auxiliary_bias,
+                groups=self.mask_groups,
+                bias=generator_bias,
                 device=dtype,
                 dtype=device)
         else:
-            self.register_module('conv_mask', None)
+            self.register_module('mask_generator', None)
 
         self.offset_activation = offset_activation
         self.mask_activation = mask_activation
@@ -861,25 +861,25 @@ class PackedDeformConv3d(DeformConv3d):
         if not hasattr(self, 'modulated'):
             return
         super().reset_parameters()
-        if self.conv_offset is not None:
-            init.zeros_(self.conv_offset.weight)
-            if self.conv_offset.bias is not None:
-                init.zeros_(self.conv_offset.bias)
-        if self.conv_mask is not None:
-            init.zeros_(self.conv_mask.weight)
-            if self.conv_mask.bias is not None:
-                init.zeros_(self.conv_mask.bias)
+        if self.offset_generator is not None:
+            init.zeros_(self.offset_generator.weight)
+            if self.offset_generator.bias is not None:
+                init.zeros_(self.offset_generator.bias)
+        if self.mask_generator is not None:
+            init.zeros_(self.mask_generator.weight)
+            if self.mask_generator.bias is not None:
+                init.zeros_(self.mask_generator.bias)
 
     def forward(self, input: Tensor) -> Tensor:
-        if self.deformable and self.conv_offset is not None:
-            offset = self.conv_offset(input)
+        if self.deformable and self.offset_generator is not None:
+            offset = self.offset_generator(input)
             if self.offset_activation is not None:
                 offset = self.offset_activation(offset)
         else:
             offset = None
 
-        if self.modulated and self.conv_mask is not None:
-            mask = self.conv_mask(input)
+        if self.modulated and self.mask_generator is not None:
+            mask = self.mask_generator(input)
             if self.mask_activation is not None:
                 mask = self.mask_activation(mask)
         else:

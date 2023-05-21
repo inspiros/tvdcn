@@ -17,6 +17,8 @@ def test_packed_wrapper():
                                        stride=(2, 3),
                                        padding=(2, 3),
                                        groups=2,
+                                       offset_groups=1,
+                                       mask_groups=2,
                                        modulated=True)
     conv = torch.jit.script(conv)
     print(conv)

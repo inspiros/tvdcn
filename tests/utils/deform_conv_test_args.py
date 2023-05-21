@@ -32,15 +32,15 @@ class DeformConvTestArgs(nn.Module):
         self.offset_groups = kwargs.get('offset_groups', 2)
         self.mask_groups = kwargs.get('mask_groups', 1)
 
-        # self.stride = tuple(range(1, 1 + self.dim))
-        # self.padding = tuple(range(0, 0 + self.dim))
-        # self.output_padding = tuple(range(0, 0 + self.dim)) if not self.transposed else (0,) * self.dim
-        # self.dilation = tuple(range(1, 1 + self.dim))
+        self.stride = tuple(range(1, 1 + self.dim))
+        self.padding = tuple(range(0, 0 + self.dim))
+        self.output_padding = tuple(range(0, 0 + self.dim)) if not self.transposed else (0,) * self.dim
+        self.dilation = tuple(range(1, 1 + self.dim))
 
-        self.stride = (1,) * self.dim
-        self.padding = (0,) * self.dim
-        self.output_padding = (0,) * self.dim
-        self.dilation = (1,) * self.dim
+        # self.stride = (1,) * self.dim
+        # self.padding = (0,) * self.dim
+        # self.output_padding = (0,) * self.dim
+        # self.dilation = (1,) * self.dim
 
         self.kernel_size = tuple(range(2, 2 + self.dim))
         self.in_size = tuple(range(5, 5 + self.dim))

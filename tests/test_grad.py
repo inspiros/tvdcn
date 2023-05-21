@@ -5,7 +5,7 @@ import tvdcn
 from utils.deform_conv_test_args import DeformConvTestArgs
 
 
-def test_deform_conv_grad(dim=1,
+def test_deform_conv_grad(dim=2,
                           transposed=False,
                           dtype=torch.float64,
                           device='cuda'):
