@@ -32,7 +32,7 @@ namespace tvdcn {
                 const bool modulated,
                 at::Tensor &columns) {
             if (input.device().is_cuda()) {
-#if defined(WITH_CUDA) || defined(WITH_HIP)
+#if defined(WITH_CUDA)
                 im2col_cuda(input,
                             offset,
                             mask,
@@ -108,7 +108,7 @@ namespace tvdcn {
                 const bool modulated,
                 at::Tensor &grad_input) {
             if (grad_input.device().is_cuda()) {
-#if defined(WITH_CUDA) || defined(WITH_HIP)
+#if defined(WITH_CUDA)
                 col2im_cuda(columns,
                             offset,
                             mask,
@@ -185,7 +185,7 @@ namespace tvdcn {
                 const bool modulated,
                 at::Tensor &grad_offset) {
             if (input.device().is_cuda()) {
-#if defined(WITH_CUDA) || defined(WITH_HIP)
+#if defined(WITH_CUDA)
                 deform_conv2d_compute_grad_offset_cuda(columns,
                                                        input,
                                                        offset,
@@ -263,7 +263,7 @@ namespace tvdcn {
                 const bool modulated,
                 at::Tensor &grad_mask) {
             if (input.device().is_cuda()) {
-#if defined(WITH_CUDA) || defined(WITH_HIP)
+#if defined(WITH_CUDA)
                 deform_conv2d_compute_grad_mask_cuda(columns,
                                                      input,
                                                      offset,

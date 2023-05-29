@@ -19,9 +19,9 @@ inline unsigned int GET_THREADS(
 
 inline unsigned int GET_BLOCKS(
         const unsigned int THREADS,
-        const unsigned int N) {
-    unsigned int kMaxGridNum = at::cuda::getCurrentDeviceProperties()->maxGridSize[0];
-    return std::min(kMaxGridNum, (N + THREADS - 1) / THREADS);
+        const int64_t N) {
+    const int64_t kMaxGridNum = at::cuda::getCurrentDeviceProperties()->maxGridSize[0];
+    return (unsigned int) std::min(kMaxGridNum, (N + THREADS - 1) / THREADS);
 }
 
 // Temporarily counter latest MSVC update that causes incompatibility with CUDA
