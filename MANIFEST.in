@@ -1,0 +1,5 @@
+recursive-include tvdcn *.cpp
+recursive-include tvdcn *.cu
+include README.md
+include LICENSE.txt
+include requirements*.txt
