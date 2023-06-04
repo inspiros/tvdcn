@@ -69,6 +69,7 @@
 // modified from
 // https://github.com/pytorch/vision/blob/master/torchvision/csrc/cpu/deform_conv2d_kernel.cpp
 
+#include <torch/autograd.h>
 #include "utils/parallel_helpers.h"
 #include "dispatch/deform_conv2d_kernels.h"
 
@@ -539,6 +540,177 @@ namespace tvdcn {
             grad_bias *= grad_out.sum(at::IntArrayRef({0, 2, 3}));
 
             return std::make_tuple(grad_input, grad_weight, grad_offset, grad_mask, grad_bias);
+        }
+
+        class DeformConvTranspose2dFunction
+                : public torch::autograd::Function<DeformConvTranspose2dFunction> {
+        public:
+            static torch::autograd::variable_list forward(
+                    torch::autograd::AutogradContext *ctx,
+                    const torch::autograd::Variable &input,
+                    const torch::autograd::Variable &weight,
+                    const torch::autograd::Variable &offset,
+                    const torch::autograd::Variable &mask,
+                    const torch::autograd::Variable &bias,
+                    int64_t stride_h,
+                    int64_t stride_w,
+                    int64_t pad_h,
+                    int64_t pad_w,
+                    int64_t out_pad_h,
+                    int64_t out_pad_w,
+                    int64_t dilation_h,
+                    int64_t dilation_w,
+                    int64_t groups,
+                    int64_t offset_groups,
+                    int64_t mask_groups,
+                    bool deformable,
+                    bool modulated) {
+                at::AutoDispatchBelowADInplaceOrView g;
+                auto output = deform_conv_transpose2d_forward(
+                        input,
+                        weight,
+                        offset,
+                        mask,
+                        bias,
+                        std::make_pair(stride_h, stride_w),
+                        std::make_pair(pad_h, pad_w),
+                        std::make_pair(out_pad_h, out_pad_w),
+                        std::make_pair(dilation_h, dilation_w),
+                        groups,
+                        offset_groups,
+                        mask_groups,
+                        deformable,
+                        modulated);
+
+                ctx->save_for_backward({input, weight, offset, mask, bias});
+                ctx->saved_data["stride_h"] = stride_h;
+                ctx->saved_data["stride_w"] = stride_w;
+                ctx->saved_data["pad_h"] = pad_h;
+                ctx->saved_data["pad_w"] = pad_w;
+                ctx->saved_data["out_pad_h"] = out_pad_h;
+                ctx->saved_data["out_pad_w"] = out_pad_w;
+                ctx->saved_data["dilation_h"] = dilation_h;
+                ctx->saved_data["dilation_w"] = dilation_w;
+                ctx->saved_data["groups"] = groups;
+                ctx->saved_data["offset_groups"] = offset_groups;
+                ctx->saved_data["mask_groups"] = mask_groups;
+                ctx->saved_data["deformable"] = deformable;
+                ctx->saved_data["modulated"] = modulated;
+
+                return {
+                        output,
+                };
+            }
+
+            static torch::autograd::variable_list backward(
+                    torch::autograd::AutogradContext *ctx,
+                    const torch::autograd::variable_list &grad_output) {
+                auto saved = ctx->get_saved_variables();
+                auto input = saved[0];
+                auto weight = saved[1];
+                auto offset = saved[2];
+                auto mask = saved[3];
+                auto bias = saved[4];
+
+                auto stride_h = ctx->saved_data["stride_h"].toInt();
+                auto stride_w = ctx->saved_data["stride_w"].toInt();
+                auto pad_h = ctx->saved_data["pad_h"].toInt();
+                auto pad_w = ctx->saved_data["pad_w"].toInt();
+                auto out_pad_h = ctx->saved_data["out_pad_h"].toInt();
+                auto out_pad_w = ctx->saved_data["out_pad_w"].toInt();
+                auto dilation_h = ctx->saved_data["dilation_h"].toInt();
+                auto dilation_w = ctx->saved_data["dilation_w"].toInt();
+                auto groups = ctx->saved_data["groups"].toInt();
+                auto offset_groups = ctx->saved_data["offset_groups"].toInt();
+                auto mask_groups = ctx->saved_data["mask_groups"].toInt();
+                auto deformable = ctx->saved_data["deformable"].toBool();
+                auto modulated = ctx->saved_data["modulated"].toBool();
+
+                auto grads = deform_conv_transpose2d_backward(
+                        grad_output[0],
+                        input,
+                        weight,
+                        offset,
+                        mask,
+                        bias,
+                        std::make_pair(stride_h, stride_w),
+                        std::make_pair(pad_h, pad_w),
+                        std::make_pair(out_pad_h, out_pad_w),
+                        std::make_pair(dilation_h, dilation_w),
+                        groups,
+                        offset_groups,
+                        mask_groups,
+                        deformable,
+                        modulated);
+                auto grad_input = std::get<0>(grads);
+                auto grad_weight = std::get<1>(grads);
+                auto grad_offset = std::get<2>(grads);
+                auto grad_mask = std::get<3>(grads);
+                auto grad_bias = std::get<4>(grads);
+
+                return {
+                        grad_input,
+                        grad_weight,
+                        grad_offset,
+                        grad_mask,
+                        grad_bias,
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                };
+            }
+        };
+
+        at::Tensor deform_conv_transpose2d(
+                const at::Tensor &input,
+                const at::Tensor &weight,
+                const at::Tensor &offset,
+                const at::Tensor &mask,
+                const at::Tensor &bias,
+                const int64_t stride_h,
+                const int64_t stride_w,
+                const int64_t pad_h,
+                const int64_t pad_w,
+                const int64_t out_pad_h,
+                const int64_t out_pad_w,
+                const int64_t dilation_h,
+                const int64_t dilation_w,
+                const int64_t groups,
+                const int64_t offset_groups,
+                const int64_t mask_groups,
+                const bool deformable,
+                const bool modulated) {
+            C10_LOG_API_USAGE_ONCE("tvdcn.csrc.ops.deform_conv_transpose.deform_conv_transpose2d");
+            auto result = DeformConvTranspose2dFunction::apply(
+                    input,
+                    weight,
+                    offset,
+                    mask,
+                    bias,
+                    stride_h,
+                    stride_w,
+                    pad_h,
+                    pad_w,
+                    out_pad_h,
+                    out_pad_w,
+                    dilation_h,
+                    dilation_w,
+                    groups,
+                    offset_groups,
+                    mask_groups,
+                    deformable,
+                    modulated);
+            return result[0];
         }
     }
 }

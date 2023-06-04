@@ -69,6 +69,7 @@
 // modified from
 // https://github.com/pytorch/vision/blob/master/torchvision/csrc/cpu/deform_conv2d_kernel.cpp
 
+#include <torch/autograd.h>
 #include "utils/parallel_helpers.h"
 #include "dispatch/deform_conv1d_kernels.h"
 
@@ -468,6 +469,145 @@ namespace tvdcn {
             grad_bias *= grad_out.sum(at::IntArrayRef({0, 2}));
 
             return std::make_tuple(grad_input, grad_weight, grad_offset, grad_mask, grad_bias);
+        }
+
+        class DeformConv1dFunction
+                : public torch::autograd::Function<DeformConv1dFunction> {
+        public:
+            static torch::autograd::variable_list forward(
+                    torch::autograd::AutogradContext *ctx,
+                    const torch::autograd::Variable &input,
+                    const torch::autograd::Variable &weight,
+                    const torch::autograd::Variable &offset,
+                    const torch::autograd::Variable &mask,
+                    const torch::autograd::Variable &bias,
+                    int64_t stride,
+                    int64_t pad,
+                    int64_t dilation,
+                    int64_t groups,
+                    int64_t offset_groups,
+                    int64_t mask_groups,
+                    bool deformable,
+                    bool modulated) {
+                at::AutoDispatchBelowADInplaceOrView g;
+                auto output = deform_conv1d_forward(
+                        input,
+                        weight,
+                        offset,
+                        mask,
+                        bias,
+                        stride,
+                        pad,
+                        dilation,
+                        groups,
+                        offset_groups,
+                        mask_groups,
+                        deformable,
+                        modulated);
+
+                ctx->save_for_backward({input, weight, offset, mask, bias});
+                ctx->saved_data["stride"] = stride;
+                ctx->saved_data["pad"] = pad;
+                ctx->saved_data["dilation"] = dilation;
+                ctx->saved_data["groups"] = groups;
+                ctx->saved_data["offset_groups"] = offset_groups;
+                ctx->saved_data["mask_groups"] = mask_groups;
+                ctx->saved_data["deformable"] = deformable;
+                ctx->saved_data["modulated"] = modulated;
+
+                return {
+                        output,
+                };
+            }
+
+            static torch::autograd::variable_list backward(
+                    torch::autograd::AutogradContext *ctx,
+                    const torch::autograd::variable_list &grad_output) {
+                auto saved = ctx->get_saved_variables();
+                auto input = saved[0];
+                auto weight = saved[1];
+                auto offset = saved[2];
+                auto mask = saved[3];
+                auto bias = saved[4];
+
+                auto stride = ctx->saved_data["stride"].toInt();
+                auto pad = ctx->saved_data["pad"].toInt();
+                auto dilation = ctx->saved_data["dilation"].toInt();
+                auto groups = ctx->saved_data["groups"].toInt();
+                auto offset_groups = ctx->saved_data["offset_groups"].toInt();
+                auto mask_groups = ctx->saved_data["mask_groups"].toInt();
+                auto deformable = ctx->saved_data["deformable"].toBool();
+                auto modulated = ctx->saved_data["modulated"].toBool();
+
+                auto grads = deform_conv1d_backward(
+                        grad_output[0],
+                        input,
+                        weight,
+                        offset,
+                        mask,
+                        bias,
+                        stride,
+                        pad,
+                        dilation,
+                        groups,
+                        offset_groups,
+                        mask_groups,
+                        deformable,
+                        modulated);
+                auto grad_input = std::get<0>(grads);
+                auto grad_weight = std::get<1>(grads);
+                auto grad_offset = std::get<2>(grads);
+                auto grad_mask = std::get<3>(grads);
+                auto grad_bias = std::get<4>(grads);
+
+                return {
+                        grad_input,
+                        grad_weight,
+                        grad_offset,
+                        grad_mask,
+                        grad_bias,
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                        torch::autograd::Variable(),
+                };
+            }
+        };
+
+        at::Tensor deform_conv1d(
+                const at::Tensor &input,
+                const at::Tensor &weight,
+                const at::Tensor &offset,
+                const at::Tensor &mask,
+                const at::Tensor &bias,
+                const int64_t stride,
+                const int64_t pad,
+                const int64_t dilation,
+                const int64_t groups,
+                const int64_t offset_groups,
+                const int64_t mask_groups,
+                const bool deformable,
+                const bool modulated) {
+            C10_LOG_API_USAGE_ONCE("tvdcn.csrc.ops.deform_conv.deform_conv1d");
+            auto result = DeformConv1dFunction::apply(
+                    input,
+                    weight,
+                    offset,
+                    mask,
+                    bias,
+                    stride,
+                    pad,
+                    dilation,
+                    groups,
+                    offset_groups,
+                    mask_groups,
+                    deformable,
+                    modulated);
+            return result[0];
         }
     }
 }
