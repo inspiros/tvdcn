@@ -29,14 +29,8 @@ namespace tvdcn {
         return -1;
 #endif
     }
-}
 
-static auto registry =
-        torch::RegisterOperators()
-                .op("tvdcn::_cuda_version", &tvdcn::cuda_version)
-                .op("tvdcn::deform_conv1d", &tvdcn::ops::deform_conv1d)
-                .op("tvdcn::deform_conv2d", &tvdcn::ops::deform_conv2d)
-                .op("tvdcn::deform_conv3d", &tvdcn::ops::deform_conv3d)
-                .op("tvdcn::deform_conv_transpose1d", &tvdcn::ops::deform_conv_transpose1d)
-                .op("tvdcn::deform_conv_transpose2d", &tvdcn::ops::deform_conv_transpose2d)
-                .op("tvdcn::deform_conv_transpose3d", &tvdcn::ops::deform_conv_transpose3d);
+    TORCH_LIBRARY_FRAGMENT(tvdcn, m) {
+        m.def("_cuda_version", &cuda_version);
+    }
+}

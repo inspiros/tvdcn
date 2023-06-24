@@ -609,5 +609,9 @@ namespace tvdcn {
                     modulated);
             return result[0];
         }
+
+        TORCH_LIBRARY_FRAGMENT(tvdcn, m) {
+            m.def("tvdcn::deform_conv1d", &deform_conv1d);
+        }
     }
 }
