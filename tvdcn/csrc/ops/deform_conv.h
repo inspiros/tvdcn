@@ -50,56 +50,58 @@ namespace tvdcn {
                 bool deformable,
                 bool modulated);
 
-        std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
-        deform_conv1d_backward(
-                const at::Tensor &grad,
-                const at::Tensor &input,
-                const at::Tensor &weight,
-                const at::Tensor &offset,
-                const at::Tensor &mask,
-                const at::Tensor &bias,
-                int stride,
-                int padding,
-                int dilation,
-                int groups,
-                int offset_groups,
-                int mask_groups,
-                bool deformable,
-                bool modulated);
+        namespace detail {
+            std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
+            _deform_conv1d_backward(
+                    const at::Tensor &grad,
+                    const at::Tensor &input,
+                    const at::Tensor &weight,
+                    const at::Tensor &offset,
+                    const at::Tensor &mask,
+                    const at::Tensor &bias,
+                    int stride,
+                    int padding,
+                    int dilation,
+                    int groups,
+                    int offset_groups,
+                    int mask_groups,
+                    bool deformable,
+                    bool modulated);
 
-        std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
-        deform_conv2d_backward(
-                const at::Tensor &grad,
-                const at::Tensor &input,
-                const at::Tensor &weight,
-                const at::Tensor &offset,
-                const at::Tensor &mask,
-                const at::Tensor &bias,
-                const std::pair<int, int> &stride,
-                const std::pair<int, int> &padding,
-                const std::pair<int, int> &dilation,
-                int groups,
-                int offset_groups,
-                int mask_groups,
-                bool deformable,
-                bool modulated);
+            std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
+            _deform_conv2d_backward(
+                    const at::Tensor &grad,
+                    const at::Tensor &input,
+                    const at::Tensor &weight,
+                    const at::Tensor &offset,
+                    const at::Tensor &mask,
+                    const at::Tensor &bias,
+                    const std::pair<int, int> &stride,
+                    const std::pair<int, int> &padding,
+                    const std::pair<int, int> &dilation,
+                    int groups,
+                    int offset_groups,
+                    int mask_groups,
+                    bool deformable,
+                    bool modulated);
 
-        std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
-        deform_conv3d_backward(
-                const at::Tensor &grad,
-                const at::Tensor &input,
-                const at::Tensor &weight,
-                const at::Tensor &offset,
-                const at::Tensor &mask,
-                const at::Tensor &bias,
-                const std::tuple<int, int, int> &stride,
-                const std::tuple<int, int, int> &padding,
-                const std::tuple<int, int, int> &dilation,
-                int groups,
-                int offset_groups,
-                int mask_groups,
-                bool deformable,
-                bool modulated);
+            std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
+            _deform_conv3d_backward(
+                    const at::Tensor &grad,
+                    const at::Tensor &input,
+                    const at::Tensor &weight,
+                    const at::Tensor &offset,
+                    const at::Tensor &mask,
+                    const at::Tensor &bias,
+                    const std::tuple<int, int, int> &stride,
+                    const std::tuple<int, int, int> &padding,
+                    const std::tuple<int, int, int> &dilation,
+                    int groups,
+                    int offset_groups,
+                    int mask_groups,
+                    bool deformable,
+                    bool modulated);
+        }
 
         VISION_API at::Tensor deform_conv1d(
                 const at::Tensor &input,
