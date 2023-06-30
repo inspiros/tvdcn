@@ -4,5 +4,5 @@
 #include "macros.h"
 
 namespace tvdcn {
-    VISION_API int64_t cuda_version();
+    TVDCN_API int64_t cuda_version();
 }

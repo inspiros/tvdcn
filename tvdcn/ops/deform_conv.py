@@ -34,9 +34,9 @@ def deform_conv1d(
         offset: Optional[Tensor] = None,
         mask: Optional[Tensor] = None,
         bias: Optional[Tensor] = None,
-        stride: Tuple[int] = (1,),
-        padding: Tuple[int] = (0,),
-        dilation: Tuple[int] = (1,),
+        stride: _size_1_t = 1,
+        padding: _size_1_t = 0,
+        dilation: _size_1_t = 1,
         groups: int = 1) -> Tensor:
     r"""
     Performs 1D Deformable Convolution.
@@ -76,56 +76,9 @@ def deform_conv1d(
     if not torch.jit.is_scripting() and not torch.jit.is_tracing():
         _log_api_usage_once(deform_conv1d)
     _assert_has_ops()
-    out_channels = weight.size(0)
 
-    deformable = offset is not None
-    modulated = mask is not None
-
-    if offset is None:
-        offset = torch.zeros((input.size(0), 0), device=input.device, dtype=input.dtype)
-    if mask is None:
-        mask = torch.zeros((input.size(0), 0), device=input.device, dtype=input.dtype)
-    if bias is None:
-        bias = torch.zeros(out_channels, device=input.device, dtype=input.dtype)
-
-    stride = _single(stride)
-    pad = _single(padding)
-    dil = _single(dilation)
-
-    weight_w = weight.size(-1)
-    _, n_in_channels, in_w = input.size()
-
-    assert groups == n_in_channels // weight.size(1)
-    offset_groups = offset.size(1) // weight_w
-    mask_groups = mask.size(1) // weight_w
-
-    if deformable and offset_groups == 0:
-        raise RuntimeError(
-            "The shape of the offset tensor at dimension 1 is not valid. It should "
-            "be a multiple of weight.size(2).\n"
-            "Got offset.size(1)={}, while weight.size(2)={}".format(
-                offset.size(1), weight_w))
-    if modulated and mask_groups == 0:
-        raise RuntimeError(
-            "The shape of the mask tensor at dimension 1 is not valid. It should "
-            "be a multiple of weight.size(2).\n"
-            "Got mask.size(1)={}, while weight.size(2)={}".format(
-                mask.size(1), weight_w))
-
-    return torch.ops.tvdcn.deform_conv1d(
-        input,
-        weight,
-        offset,
-        mask,
-        bias,
-        stride[0],
-        pad[0],
-        dil[0],
-        groups,
-        offset_groups,
-        mask_groups,
-        deformable,
-        modulated)
+    return torch.ops.tvdcn.deform_conv1d(input, weight, offset, mask, bias,
+                                         stride, padding, dilation, groups)
 
 
 def deform_conv2d(
@@ -134,9 +87,9 @@ def deform_conv2d(
         offset: Optional[Tensor] = None,
         mask: Optional[Tensor] = None,
         bias: Optional[Tensor] = None,
-        stride: Tuple[int, int] = (1, 1),
-        padding: Tuple[int, int] = (0, 0),
-        dilation: Tuple[int, int] = (1, 1),
+        stride: _size_2_t = 1,
+        padding: _size_2_t = 0,
+        dilation: _size_2_t = 1,
         groups: int = 1) -> Tensor:
     r"""
     Performs 2D Deformable Convolution.
@@ -183,55 +136,9 @@ def deform_conv2d(
     if not torch.jit.is_scripting() and not torch.jit.is_tracing():
         _log_api_usage_once(deform_conv2d)
     _assert_has_ops()
-    out_channels = weight.size(0)
 
-    deformable = offset is not None
-    modulated = mask is not None
-
-    if offset is None:
-        offset = torch.zeros((input.size(0), 0), device=input.device, dtype=input.dtype)
-    if mask is None:
-        mask = torch.zeros((input.size(0), 0), device=input.device, dtype=input.dtype)
-    if bias is None:
-        bias = torch.zeros(out_channels, device=input.device, dtype=input.dtype)
-
-    stride_h, stride_w = _pair(stride)
-    pad_h, pad_w = _pair(padding)
-    dil_h, dil_w = _pair(dilation)
-    weight_h, weight_w = weight.size()[-2:]
-    _, n_in_channels, in_h, in_w = input.size()
-
-    assert groups == n_in_channels // weight.size(1)
-    offset_groups = offset.size(1) // (2 * weight_h * weight_w)
-    mask_groups = mask.size(1) // (weight_h * weight_w)
-
-    if deformable and offset_groups == 0:
-        raise RuntimeError(
-            "The shape of the offset tensor at dimension 1 is not valid. It should "
-            "be a multiple of 2 * weight.size(2) * weight.size(3).\n"
-            "Got offset.size(1)={}, while 2 * weight.size(2) * weight.size(3)={}".format(
-                offset.size(1), 2 * weight_h * weight_w))
-    if modulated and mask_groups == 0:
-        raise RuntimeError(
-            "The shape of the mask tensor at dimension 1 is not valid. It should "
-            "be a multiple of weight.size(2) * weight.size(3).\n"
-            "Got mask.size(1)={}, while weight.size(2) * weight.size(3)={}".format(
-                mask.size(1), weight_h * weight_w))
-
-    return torch.ops.tvdcn.deform_conv2d(
-        input,
-        weight,
-        offset,
-        mask,
-        bias,
-        stride_h, stride_w,
-        pad_h, pad_w,
-        dil_h, dil_w,
-        groups,
-        offset_groups,
-        mask_groups,
-        deformable,
-        modulated)
+    return torch.ops.tvdcn.deform_conv2d(input, weight, offset, mask, bias,
+                                         stride, padding, dilation, groups)
 
 
 def deform_conv3d(
@@ -240,9 +147,9 @@ def deform_conv3d(
         offset: Optional[Tensor] = None,
         mask: Optional[Tensor] = None,
         bias: Optional[Tensor] = None,
-        stride: Tuple[int, int, int] = (1, 1, 1),
-        padding: Tuple[int, int, int] = (0, 0, 0),
-        dilation: Tuple[int, int, int] = (1, 1, 1),
+        stride: _size_3_t = 1,
+        padding: _size_3_t = 0,
+        dilation: _size_3_t = 1,
         groups: int = 1) -> Tensor:
     r"""
     Performs 3D Deformable Convolution.
@@ -285,55 +192,9 @@ def deform_conv3d(
     if not torch.jit.is_scripting() and not torch.jit.is_tracing():
         _log_api_usage_once(deform_conv3d)
     _assert_has_ops()
-    out_channels = weight.size(0)
 
-    deformable = offset is not None
-    modulated = mask is not None
-
-    if offset is None:
-        offset = torch.zeros((input.size(0), 0), device=input.device, dtype=input.dtype)
-    if mask is None:
-        mask = torch.zeros((input.size(0), 0), device=input.device, dtype=input.dtype)
-    if bias is None:
-        bias = torch.zeros(out_channels, device=input.device, dtype=input.dtype)
-
-    stride_d, stride_h, stride_w = _triple(stride)
-    pad_d, pad_h, pad_w = _triple(padding)
-    dil_d, dil_h, dil_w = _triple(dilation)
-    weight_d, weight_h, weight_w = weight.size()[-3:]
-    _, n_in_channels, in_d, in_h, in_w = input.size()
-
-    assert groups == n_in_channels // weight.size(1)
-    offset_groups = offset.size(1) // (3 * weight_d * weight_h * weight_w)
-    mask_groups = mask.size(1) // (weight_d * weight_h * weight_w)
-
-    if deformable and offset_groups == 0:
-        raise RuntimeError(
-            "The shape of the offset tensor at dimension 1 is not valid. It should "
-            "be a multiple of 3 * weight.size(2) * weight.size(3) * weight.size(4).\n"
-            "Got offset.size(1)={}, while 3 * weight.size(2) * weight.size(3) * weight.size(4)={}".format(
-                offset.size(1), 3 * weight_d * weight_h * weight_w))
-    if modulated and mask_groups == 0:
-        raise RuntimeError(
-            "The shape of the mask tensor at dimension 1 is not valid. It should "
-            "be a multiple of weight.size(2) * weight.size(3) * weight.size(4).\n"
-            "Got mask.size(1)={}, while weight.size(2) * weight.size(3) * weight.size(4)={}".format(
-                mask.size(1), weight_d * weight_h * weight_w))
-
-    return torch.ops.tvdcn.deform_conv3d(
-        input,
-        weight,
-        offset,
-        mask,
-        bias,
-        stride_d, stride_h, stride_w,
-        pad_d, pad_h, pad_w,
-        dil_d, dil_h, dil_w,
-        groups,
-        offset_groups,
-        mask_groups,
-        deformable,
-        modulated)
+    return torch.ops.tvdcn.deform_conv3d(input, weight, offset, mask, bias,
+                                         stride, padding, dilation, groups)
 
 
 ################################################################################

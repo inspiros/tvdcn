@@ -81,15 +81,13 @@ namespace tvdcn {
                 const at::Tensor &offset,
                 const at::Tensor &mask,
                 const at::Tensor &bias,
-                const std::tuple<int, int, int> &stride,
-                const std::tuple<int, int, int> &padding,
-                const std::tuple<int, int, int> &output_padding,
-                const std::tuple<int, int, int> &dilation,
-                const int groups,
-                const int offset_groups,
-                const int mask_groups,
-                const bool deformable,
-                const bool modulated) {
+                at::IntArrayRef stride,
+                at::IntArrayRef padding,
+                at::IntArrayRef output_padding,
+                at::IntArrayRef dilation,
+                int64_t groups,
+                bool deformable,
+                bool modulated) {
             at::CheckedFrom c = "deform_conv_transpose3d_forward";
             auto args = {
                     at::TensorArg(input, "input", 1),
@@ -108,42 +106,42 @@ namespace tvdcn {
             at::Tensor bias_c = bias.contiguous();
 
             TORCH_CHECK(input_c.ndimension() == 5)
+            TORCH_CHECK(weight_c.ndimension() == 5)
             TORCH_CHECK(!deformable || offset_c.ndimension() == 5)
             TORCH_CHECK(!modulated || mask_c.ndimension() == 5)
-            TORCH_CHECK(weight_c.ndimension() == 5)
 
-            int batch_sz = input_c.size(0);
-            int in_channels = input_c.size(1);
-            int in_d = input_c.size(2);
-            int in_h = input_c.size(3);
-            int in_w = input_c.size(4);
+            int64_t batch_sz = input_c.size(0);
+            int64_t in_channels = input_c.size(1);
+            int64_t in_d = input_c.size(2);
+            int64_t in_h = input_c.size(3);
+            int64_t in_w = input_c.size(4);
 
-            int n_parallel_imgs = get_greatest_divisor_below_bound(batch_sz, kMaxParallelImgs);
+            int64_t n_parallel_imgs = get_greatest_divisor_below_bound(batch_sz, kMaxParallelImgs);
 
-            int out_channels = weight_c.size(1) * groups;
-            int weight_d = weight_c.size(2);
-            int weight_h = weight_c.size(3);
-            int weight_w = weight_c.size(4);
+            int64_t out_channels = weight_c.size(1) * groups;
+            int64_t weight_d = weight_c.size(2);
+            int64_t weight_h = weight_c.size(3);
+            int64_t weight_w = weight_c.size(4);
 
-            int stride_d = std::get<0>(stride);
-            int stride_h = std::get<1>(stride);
-            int stride_w = std::get<2>(stride);
+            int64_t stride_d = stride[0];
+            int64_t stride_h = stride[1];
+            int64_t stride_w = stride[2];
 
-            int pad_d = std::get<0>(padding);
-            int pad_h = std::get<1>(padding);
-            int pad_w = std::get<2>(padding);
+            int64_t pad_d = padding[0];
+            int64_t pad_h = padding[1];
+            int64_t pad_w = padding[2];
 
-            int out_pad_d = std::get<0>(output_padding);
-            int out_pad_h = std::get<1>(output_padding);
-            int out_pad_w = std::get<2>(output_padding);
+            int64_t out_pad_d = output_padding[0];
+            int64_t out_pad_h = output_padding[1];
+            int64_t out_pad_w = output_padding[2];
 
-            int dilation_d = std::get<0>(dilation);
-            int dilation_h = std::get<1>(dilation);
-            int dilation_w = std::get<2>(dilation);
+            int64_t dilation_d = dilation[0];
+            int64_t dilation_h = dilation[1];
+            int64_t dilation_w = dilation[2];
 
-            int out_d = (in_d - 1) * stride_d - 2 * pad_d + dilation_d * (weight_d - 1) + 1 + out_pad_d;
-            int out_h = (in_h - 1) * stride_h - 2 * pad_h + dilation_h * (weight_h - 1) + 1 + out_pad_h;
-            int out_w = (in_w - 1) * stride_w - 2 * pad_w + dilation_w * (weight_w - 1) + 1 + out_pad_w;
+            int64_t out_d = (in_d - 1) * stride_d - 2 * pad_d + dilation_d * (weight_d - 1) + 1 + out_pad_d;
+            int64_t out_h = (in_h - 1) * stride_h - 2 * pad_h + dilation_h * (weight_h - 1) + 1 + out_pad_h;
+            int64_t out_w = (in_w - 1) * stride_w - 2 * pad_w + dilation_w * (weight_w - 1) + 1 + out_pad_w;
 
             TORCH_CHECK(
                     weight_d > 0 && weight_h > 0 && weight_w > 0,
@@ -167,7 +165,24 @@ namespace tvdcn {
 
             TORCH_CHECK(weight_c.size(1) * groups == out_channels)
             TORCH_CHECK(weight_c.size(0) % groups == 0)
+
+            int64_t offset_groups = offset.size(1) / (3 * weight_d * weight_h * weight_w);
+            int64_t mask_groups = mask.size(1) / (weight_d * weight_h * weight_w);
+
+            TORCH_CHECK(!deformable || offset_groups > 0,
+                        "The shape of the offset tensor at dimension 1 is not valid. It should "
+                        "be a multiple of 3 * weight.size(2) * weight.size(3) * weight.size(4).\nGot offset.size(1)=",
+                        offset.size(1),
+                        ", while 3 * weight.size(2) * weight.size(3) * weight.size(3)=",
+                        3 * weight_d * weight_h * weight_w)
             TORCH_CHECK(!deformable || input_c.size(1) % offset_groups == 0)
+
+            TORCH_CHECK(!modulated || mask_groups > 0,
+                        "The shape of the mask tensor at dimension 1 is not valid. It should "
+                        "be a multiple of weight.size(2) * weight.size(3) * weight.size(4).\nGot mask.size(1)=",
+                        mask.size(1),
+                        ", while weight.size(2) * weight.size(3) * weight.size(4)=",
+                        weight_d * weight_h * weight_w)
             TORCH_CHECK(!modulated || input_c.size(1) % mask_groups == 0)
 
             TORCH_CHECK(
@@ -300,9 +315,9 @@ namespace tvdcn {
                                               in_d,
                                               in_h,
                                               in_w});
-            for (int b = 0; b < batch_sz / n_parallel_imgs; b++) {
+            for (int64_t b = 0; b < batch_sz / n_parallel_imgs; b++) {
                 columns.zero_();
-                for (int g = 0; g < groups; g++) {
+                for (int64_t g = 0; g < groups; g++) {
                     columns[g].addmm_(weight_c[g].flatten(1).transpose(0, 1), input_c[b][g].flatten(1));
                 }
 
@@ -352,15 +367,13 @@ namespace tvdcn {
                     const at::Tensor &offset,
                     const at::Tensor &mask,
                     const at::Tensor &bias,
-                    const std::tuple<int, int, int> &stride,
-                    const std::tuple<int, int, int> &padding,
-                    const std::tuple<int, int, int> &output_padding,
-                    const std::tuple<int, int, int> &dilation,
-                    const int groups,
-                    const int offset_groups,
-                    const int mask_groups,
-                    const bool deformable,
-                    const bool modulated) {
+                    at::IntArrayRef stride,
+                    at::IntArrayRef padding,
+                    at::IntArrayRef output_padding,
+                    at::IntArrayRef dilation,
+                    int64_t groups,
+                    bool deformable,
+                    bool modulated) {
                 at::Tensor grad_out_c = grad_out.contiguous();
                 at::Tensor input_c = input.contiguous();
                 at::Tensor weight_c = weight.contiguous();
@@ -368,38 +381,41 @@ namespace tvdcn {
                 at::Tensor mask_c = mask.contiguous();
                 at::Tensor bias_c = bias.contiguous();
 
-                int batch_sz = input_c.size(0);
-                int in_channels = input_c.size(1);
-                int in_d = input_c.size(2);
-                int in_h = input_c.size(3);
-                int in_w = input_c.size(4);
+                int64_t batch_sz = input_c.size(0);
+                int64_t in_channels = input_c.size(1);
+                int64_t in_d = input_c.size(2);
+                int64_t in_h = input_c.size(3);
+                int64_t in_w = input_c.size(4);
 
-                int n_parallel_imgs = get_greatest_divisor_below_bound(batch_sz, kMaxParallelImgs);
+                int64_t n_parallel_imgs = get_greatest_divisor_below_bound(batch_sz, kMaxParallelImgs);
 
-                int out_channels = weight_c.size(1) * groups;
-                int weight_d = weight_c.size(2);
-                int weight_h = weight_c.size(3);
-                int weight_w = weight_c.size(4);
+                int64_t out_channels = weight_c.size(1) * groups;
+                int64_t weight_d = weight_c.size(2);
+                int64_t weight_h = weight_c.size(3);
+                int64_t weight_w = weight_c.size(4);
 
-                int stride_d = std::get<0>(stride);
-                int stride_h = std::get<1>(stride);
-                int stride_w = std::get<2>(stride);
+                int64_t stride_d = stride[0];
+                int64_t stride_h = stride[1];
+                int64_t stride_w = stride[2];
 
-                int pad_d = std::get<0>(padding);
-                int pad_h = std::get<1>(padding);
-                int pad_w = std::get<2>(padding);
+                int64_t pad_d = padding[0];
+                int64_t pad_h = padding[1];
+                int64_t pad_w = padding[2];
 
-                int out_pad_d = std::get<0>(output_padding);
-                int out_pad_h = std::get<1>(output_padding);
-                int out_pad_w = std::get<2>(output_padding);
+                int64_t out_pad_d = output_padding[0];
+                int64_t out_pad_h = output_padding[1];
+                int64_t out_pad_w = output_padding[2];
 
-                int dilation_d = std::get<0>(dilation);
-                int dilation_h = std::get<1>(dilation);
-                int dilation_w = std::get<2>(dilation);
+                int64_t dilation_d = dilation[0];
+                int64_t dilation_h = dilation[1];
+                int64_t dilation_w = dilation[2];
 
-                int out_d = (in_d - 1) * stride_d - 2 * pad_d + dilation_d * (weight_d - 1) + 1 + out_pad_d;
-                int out_h = (in_h - 1) * stride_h - 2 * pad_h + dilation_h * (weight_h - 1) + 1 + out_pad_h;
-                int out_w = (in_w - 1) * stride_w - 2 * pad_w + dilation_w * (weight_w - 1) + 1 + out_pad_w;
+                int64_t out_d = (in_d - 1) * stride_d - 2 * pad_d + dilation_d * (weight_d - 1) + 1 + out_pad_d;
+                int64_t out_h = (in_h - 1) * stride_h - 2 * pad_h + dilation_h * (weight_h - 1) + 1 + out_pad_h;
+                int64_t out_w = (in_w - 1) * stride_w - 2 * pad_w + dilation_w * (weight_w - 1) + 1 + out_pad_w;
+
+                int64_t offset_groups = offset.size(1) / (3 * weight_d * weight_h * weight_w);
+                int64_t mask_groups = mask.size(1) / (weight_d * weight_h * weight_w);
 
                 auto grad_input = at::zeros_like(input_c);
                 auto grad_weight = at::zeros_like(weight_c);
@@ -498,9 +514,9 @@ namespace tvdcn {
                                                   in_d,
                                                   in_h,
                                                   in_w});
-                for (int b = 0; b < batch_sz / n_parallel_imgs; b++) {
+                for (int64_t b = 0; b < batch_sz / n_parallel_imgs; b++) {
                     columns.zero_();
-                    for (int g = 0; g < groups; g++) {
+                    for (int64_t g = 0; g < groups; g++) {
                         columns[g].addmm_(weight_c[g].flatten(1).transpose(0, 1), input_c[b][g].flatten(1));
                     }
 
@@ -597,7 +613,7 @@ namespace tvdcn {
                             modulated,
                             columns_view);
 
-                    for (int g = 0; g < groups; g++) {
+                    for (int64_t g = 0; g < groups; g++) {
                         grad_input_buf[b][g].flatten(1).addmm_(weight_c[g].flatten(1), columns[g]);
                         grad_weight[g].flatten(1).addmm_(input_c[b][g].flatten(1), columns[g].transpose(1, 0));
                     }
@@ -631,21 +647,11 @@ namespace tvdcn {
                     const torch::autograd::Variable &offset,
                     const torch::autograd::Variable &mask,
                     const torch::autograd::Variable &bias,
-                    int64_t stride_d,
-                    int64_t stride_h,
-                    int64_t stride_w,
-                    int64_t pad_d,
-                    int64_t pad_h,
-                    int64_t pad_w,
-                    int64_t out_pad_d,
-                    int64_t out_pad_h,
-                    int64_t out_pad_w,
-                    int64_t dilation_d,
-                    int64_t dilation_h,
-                    int64_t dilation_w,
+                    at::IntArrayRef stride,
+                    at::IntArrayRef padding,
+                    at::IntArrayRef output_padding,
+                    at::IntArrayRef dilation,
                     int64_t groups,
-                    int64_t offset_groups,
-                    int64_t mask_groups,
                     bool deformable,
                     bool modulated) {
                 at::AutoDispatchBelowADInplaceOrView g;
@@ -655,32 +661,20 @@ namespace tvdcn {
                         offset,
                         mask,
                         bias,
-                        std::make_tuple(stride_d, stride_h, stride_w),
-                        std::make_tuple(pad_d, pad_h, pad_w),
-                        std::make_tuple(out_pad_d, out_pad_h, out_pad_w),
-                        std::make_tuple(dilation_d, dilation_h, dilation_w),
+                        stride,
+                        padding,
+                        output_padding,
+                        dilation,
                         groups,
-                        offset_groups,
-                        mask_groups,
                         deformable,
                         modulated);
 
                 ctx->save_for_backward({input, weight, offset, mask, bias});
-                ctx->saved_data["stride_d"] = stride_d;
-                ctx->saved_data["stride_h"] = stride_h;
-                ctx->saved_data["stride_w"] = stride_w;
-                ctx->saved_data["pad_d"] = pad_d;
-                ctx->saved_data["pad_h"] = pad_h;
-                ctx->saved_data["pad_w"] = pad_w;
-                ctx->saved_data["out_pad_d"] = out_pad_d;
-                ctx->saved_data["out_pad_h"] = out_pad_h;
-                ctx->saved_data["out_pad_w"] = out_pad_w;
-                ctx->saved_data["dilation_d"] = dilation_d;
-                ctx->saved_data["dilation_h"] = dilation_h;
-                ctx->saved_data["dilation_w"] = dilation_w;
+                ctx->saved_data["stride"] = stride.vec();
+                ctx->saved_data["padding"] = padding.vec();
+                ctx->saved_data["output_padding"] = output_padding.vec();
+                ctx->saved_data["dilation"] = dilation.vec();
                 ctx->saved_data["groups"] = groups;
-                ctx->saved_data["offset_groups"] = offset_groups;
-                ctx->saved_data["mask_groups"] = mask_groups;
                 ctx->saved_data["deformable"] = deformable;
                 ctx->saved_data["modulated"] = modulated;
 
@@ -699,21 +693,11 @@ namespace tvdcn {
                 auto mask = saved[3];
                 auto bias = saved[4];
 
-                auto stride_d = ctx->saved_data["stride_d"].toInt();
-                auto stride_h = ctx->saved_data["stride_h"].toInt();
-                auto stride_w = ctx->saved_data["stride_w"].toInt();
-                auto pad_d = ctx->saved_data["pad_d"].toInt();
-                auto pad_h = ctx->saved_data["pad_h"].toInt();
-                auto pad_w = ctx->saved_data["pad_w"].toInt();
-                auto out_pad_d = ctx->saved_data["out_pad_d"].toInt();
-                auto out_pad_h = ctx->saved_data["out_pad_h"].toInt();
-                auto out_pad_w = ctx->saved_data["out_pad_w"].toInt();
-                auto dilation_d = ctx->saved_data["dilation_d"].toInt();
-                auto dilation_h = ctx->saved_data["dilation_h"].toInt();
-                auto dilation_w = ctx->saved_data["dilation_w"].toInt();
+                auto stride = ctx->saved_data["stride"].toIntVector();
+                auto padding = ctx->saved_data["padding"].toIntVector();
+                auto output_padding = ctx->saved_data["output_padding"].toIntVector();
+                auto dilation = ctx->saved_data["dilation"].toIntVector();
                 auto groups = ctx->saved_data["groups"].toInt();
-                auto offset_groups = ctx->saved_data["offset_groups"].toInt();
-                auto mask_groups = ctx->saved_data["mask_groups"].toInt();
                 auto deformable = ctx->saved_data["deformable"].toBool();
                 auto modulated = ctx->saved_data["modulated"].toBool();
 
@@ -724,13 +708,11 @@ namespace tvdcn {
                         offset,
                         mask,
                         bias,
-                        std::make_tuple(stride_d, stride_h, stride_w),
-                        std::make_tuple(pad_d, pad_h, pad_w),
-                        std::make_tuple(out_pad_d, out_pad_h, out_pad_w),
-                        std::make_tuple(dilation_d, dilation_h, dilation_w),
+                        stride,
+                        padding,
+                        output_padding,
+                        dilation,
                         groups,
-                        offset_groups,
-                        mask_groups,
                         deformable,
                         modulated);
                 auto grad_input = std::get<0>(grads);
@@ -752,16 +734,6 @@ namespace tvdcn {
                         torch::autograd::Variable(),
                         torch::autograd::Variable(),
                         torch::autograd::Variable(),
-                        torch::autograd::Variable(),
-                        torch::autograd::Variable(),
-                        torch::autograd::Variable(),
-                        torch::autograd::Variable(),
-                        torch::autograd::Variable(),
-                        torch::autograd::Variable(),
-                        torch::autograd::Variable(),
-                        torch::autograd::Variable(),
-                        torch::autograd::Variable(),
-                        torch::autograd::Variable(),
                 };
             }
         };
@@ -769,55 +741,37 @@ namespace tvdcn {
         at::Tensor deform_conv_transpose3d(
                 const at::Tensor &input,
                 const at::Tensor &weight,
-                const at::Tensor &offset,
-                const at::Tensor &mask,
-                const at::Tensor &bias,
-                const int64_t stride_d,
-                const int64_t stride_h,
-                const int64_t stride_w,
-                const int64_t pad_d,
-                const int64_t pad_h,
-                const int64_t pad_w,
-                const int64_t out_pad_d,
-                const int64_t out_pad_h,
-                const int64_t out_pad_w,
-                const int64_t dilation_d,
-                const int64_t dilation_h,
-                const int64_t dilation_w,
-                const int64_t groups,
-                const int64_t offset_groups,
-                const int64_t mask_groups,
-                const bool deformable,
-                const bool modulated) {
+                const at::optional<at::Tensor> &offset = {},
+                const at::optional<at::Tensor> &mask = {},
+                const at::optional<at::Tensor> &bias = {},
+                at::IntArrayRef stride = 1,
+                at::IntArrayRef padding = 0,
+                at::IntArrayRef output_padding = 0,
+                at::IntArrayRef dilation = 1,
+                int64_t groups = 1) {
             C10_LOG_API_USAGE_ONCE("tvdcn.csrc.ops.deform_conv_transpose.deform_conv_transpose3d");
             auto result = DeformConvTranspose3dFunction::apply(
                     input,
                     weight,
-                    offset,
-                    mask,
-                    bias,
-                    stride_d,
-                    stride_h,
-                    stride_w,
-                    pad_d,
-                    pad_h,
-                    pad_w,
-                    out_pad_d,
-                    out_pad_h,
-                    out_pad_w,
-                    dilation_d,
-                    dilation_h,
-                    dilation_w,
+                    offset.value_or(at::zeros({input.size(0), 0}, input.options().requires_grad(false))),
+                    mask.value_or(at::zeros({input.size(0), 0}, input.options().requires_grad(false))),
+                    bias.value_or(at::zeros({weight.size(0)}, input.options().requires_grad(false))),
+                    stride,
+                    padding,
+                    output_padding,
+                    dilation,
                     groups,
-                    offset_groups,
-                    mask_groups,
-                    deformable,
-                    modulated);
+                    offset.has_value(),
+                    mask.has_value());
             return result[0];
         }
 
         TORCH_LIBRARY_FRAGMENT(tvdcn, m) {
-            m.def("tvdcn::deform_conv_transpose3d", &deform_conv_transpose3d);
+            m.def("tvdcn::deform_conv_transpose3d(Tensor input, Tensor weight, "
+                  "Tensor? offset=None, Tensor? mask=None, Tensor? bias=None, "
+                  "int[3] stride=1, int[3] padding=0, int[3] output_padding=0, "
+                  "int[3] dilation=1, int groups=1) -> Tensor",
+                  &deform_conv_transpose3d);
         }
     }
 }

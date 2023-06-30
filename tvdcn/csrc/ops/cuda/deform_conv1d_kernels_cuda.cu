@@ -144,23 +144,23 @@ namespace tvdcn {
                 const at::Tensor &input,
                 const at::Tensor &offset,
                 const at::Tensor &mask,
-                const int in_channels,
-                const int width,
-                const int weight_w,
-                const int stride_w,
-                const int pad_w,
-                const int dilation_w,
-                const int out_w,
-                const int batch_sz,
-                const int offset_groups,
-                const int mask_groups,
+                const int64_t in_channels,
+                const int64_t width,
+                const int64_t weight_w,
+                const int64_t stride_w,
+                const int64_t pad_w,
+                const int64_t dilation_w,
+                const int64_t out_w,
+                const int64_t batch_sz,
+                const int64_t offset_groups,
+                const int64_t mask_groups,
                 const bool deformable,
                 const bool modulated,
                 at::Tensor &columns) {
             at::cuda::CUDAGuard device_guard(input.get_device());
             const int64_t n_kernels = (int64_t) batch_sz * in_channels * out_w;
-            const int c_per_offset_group = deformable ? in_channels / offset_groups : 1;
-            const int c_per_mask_group = modulated ? in_channels / mask_groups : 1;
+            const int64_t c_per_offset_group = deformable ? in_channels / offset_groups : 1;
+            const int64_t c_per_mask_group = modulated ? in_channels / mask_groups : 1;
 
             const unsigned int threads = GET_THREADS(threadsFraction);
             const unsigned int blocks = GET_BLOCKS(threads, n_kernels);
@@ -238,23 +238,23 @@ namespace tvdcn {
                 const at::Tensor &columns,
                 const at::Tensor &offset,
                 const at::Tensor &mask,
-                const int in_channels,
-                const int width,
-                const int weight_w,
-                const int stride_w,
-                const int pad_w,
-                const int dilation_w,
-                const int out_w,
-                const int batch_sz,
-                const int offset_groups,
-                const int mask_groups,
+                const int64_t in_channels,
+                const int64_t width,
+                const int64_t weight_w,
+                const int64_t stride_w,
+                const int64_t pad_w,
+                const int64_t dilation_w,
+                const int64_t out_w,
+                const int64_t batch_sz,
+                const int64_t offset_groups,
+                const int64_t mask_groups,
                 const bool deformable,
                 const bool modulated,
                 at::Tensor &grad_input) {
             at::cuda::CUDAGuard device_guard(columns.get_device());
             const int64_t n_kernels = (int64_t) batch_sz * in_channels * out_w * weight_w;
-            const int c_per_offset_group = deformable ? in_channels / offset_groups : 1;
-            const int c_per_mask_group = modulated ? in_channels / mask_groups : 1;
+            const int64_t c_per_offset_group = deformable ? in_channels / offset_groups : 1;
+            const int64_t c_per_mask_group = modulated ? in_channels / mask_groups : 1;
 
             const unsigned int threads = GET_THREADS(threadsFraction);
             const unsigned int blocks = GET_BLOCKS(threads, n_kernels);
@@ -337,24 +337,24 @@ namespace tvdcn {
                 const at::Tensor &input,
                 const at::Tensor &offset,
                 const at::Tensor &mask,
-                const int in_channels,
-                const int width,
-                const int weight_w,
-                const int stride_w,
-                const int pad_w,
-                const int dilation_w,
-                const int out_w,
-                const int batch_sz,
-                const int offset_groups,
-                const int mask_groups,
+                const int64_t in_channels,
+                const int64_t width,
+                const int64_t weight_w,
+                const int64_t stride_w,
+                const int64_t pad_w,
+                const int64_t dilation_w,
+                const int64_t out_w,
+                const int64_t batch_sz,
+                const int64_t offset_groups,
+                const int64_t mask_groups,
                 const bool deformable,
                 const bool modulated,
                 at::Tensor &grad_offset) {
             if (!deformable) return;
             at::cuda::CUDAGuard device_guard(columns.get_device());
             const int64_t n_kernels = (int64_t) batch_sz * offset_groups * out_w * weight_w;
-            const int c_per_offset_group = deformable ? in_channels / offset_groups : 1;
-            const int c_per_mask_group = modulated ? in_channels / mask_groups : 1;
+            const int64_t c_per_offset_group = deformable ? in_channels / offset_groups : 1;
+            const int64_t c_per_mask_group = modulated ? in_channels / mask_groups : 1;
 
             const unsigned int threads = GET_THREADS(threadsFraction);
             const unsigned int blocks = GET_BLOCKS(threads, n_kernels);
@@ -436,24 +436,24 @@ namespace tvdcn {
                 const at::Tensor &columns,
                 const at::Tensor &input,
                 const at::Tensor &offset,
-                const int in_channels,
-                const int width,
-                const int weight_w,
-                const int stride_w,
-                const int pad_w,
-                const int dilation_w,
-                const int out_w,
-                const int batch_sz,
-                const int offset_groups,
-                const int mask_groups,
+                const int64_t in_channels,
+                const int64_t width,
+                const int64_t weight_w,
+                const int64_t stride_w,
+                const int64_t pad_w,
+                const int64_t dilation_w,
+                const int64_t out_w,
+                const int64_t batch_sz,
+                const int64_t offset_groups,
+                const int64_t mask_groups,
                 const bool deformable,
                 const bool modulated,
                 at::Tensor &grad_mask) {
             if (!modulated) return;
             at::cuda::CUDAGuard device_guard(columns.get_device());
             const int64_t n_kernels = (int64_t) batch_sz * mask_groups * out_w * weight_w;
-            const int c_per_offset_group = deformable ? in_channels / offset_groups : 1;
-            const int c_per_mask_group = modulated ? in_channels / mask_groups : 1;
+            const int64_t c_per_offset_group = deformable ? in_channels / offset_groups : 1;
+            const int64_t c_per_mask_group = modulated ? in_channels / mask_groups : 1;
 
             const unsigned int threads = GET_THREADS(threadsFraction);
             const unsigned int blocks = GET_BLOCKS(threads, n_kernels);
