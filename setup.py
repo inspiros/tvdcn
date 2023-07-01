@@ -33,7 +33,8 @@ def get_extensions():
     source_cpu = (glob.glob(os.path.join(extensions_dir, 'ops', 'cpu', '*.cpp')) +
                   glob.glob(os.path.join(extensions_dir, 'ops', 'dispatch', '*.cpp')) +
                   glob.glob(os.path.join(extensions_dir, 'ops', 'autograd', '*.cpp')) +
-                  glob.glob(os.path.join(extensions_dir, 'ops', 'quantized', 'cpu', '*.cpp'))
+                  glob.glob(os.path.join(extensions_dir, 'ops', 'quantized', 'cpu', '*.cpp')) +
+                  glob.glob(os.path.join(extensions_dir, 'ops', 'utils', '*.cpp'))
                   )
 
     source_cuda = glob.glob(os.path.join(extensions_dir, 'ops', 'cuda', '*.cu'))

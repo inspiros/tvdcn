@@ -70,8 +70,10 @@
 // https://github.com/pytorch/vision/blob/master/torchvision/csrc/cpu/deform_conv2d_kernel.cpp
 
 #include <torch/autograd.h>
-#include "utils/parallel_helpers.h"
+
 #include "dispatch/deform_conv3d_kernels.h"
+#include "utils/parallel_helpers.h"
+#include "utils/tensor_utils.h"
 
 namespace tvdcn {
     namespace ops {
@@ -96,8 +98,7 @@ namespace tvdcn {
                     at::TensorArg(mask, "mask", 4),
                     at::TensorArg(bias, "bias", 5)};
             at::checkAllSameType(c, args);
-            if (input.device().is_cuda())
-                at::checkAllSameGPU(c, args);
+            at::checkAllSameDevice(c, args);
 
             at::Tensor input_c = input.contiguous();
             at::Tensor weight_c = weight.contiguous();
@@ -749,7 +750,7 @@ namespace tvdcn {
                 at::IntArrayRef output_padding = 0,
                 at::IntArrayRef dilation = 1,
                 int64_t groups = 1) {
-            C10_LOG_API_USAGE_ONCE("tvdcn.csrc.ops.deform_conv_transpose.deform_conv_transpose3d");
+            C10_LOG_API_USAGE_ONCE("tvdcn.csrc.ops.deform_conv_transpose.deform_conv_transpose3d")
             auto result = DeformConvTranspose3dFunction::apply(
                     input,
                     weight,
