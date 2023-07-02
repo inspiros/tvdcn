@@ -99,10 +99,10 @@ class DeformConvTestArgs(nn.Module):
             self.offset = self.offset.contiguous()
             self.mask = self.mask.contiguous()
         else:
-            self.input = _decontiguous(self.input)
-            self.weight = _decontiguous(self.weight)
-            self.offset = _decontiguous(self.offset)
-            self.mask = _decontiguous(self.mask)
+            self.input = nn.Parameter(_decontiguous(self.input))
+            self.weight = nn.Parameter(_decontiguous(self.weight))
+            self.offset = nn.Parameter(_decontiguous(self.offset))
+            self.mask = nn.Parameter(_decontiguous(self.mask))
 
     def equivalent_torch_layer(self):
         if self.dim == 1:

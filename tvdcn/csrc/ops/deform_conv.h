@@ -14,9 +14,7 @@ namespace tvdcn {
                 at::IntArrayRef stride,
                 at::IntArrayRef padding,
                 at::IntArrayRef dilation,
-                int64_t groups,
-                bool deformable,
-                bool modulated);
+                int64_t groups);
 
         at::Tensor deform_conv2d_forward(
                 const at::Tensor &input,
@@ -27,9 +25,7 @@ namespace tvdcn {
                 at::IntArrayRef stride,
                 at::IntArrayRef padding,
                 at::IntArrayRef dilation,
-                int64_t groups,
-                bool deformable,
-                bool modulated);
+                int64_t groups);
 
         at::Tensor deform_conv3d_forward(
                 const at::Tensor &input,
@@ -40,9 +36,7 @@ namespace tvdcn {
                 at::IntArrayRef stride,
                 at::IntArrayRef padding,
                 at::IntArrayRef dilation,
-                int64_t groups,
-                bool deformable,
-                bool modulated);
+                int64_t groups);
 
         namespace detail {
             std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
@@ -56,9 +50,7 @@ namespace tvdcn {
                     at::IntArrayRef stride,
                     at::IntArrayRef padding,
                     at::IntArrayRef dilation,
-                    int64_t groups,
-                    bool deformable,
-                    bool modulated);
+                    int64_t groups);
 
             std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
             _deform_conv2d_backward(
@@ -71,9 +63,7 @@ namespace tvdcn {
                     at::IntArrayRef stride,
                     at::IntArrayRef padding,
                     at::IntArrayRef dilation,
-                    int64_t groups,
-                    bool deformable,
-                    bool modulated);
+                    int64_t groups);
 
             std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
             _deform_conv3d_backward(
@@ -86,9 +76,7 @@ namespace tvdcn {
                     at::IntArrayRef stride,
                     at::IntArrayRef padding,
                     at::IntArrayRef dilation,
-                    int64_t groups,
-                    bool deformable,
-                    bool modulated);
+                    int64_t groups);
         }
 
         TVDCN_API at::Tensor deform_conv1d(

@@ -86,9 +86,7 @@ namespace tvdcn {
                 at::IntArrayRef stride,
                 at::IntArrayRef padding,
                 at::IntArrayRef dilation,
-                int64_t groups,
-                bool deformable,
-                bool modulated) {
+                int64_t groups) {
             at::CheckedFrom c = "deform_conv2d_forward";
             auto args = {
                     at::TensorArg(input, "input", 1),
@@ -98,6 +96,10 @@ namespace tvdcn {
                     at::TensorArg(bias, "bias", 5)};
             at::checkAllSameType(c, args);
             at::checkAllSameDevice(c, args);
+
+            bool deformable = offset.defined() && offset.numel();
+            bool modulated = mask.defined() && mask.numel();
+            bool with_bias = bias.defined() && bias.numel();
 
             at::Tensor input_c = input.contiguous();
             at::Tensor weight_c = weight.contiguous();
@@ -145,42 +147,45 @@ namespace tvdcn {
                     stride_h,
                     " stride_w: ",
                     stride_w)
-            TORCH_CHECK(pad_h >= 0 && pad_w >= 0, "pad_h: ", pad_h, " pad_w: ", pad_w)
-            TORCH_CHECK(dilation_h > 0 && dilation_w > 0, "dilation_h: ", dilation_h, " dilation_w: ", dilation_w)
+            TORCH_CHECK(
+                    pad_h >= 0 && pad_w >= 0,
+                    "pad_h: ",
+                    pad_h,
+                    " pad_w: ",
+                    pad_w)
+            TORCH_CHECK(
+                    dilation_h > 0 && dilation_w > 0,
+                    "dilation_h: ",
+                    dilation_h,
+                    " dilation_w: ",
+                    dilation_w)
 
             TORCH_CHECK(weight_c.size(1) * groups == in_channels)
             TORCH_CHECK(weight_c.size(0) % groups == 0)
 
-            int64_t offset_groups = offset.size(1) / (2 * weight_h * weight_w);
-            int64_t mask_groups = mask.size(1) / (weight_h * weight_w);
-
-            TORCH_CHECK(!deformable || offset_groups > 0,
-                        "The shape of the offset tensor at dimension 1 is not valid. It should "
-                        "be a multiple of 2 * weight.size(2) * weight.size(3).\nGot offset.size(1)=",
-                        offset.size(1),
-                        ", while 2 * weight.size(2) * weight.size(3)=",
-                        2 * weight_h * weight_w)
-            TORCH_CHECK(!deformable || input_c.size(1) % offset_groups == 0)
-
-            TORCH_CHECK(!modulated || mask_groups > 0,
-                        "The shape of the mask tensor at dimension 1 is not valid. It should "
-                        "be a multiple of weight.size(2) * weight.size(3).\nGot mask.size(1)=",
-                        mask.size(1),
-                        ", while weight.size(2) * weight.size(3)=",
-                        weight_h * weight_w)
-            TORCH_CHECK(!modulated || input_c.size(1) % mask_groups == 0)
+            int64_t offset_groups = deformable ? offset.size(1) / (2 * weight_h * weight_w) : 0;
+            int64_t mask_groups = modulated ? mask.size(1) / (weight_h * weight_w) : 0;
 
             TORCH_CHECK(
-                    (!deformable || offset_c.size(1) == offset_groups * 2 * weight_h * weight_w),
+                    !deformable || offset_c.size(0) == input_c.size(0),
+                    "invalid batch size of offset")
+            TORCH_CHECK(
+                    !deformable || offset_groups > 0,
+                    "The shape of the offset tensor at dimension 1 is not valid. It should "
+                    "be a multiple of 2 * weight.size(2) * weight.size(3).\nGot offset.size(1)=",
+                    offset.size(1),
+                    ", while 2 * weight.size(2) * weight.size(3)=",
+                    2 * weight_h * weight_w)
+            TORCH_CHECK(!deformable || input_c.size(1) % offset_groups == 0)
+            TORCH_CHECK(
+                    !deformable || offset_c.size(1) == offset_groups * 2 * weight_h * weight_w,
                     "offset.shape[1] is not valid. got: ",
                     offset_c.size(1),
                     " expected: ",
                     offset_groups * 2 * weight_h * weight_w)
             TORCH_CHECK(
-                    (offset_c.size(0) == input_c.size(0)), "invalid batch size of offset")
-            TORCH_CHECK(
-                    (!deformable || (offset_c.size(2) == out_h &&
-                                     offset_c.size(3) == out_w)),
+                    !deformable || (offset_c.size(2) == out_h &&
+                                    offset_c.size(3) == out_w),
                     "offset output dims: (",
                     offset_c.size(2),
                     ", ",
@@ -193,16 +198,25 @@ namespace tvdcn {
                     ")")
 
             TORCH_CHECK(
-                    (!modulated || mask_c.size(1) == mask_groups * weight_h * weight_w),
+                    !modulated || mask_c.size(0) == input_c.size(0),
+                    "invalid batch size of mask")
+            TORCH_CHECK(
+                    !modulated || mask_groups > 0,
+                    "The shape of the mask tensor at dimension 1 is not valid. It should "
+                    "be a multiple of weight.size(2) * weight.size(3).\nGot mask.size(1)=",
+                    mask.size(1),
+                    ", while weight.size(2) * weight.size(3)=",
+                    weight_h * weight_w)
+            TORCH_CHECK(!modulated || input_c.size(1) % mask_groups == 0)
+            TORCH_CHECK(
+                    !modulated || mask_c.size(1) == mask_groups * weight_h * weight_w,
                     "mask.shape[1] is not valid. got: ",
                     mask_c.size(1),
                     " expected: ",
                     mask_groups * weight_h * weight_w)
             TORCH_CHECK(
-                    (mask_c.size(0) == input_c.size(0)), "invalid batch size of mask")
-            TORCH_CHECK(
-                    (!modulated || (mask_c.size(2) == out_h &&
-                                    mask_c.size(3) == out_w)),
+                    !modulated || (mask_c.size(2) == out_h &&
+                                   mask_c.size(3) == out_w),
                     "mask output dims: (",
                     mask_c.size(2),
                     ", ",
@@ -330,8 +344,10 @@ namespace tvdcn {
             output_buf.transpose_(1, 2);
             output.copy_(output_buf);
             output = output.view({batch_sz, out_channels, out_h, out_w});
+            if (with_bias)
+                output.add_(bias_c.view({1, out_channels, 1, 1}));
 
-            return output + bias_c.view({1, out_channels, 1, 1});
+            return output;
         }
 
         namespace detail {
@@ -346,9 +362,11 @@ namespace tvdcn {
                     at::IntArrayRef stride,
                     at::IntArrayRef padding,
                     at::IntArrayRef dilation,
-                    int64_t groups,
-                    bool deformable,
-                    bool modulated) {
+                    int64_t groups) {
+                bool deformable = offset.defined() && offset.numel();
+                bool modulated = mask.defined() && mask.numel();
+                bool with_bias = bias.defined() && bias.numel();
+
                 at::Tensor grad_out_c = grad_out.contiguous();
                 at::Tensor input_c = input.contiguous();
                 at::Tensor weight_c = weight.contiguous();
@@ -379,14 +397,14 @@ namespace tvdcn {
                 int64_t out_h = (in_h + 2 * pad_h - (dilation_h * (weight_h - 1) + 1)) / stride_h + 1;
                 int64_t out_w = (in_w + 2 * pad_w - (dilation_w * (weight_w - 1) + 1)) / stride_w + 1;
 
-                int64_t offset_groups = offset.size(1) / (2 * weight_h * weight_w);
-                int64_t mask_groups = mask.size(1) / (weight_h * weight_w);
+                int64_t offset_groups = deformable ? offset.size(1) / (2 * weight_h * weight_w) : 0;
+                int64_t mask_groups = modulated ? mask.size(1) / (weight_h * weight_w) : 0;
 
                 auto grad_input = at::zeros_like(input_c);
                 auto grad_weight = at::zeros_like(weight_c);
                 auto grad_offset = at::zeros_like(offset_c);
                 auto grad_mask = at::zeros_like(mask_c);
-                auto grad_bias = at::ones_like(bias_c);
+                auto grad_bias = with_bias ? grad_out_c.sum(at::IntArrayRef({0, 2, 3})) : at::zeros_like(bias_c);
 
                 // Separate into blocks
                 input_c = input_c.view({batch_sz / n_parallel_imgs,
@@ -563,7 +581,6 @@ namespace tvdcn {
                 grad_weight = grad_weight.view_as(weight);
                 grad_offset = grad_offset.view_as(offset);
                 grad_mask = grad_mask.view_as(mask);
-                grad_bias *= grad_out.sum(at::IntArrayRef({0, 2, 3}));
 
                 return std::make_tuple(grad_input, grad_weight, grad_offset, grad_mask, grad_bias);
             }
@@ -582,9 +599,7 @@ namespace tvdcn {
                     at::IntArrayRef stride,
                     at::IntArrayRef padding,
                     at::IntArrayRef dilation,
-                    int64_t groups,
-                    bool deformable,
-                    bool modulated) {
+                    int64_t groups) {
                 at::AutoDispatchBelowADInplaceOrView g;
                 auto output = deform_conv2d_forward(
                         input,
@@ -595,17 +610,13 @@ namespace tvdcn {
                         stride,
                         padding,
                         dilation,
-                        groups,
-                        deformable,
-                        modulated);
+                        groups);
 
                 ctx->save_for_backward({input, weight, offset, mask, bias});
                 ctx->saved_data["stride"] = stride.vec();
                 ctx->saved_data["padding"] = padding.vec();
                 ctx->saved_data["dilation"] = dilation.vec();
                 ctx->saved_data["groups"] = groups;
-                ctx->saved_data["deformable"] = deformable;
-                ctx->saved_data["modulated"] = modulated;
 
                 return {
                         output,
@@ -626,8 +637,6 @@ namespace tvdcn {
                 auto padding = ctx->saved_data["padding"].toIntVector();
                 auto dilation = ctx->saved_data["dilation"].toIntVector();
                 auto groups = ctx->saved_data["groups"].toInt();
-                auto deformable = ctx->saved_data["deformable"].toBool();
-                auto modulated = ctx->saved_data["modulated"].toBool();
 
                 auto grads = detail::_deform_conv2d_backward(
                         grad_output[0],
@@ -639,9 +648,7 @@ namespace tvdcn {
                         stride,
                         padding,
                         dilation,
-                        groups,
-                        deformable,
-                        modulated);
+                        groups);
                 auto grad_input = std::get<0>(grads);
                 auto grad_weight = std::get<1>(grads);
                 auto grad_offset = std::get<2>(grads);
@@ -654,8 +661,6 @@ namespace tvdcn {
                         grad_offset,
                         grad_mask,
                         grad_bias,
-                        torch::autograd::Variable(),
-                        torch::autograd::Variable(),
                         torch::autograd::Variable(),
                         torch::autograd::Variable(),
                         torch::autograd::Variable(),
@@ -678,15 +683,13 @@ namespace tvdcn {
             auto result = DeformConv2dFunction::apply(
                     input,
                     weight,
-                    offset.value_or(at::zeros({input.size(0), 0}, input.options().requires_grad(false))),
-                    mask.value_or(at::zeros({input.size(0), 0}, input.options().requires_grad(false))),
-                    bias.value_or(at::zeros({weight.size(0)}, input.options().requires_grad(false))),
+                    offset.value_or(input.new_zeros(0)),
+                    mask.value_or(input.new_zeros(0)),
+                    bias.value_or(input.new_zeros(0)),
                     stride,
                     padding,
                     dilation,
-                    groups,
-                    offset.has_value(),
-                    mask.has_value());
+                    groups);
             return result[0];
         }
 
