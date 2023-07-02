@@ -65,7 +65,8 @@ please proceed to [instructions to build from source](#from-source), all steps a
 
 #### From Source:
 
-For installing from source, you need a C++ compiler (`gcc`/`msvc`) and a Cuda compiler (`nvcc`).
+For installing from source, you need a C++ compiler (`gcc`/`msvc`) and a Cuda compiler (`nvcc`) with C++17 features
+enabled.
 Clone this repo and execute the following command:
 
 ```terminal
@@ -110,9 +111,9 @@ def deform_conv2d(
         offset: Optional[Tensor] = None,
         mask: Optional[Tensor] = None,
         bias: Optional[Tensor] = None,
-        stride: Union[int, Tuple[int, ...]] = 1,
-        padding: Union[int, Tuple[int, ...]] = 0,
-        dilation: Union[int, Tuple[int, ...]] = 1,
+        stride: Union[int, Tuple[int, int]] = 1,
+        padding: Union[int, Tuple[int, int]] = 0,
+        dilation: Union[int, Tuple[int, int]] = 1,
         groups: int = 1) -> Tensor:
     ...
 
@@ -123,10 +124,10 @@ def deform_conv_transpose2d(
         offset: Optional[Tensor] = None,
         mask: Optional[Tensor] = None,
         bias: Optional[Tensor] = None,
-        stride: Union[int, Tuple[int, ...]] = 1,
-        padding: Union[int, Tuple[int, ...]] = 0,
-        output_padding: Union[int, Tuple[int, ...]] = 0,
-        dilation: Union[int, Tuple[int, ...]] = 1,
+        stride: Union[int, Tuple[int, int]] = 1,
+        padding: Union[int, Tuple[int, int]] = 0,
+        output_padding: Union[int, Tuple[int, int]] = 0,
+        dilation: Union[int, Tuple[int, int]] = 1,
         groups: int = 1) -> Tensor:
     ...
 ```

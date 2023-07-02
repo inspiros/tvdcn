@@ -123,15 +123,18 @@ namespace tvdcn {
                 for (index_t i = 0; i < weight_w; ++i) {
                     const index_t x = (w * stride_w - pad_w) + i * dilation_w;
 
-                    const scalar_t val =
-                            deformable ?
-                            interpolate_sample(
-                                    input, b, c, width,
-                                    x + offset[b][offset_group_idx][i][0][w])
-                                       : sample(input, b, c, width, x);
+                    scalar_t val, mask_val;
+                    if constexpr (deformable)
+                        val = interpolate_sample(
+                                input, b, c, width,
+                                x + offset[b][offset_group_idx][i][0][w]);
+                    else
+                        val = sample(input, b, c, width, x);
 
-                    const scalar_t mask_val =
-                            modulated ? mask[b][mask_group_idx][i][w] : static_cast<scalar_t>(1);
+                    if constexpr (modulated)
+                        mask_val = mask[b][mask_group_idx][i][w];
+                    else
+                        mask_val = static_cast<scalar_t>(1);
 
                     columns[c][i][b][w] = val * mask_val;
                 }
@@ -212,12 +215,15 @@ namespace tvdcn {
 
                 const index_t x = (w * stride_w - pad_w) + i * dilation_w;
 
-                const scalar_t mask_val =
-                        modulated ? mask[b][mask_group_idx][i][w] : static_cast<scalar_t>(1);
+                scalar_t mask_val;
+                if constexpr (modulated)
+                    mask_val = mask[b][mask_group_idx][i][w];
+                else
+                    mask_val = static_cast<scalar_t>(1);
 
-                const scalar_t val = columns[c][i][b][w] * mask_val;
+                scalar_t val = columns[c][i][b][w] * mask_val;
 
-                if (deformable)
+                if constexpr (deformable)
                     interpolate_insert(
                             grad_input, b, c, width,
                             x + offset[b][offset_group_idx][i][0][w],
@@ -306,12 +312,15 @@ namespace tvdcn {
 
                     const index_t x = (w * stride_w - pad_w) + i * dilation_w;
 
-                    const scalar_t weight = coordinate_weight(
+                    scalar_t weight = coordinate_weight(
                             input, b, c, width,
                             x + offset[b][g][i][0][w]);
 
-                    const scalar_t mask_val =
-                            modulated ? mask[b][mask_group_idx][i][w] : static_cast<scalar_t>(1);
+                    scalar_t mask_val;
+                    if constexpr (modulated)
+                        mask_val = mask[b][mask_group_idx][i][w];
+                    else
+                        mask_val = static_cast<scalar_t>(1);
 
                     grad_offset_val += columns[c][i][b][w] * weight * mask_val;
                 }
@@ -401,12 +410,13 @@ namespace tvdcn {
 
                     const index_t x = (w * stride_w - pad_w) + i * dilation_w;
 
-                    const scalar_t val =
-                            deformable ?
-                            interpolate_sample(
-                                    input, b, c, width,
-                                    x + offset[b][offset_group_idx][i][0][w])
-                                       : sample(input, b, c, width, x);
+                    scalar_t val;
+                    if constexpr (deformable)
+                        val = interpolate_sample(
+                                input, b, c, width,
+                                x + offset[b][offset_group_idx][i][0][w]);
+                    else
+                        val = sample(input, b, c, width, x);
 
                     grad_mask_val += columns[c][i][b][w] * val;
                 }
