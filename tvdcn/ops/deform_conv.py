@@ -77,8 +77,9 @@ def deform_conv1d(
         _log_api_usage_once(deform_conv1d)
     _assert_has_ops()
 
-    return torch.ops.tvdcn.deform_conv1d(input, weight, offset, mask, bias,
-                                         stride, padding, dilation, groups)
+    return torch.ops.tvdcn.deform_conv1d(
+        input, weight, offset, mask, bias,
+        stride, padding, dilation, groups)
 
 
 def deform_conv2d(
@@ -137,8 +138,9 @@ def deform_conv2d(
         _log_api_usage_once(deform_conv2d)
     _assert_has_ops()
 
-    return torch.ops.tvdcn.deform_conv2d(input, weight, offset, mask, bias,
-                                         stride, padding, dilation, groups)
+    return torch.ops.tvdcn.deform_conv2d(
+        input, weight, offset, mask, bias,
+        stride, padding, dilation, groups)
 
 
 def deform_conv3d(
@@ -193,8 +195,9 @@ def deform_conv3d(
         _log_api_usage_once(deform_conv3d)
     _assert_has_ops()
 
-    return torch.ops.tvdcn.deform_conv3d(input, weight, offset, mask, bias,
-                                         stride, padding, dilation, groups)
+    return torch.ops.tvdcn.deform_conv3d(
+        input, weight, offset, mask, bias,
+        stride, padding, dilation, groups)
 
 
 ################################################################################
