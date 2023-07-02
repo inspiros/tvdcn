@@ -6,7 +6,6 @@ from torch.nn import init
 from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from torch.nn.modules.utils import _single, _pair, _triple
 
-# noinspection PyUnresolvedReferences
 from .activations import (
     MaskSigmoid, MaskSoftmax1d, MaskSoftmax2d, MaskSoftmax3d,
 )
