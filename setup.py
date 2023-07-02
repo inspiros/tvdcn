@@ -43,9 +43,7 @@ def get_extensions():
     sources = main_file + source_cpu
     extension = CppExtension
     extra_compile_args = {'cxx': []}
-    extra_compile_args['cxx'].append('/std:c++17' if sys.platform == 'win32' else
-                                     '-std=c++17' if sys.platform == 'darwin' else
-                                     '-std:c++17')
+    extra_compile_args['cxx'].append('/std:c++17' if sys.platform == 'win32' else '-std=c++17')
     define_macros = []
 
     print('Compiling extensions with following flags:')
