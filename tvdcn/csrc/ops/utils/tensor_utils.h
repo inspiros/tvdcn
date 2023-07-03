@@ -2,8 +2,6 @@
 
 #include <ATen/TensorUtils.h>
 
-#include "../../macros.h"
-
 namespace at {
     void checkSameDeviceType(CheckedFrom c, const TensorArg &t1, const TensorArg &t2);
 
