@@ -506,8 +506,8 @@ class PackedDeformConvTranspose1d(DeformConvTranspose1d):
                 kernel_size=1,
                 groups=self.offset_groups,
                 bias=generator_bias,
-                device=dtype,
-                dtype=device)
+                device=device,
+                dtype=dtype)
         else:
             self.register_module('offset_generator', None)
 
@@ -518,8 +518,8 @@ class PackedDeformConvTranspose1d(DeformConvTranspose1d):
                 kernel_size=1,
                 groups=self.mask_groups,
                 bias=generator_bias,
-                device=dtype,
-                dtype=device)
+                device=device,
+                dtype=dtype)
         else:
             self.register_module('mask_generator', None)
 
@@ -622,8 +622,8 @@ class PackedDeformConvTranspose2d(DeformConvTranspose2d):
                 kernel_size=1,
                 groups=self.offset_groups,
                 bias=generator_bias,
-                device=dtype,
-                dtype=device)
+                device=device,
+                dtype=dtype)
         else:
             self.register_module('offset_generator', None)
 
@@ -634,8 +634,8 @@ class PackedDeformConvTranspose2d(DeformConvTranspose2d):
                 kernel_size=1,
                 groups=self.mask_groups,
                 bias=generator_bias,
-                device=dtype,
-                dtype=device)
+                device=device,
+                dtype=dtype)
         else:
             self.register_module('mask_generator', None)
 
@@ -738,8 +738,8 @@ class PackedDeformConvTranspose3d(DeformConvTranspose3d):
                 kernel_size=1,
                 groups=self.offset_groups,
                 bias=generator_bias,
-                device=dtype,
-                dtype=device)
+                device=device,
+                dtype=dtype)
         else:
             self.register_module('offset_generator', None)
 
@@ -750,8 +750,8 @@ class PackedDeformConvTranspose3d(DeformConvTranspose3d):
                 kernel_size=1,
                 groups=self.mask_groups,
                 bias=generator_bias,
-                device=dtype,
-                dtype=device)
+                device=device,
+                dtype=dtype)
         else:
             self.register_module('mask_generator', None)
 

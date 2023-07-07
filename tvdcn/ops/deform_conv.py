@@ -696,8 +696,8 @@ class PackedDeformConv3d(DeformConv3d):
                 dilation=self.dilation,  # type: ignore[arg-type]
                 groups=self.offset_groups,
                 bias=generator_bias,
-                device=dtype,
-                dtype=device)
+                device=device,
+                dtype=dtype)
         else:
             self.register_module('offset_generator', None)
 
@@ -711,8 +711,8 @@ class PackedDeformConv3d(DeformConv3d):
                 dilation=self.dilation,  # type: ignore[arg-type]
                 groups=self.mask_groups,
                 bias=generator_bias,
-                device=dtype,
-                dtype=device)
+                device=device,
+                dtype=dtype)
         else:
             self.register_module('mask_generator', None)
 
