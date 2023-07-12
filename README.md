@@ -4,14 +4,11 @@ Torchvision+ Deformable Convolution Networks
 [![PyPI](https://img.shields.io/pypi/v/tvdcn)](https://pypi.org/project/tvdcn)
 [![GitHub](https://img.shields.io/github/license/inspiros/tvdcn)](LICENSE.txt)
 
-This package contains the PyTorch implementations of the **2D Deformable Convolution** operation
+This package contains the PyTorch implementations of the **Deformable Convolution** operation
 (the commonly used  `torchvision.ops.deform_conv2d`) proposed in https://arxiv.org/abs/1811.11168,
-as well as its **1D** and **3D** equivalences, which are not available in `torchvision` (thus the name).
-
-And beyond that, the package also provides the **transposed** versions of them,
-which interestingly noone has ever proposed to use.
-The main idea is, while `offset` in deformable convolution guides the convolution kernel where to get the inputs to
-compute the output; in transposed deformable convolution, it guides the convolution kernel where to write the outputs.
+and the **Transposed Deformable Convolution** proposed in https://arxiv.org/abs/2210.09446
+(currently without interpolation kernel scaling).
+It also supports their **1D** and **3D** equivalences, which are not available in `torchvision` (thus the name).
 
 ## Highlights
 
