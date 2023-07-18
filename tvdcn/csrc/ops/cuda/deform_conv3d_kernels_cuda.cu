@@ -200,7 +200,7 @@ namespace tvdcn {
         }
 
         template<bool deformable, bool modulated, typename scalar_t, typename index_t>
-        static __global__ void vol2col_kernel(
+        static __launch_bounds__(1024) __global__ void vol2col_kernel(
                 const index_t n_kernels,
                 const at::GenericPackedTensorAccessor<scalar_t, 5, at::RestrictPtrTraits, index_t> input,
                 const at::GenericPackedTensorAccessor<scalar_t, 9, at::RestrictPtrTraits, index_t> offset,
@@ -343,7 +343,7 @@ namespace tvdcn {
         }
 
         template<bool deformable, bool modulated, typename scalar_t, typename index_t>
-        static __global__ void col2vol_kernel(
+        static __launch_bounds__(1024) __global__ void col2vol_kernel(
                 const index_t n_kernels,
                 const at::GenericPackedTensorAccessor<scalar_t, 8, at::RestrictPtrTraits, index_t> columns,
                 const at::GenericPackedTensorAccessor<scalar_t, 9, at::RestrictPtrTraits, index_t> offset,
@@ -485,7 +485,7 @@ namespace tvdcn {
         }
 
         template<bool modulated, typename scalar_t, typename index_t>
-        static __global__ void deform_conv3d_compute_grad_offset_kernel(
+        static __launch_bounds__(1024) __global__ void deform_conv3d_compute_grad_offset_kernel(
                 const index_t n_kernels,
                 const at::GenericPackedTensorAccessor<scalar_t, 8, at::RestrictPtrTraits, index_t> columns,
                 const at::GenericPackedTensorAccessor<scalar_t, 5, at::RestrictPtrTraits, index_t> input,
@@ -638,7 +638,7 @@ namespace tvdcn {
         }
 
         template<bool deformable, typename scalar_t, typename index_t>
-        static __global__ void deform_conv3d_compute_grad_mask_kernel(
+        static __launch_bounds__(1024) __global__ void deform_conv3d_compute_grad_mask_kernel(
                 const index_t n_kernels,
                 const at::GenericPackedTensorAccessor<scalar_t, 8, at::RestrictPtrTraits, index_t> columns,
                 const at::GenericPackedTensorAccessor<scalar_t, 5, at::RestrictPtrTraits, index_t> input,
