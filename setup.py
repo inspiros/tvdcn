@@ -100,7 +100,7 @@ def setup_package():
         version=get_version(),
         ext_modules=get_extensions(),
         cmdclass={
-            'build_ext': torch.utils.cpp_extension.BuildExtension.with_options(use_ninja=False)
+            'build_ext': torch.utils.cpp_extension.BuildExtension
         },
     )
 
