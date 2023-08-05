@@ -1,14 +1,48 @@
 #include <ATen/TensorUtils.h>
 
 namespace at {
-    namespace {
-        inline std::vector<int> definedPositions(ArrayRef<TensorArg> tensors) {
-            std::vector<int> res = {};
-            for (int i = 0; i < tensors.size(); i++) {
-                if (tensors[i]->defined())
-                    res.push_back(i);
-            }
-            return res;
+    static inline IntArrayRef definedPositions(ArrayRef<TensorArg> tensors) {
+        std::vector<int64_t> res;
+        res.reserve(tensors.size());
+        for (const auto i: c10::irange(tensors.size())) {
+            if (tensors[i]->defined())
+                res.emplace_back(i);
+        }
+        return res;
+    }
+
+    static void checkDeviceType(CheckedFrom c,
+                                const TensorArg &t,
+                                DeviceType device_type) {
+        TORCH_CHECK(
+                !t->defined() || t->device().type() == device_type,
+                "Expected tensor for argument #",
+                t.pos,
+                " '",
+                t.name,
+                "' to have ",
+                device_type,
+                " DeviceType, but got tensor with ",
+                t->device().type(),
+                " DeviceType (while checking arguments for ", c, ")");
+    }
+
+    void checkDeviceType(
+            CheckedFrom c,
+            ArrayRef<TensorArg> tensors,
+            DeviceType device_type) {
+        for (const auto i: c10::irange(tensors.size())) {
+            checkDeviceType(c, tensors[i], device_type);
+        }
+    }
+
+    void checkDeviceTypeExceptUndefined(
+            CheckedFrom c,
+            ArrayRef<TensorArg> tensors,
+            DeviceType device_type) {
+        auto defined_pos = definedPositions(tensors);
+        for (const auto i: c10::irange(defined_pos.size())) {
+            checkDeviceType(c, tensors[defined_pos[i]], device_type);
         }
     }
 
@@ -39,7 +73,7 @@ namespace at {
             ArrayRef<TensorArg> tensors) {
         if (tensors.size() < 2)
             return;
-        for (int i = 1; i < tensors.size(); i++) {
+        for (const auto i: c10::irange(1, tensors.size())) {
             checkSameDeviceType(c, tensors[0], tensors[i]);
         }
     }
@@ -50,7 +84,7 @@ namespace at {
         auto defined_pos = definedPositions(tensors);
         if (defined_pos.size() < 2)
             return;
-        for (int i = 1; i < defined_pos.size(); i++) {
+        for (const auto i: c10::irange(1, defined_pos.size())) {
             checkSameDeviceType(c, tensors[defined_pos[0]], tensors[defined_pos[i]]);
         }
     }
@@ -82,7 +116,7 @@ namespace at {
             ArrayRef<TensorArg> tensors) {
         if (tensors.size() < 2)
             return;
-        for (int i = 1; i < tensors.size(); i++) {
+        for (const auto i: c10::irange(1, tensors.size())) {
             checkSameDevice(c, tensors[0], tensors[i]);
         }
     }
@@ -93,7 +127,7 @@ namespace at {
         auto defined_pos = definedPositions(tensors);
         if (defined_pos.size() < 2)
             return;
-        for (int i = 1; i < defined_pos.size(); i++) {
+        for (const auto i: c10::irange(1, defined_pos.size())) {
             checkSameDevice(c, tensors[defined_pos[0]], tensors[defined_pos[i]]);
         }
     }
@@ -104,7 +138,7 @@ namespace at {
         auto defined_pos = definedPositions(tensors);
         if (defined_pos.size() < 2)
             return;
-        for (int i = 1; i < defined_pos.size(); i++) {
+        for (const auto i: c10::irange(1, defined_pos.size())) {
             checkSameGPU(c, tensors[defined_pos[0]], tensors[defined_pos[i]]);
         }
     }
@@ -113,7 +147,7 @@ namespace at {
         auto defined_pos = definedPositions(tensors);
         if (defined_pos.size() < 2)
             return;
-        for (int i = 1; i < defined_pos.size(); i++) {
+        for (const auto i: c10::irange(1, defined_pos.size())) {
             checkSameType(c, tensors[defined_pos[0]], tensors[defined_pos[i]]);
         }
     }

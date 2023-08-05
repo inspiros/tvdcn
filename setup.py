@@ -31,14 +31,15 @@ def get_extensions():
                  )
 
     source_cpu = (glob.glob(os.path.join(extensions_dir, 'ops', 'cpu', '*.cpp')) +
-                  glob.glob(os.path.join(extensions_dir, 'ops', 'dispatch', '*.cpp')) +
                   glob.glob(os.path.join(extensions_dir, 'ops', 'autograd', '*.cpp')) +
                   glob.glob(os.path.join(extensions_dir, 'ops', 'quantized', 'cpu', '*.cpp')) +
                   glob.glob(os.path.join(extensions_dir, 'ops', 'utils', '*.cpp'))
                   )
 
-    source_cuda = glob.glob(os.path.join(extensions_dir, 'ops', 'cuda', '*.cu'))
-    source_cuda += glob.glob(os.path.join(extensions_dir, 'ops', 'autocast', '*.cpp'))
+    source_cuda = (glob.glob(os.path.join(extensions_dir, 'ops', 'cuda', '*.cu')) +
+                   glob.glob(os.path.join(extensions_dir, 'ops', 'cuda', '*.cpp')) +
+                   glob.glob(os.path.join(extensions_dir, 'ops', 'autocast', '*.cpp'))
+                   )
 
     sources = main_file + source_cpu
     extension = CppExtension

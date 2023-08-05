@@ -3,6 +3,10 @@
 #include <ATen/TensorUtils.h>
 
 namespace at {
+    void checkDeviceType(CheckedFrom c, ArrayRef<TensorArg> tensors, DeviceType device_type);
+
+    void checkDeviceTypeExceptUndefined(CheckedFrom c, ArrayRef<TensorArg> tensors, DeviceType device_type);
+
     void checkSameDeviceType(CheckedFrom c, const TensorArg &t1, const TensorArg &t2);
 
     void checkAllSameDeviceType(CheckedFrom c, ArrayRef<TensorArg> tensors);

@@ -21,7 +21,7 @@ It also supports their **1D** and **3D** equivalences, which are not available i
   - `tvdcn.ops.deform_conv_transpose2d`
   - `tvdcn.ops.deform_conv_transpose3d`
 
-- And the following **supplementary operations** (for activating `mask`):
+- And the following **supplementary operations** (`mask` activation proposed in https://arxiv.org/abs/2211.05778):
   - `tvdcn.ops.mask_softmax1d`
   - `tvdcn.ops.mask_softmax2d`
   - `tvdcn.ops.mask_softmax3d`

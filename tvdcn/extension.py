@@ -9,6 +9,10 @@ import sys
 from warnings import warn
 
 import torch
+from torch._classes import _ClassNamespace
+from torch._ops import _OpNamespace
+
+extension_namespace = os.path.basename(os.path.dirname(__file__))
 
 
 def _get_extension_path(lib_name):
@@ -80,6 +84,9 @@ try:
 
 except (ImportError, OSError):
     pass
+finally:
+    _classes = _ClassNamespace(extension_namespace)
+    _ops = _OpNamespace(extension_namespace)
 
 
 def _assert_has_ops():
@@ -92,7 +99,7 @@ def _assert_has_ops():
 
 def _check_cuda_version(minor=True):
     """
-    Make sure that CUDA versions match between the pytorch install and tvdcn install
+    Make sure that CUDA versions match between the pytorch install and C++ extension install
 
     Args:
         minor (bool): If ``False``, ignore minor version difference.
@@ -102,7 +109,7 @@ def _check_cuda_version(minor=True):
         return -1
     from torch.version import cuda as torch_version_cuda
 
-    _version = torch.ops.tvdcn._cuda_version()
+    _version = _ops._cuda_version()
     if _version != -1 and torch_version_cuda is not None:
         ext_version = str(_version)
         if int(ext_version) < 10000:
@@ -161,7 +168,7 @@ def cuda_version():
     """
     if not _HAS_OPS:
         return -1
-    return torch.ops.tvdcn._cuda_version()
+    return _ops._cuda_version()
 
 
 def with_cuda():
