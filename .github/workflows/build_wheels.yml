@@ -30,8 +30,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Install ninja-build
+        uses: seanmiddleditch/gha-setup-ninja@master
+
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.12.1
+        uses: pypa/cibuildwheel@v2.14.1
 
       - name: Upload wheels
         uses: actions/upload-artifact@v3
