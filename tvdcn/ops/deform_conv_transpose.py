@@ -1,16 +1,15 @@
-from typing import List, Tuple, Optional, Union
+from typing import Callable, List, Tuple, Optional, Union
 
 import torch
 from torch import nn, Tensor
 from torch.nn import init
-from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t
+from torch.nn.common_types import _size_any_t, _size_1_t, _size_2_t, _size_3_t
 from torch.nn.modules.utils import _single, _pair, _triple
 
 from .activations import (
     MaskSigmoid, MaskSoftmax1d, MaskSoftmax2d, MaskSoftmax3d,
 )
 from .deform_conv import _DeformConvNd
-from .._types import _IntTuple, _Activation
 from ..extension import _assert_has_ops
 from ..utils import _log_api_usage_once
 
@@ -209,12 +208,12 @@ class _DeformConvTransposeNd(_DeformConvNd):
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
-                 kernel_size: _IntTuple,
-                 stride: _IntTuple,
-                 padding: Union[str, _IntTuple],
-                 dilation: _IntTuple,
+                 kernel_size: _size_any_t,
+                 stride: _size_any_t,
+                 padding: Union[str, _size_any_t],
+                 dilation: _size_any_t,
                  transposed: bool,
-                 output_padding: Union[str, _IntTuple],
+                 output_padding: Union[str, _size_any_t],
                  groups: int,
                  bias: bool,
                  padding_mode: str,
@@ -464,8 +463,8 @@ class PackedDeformConvTranspose1d(DeformConvTranspose1d):
                  generator_bias: bool = False,
                  deformable: bool = True,
                  modulated: bool = False,
-                 offset_activation: Union[str, _Activation] = None,
-                 mask_activation: Union[str, _Activation] = 'sigmoid',
+                 offset_activation: Optional[Union[str, Callable]] = None,
+                 mask_activation: Optional[Union[str, Callable]] = 'sigmoid',
                  padding_mode: str = 'zeros',
                  device=None,
                  dtype=None) -> None:
@@ -580,8 +579,8 @@ class PackedDeformConvTranspose2d(DeformConvTranspose2d):
                  generator_bias: bool = False,
                  deformable: bool = True,
                  modulated: bool = False,
-                 offset_activation: Union[str, _Activation] = None,
-                 mask_activation: Union[str, _Activation] = 'sigmoid',
+                 offset_activation: Optional[Union[str, Callable]] = None,
+                 mask_activation: Optional[Union[str, Callable]] = 'sigmoid',
                  padding_mode: str = 'zeros',
                  device=None,
                  dtype=None) -> None:
@@ -696,8 +695,8 @@ class PackedDeformConvTranspose3d(DeformConvTranspose3d):
                  generator_bias: bool = False,
                  deformable: bool = True,
                  modulated: bool = False,
-                 offset_activation: Union[str, _Activation] = None,
-                 mask_activation: Union[str, _Activation] = 'sigmoid',
+                 offset_activation: Optional[Union[str, Callable]] = None,
+                 mask_activation: Optional[Union[str, Callable]] = 'sigmoid',
                  padding_mode: str = 'zeros',
                  device=None,
                  dtype=None) -> None:

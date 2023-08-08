@@ -3,10 +3,8 @@ from typing import Tuple, Optional
 import torch
 import torch.nn as nn
 from torch import Tensor
-from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t
+from torch.nn.common_types import _size_any_t, _size_1_t, _size_2_t, _size_3_t
 from torch.nn.modules.utils import _single, _pair, _triple
-
-from tvdcn._types import _IntTuple
 
 __all__ = [
     'mask_softmax1d',
@@ -136,11 +134,11 @@ class _MaskSoftmaxNd(nn.Module):
     Base class for MaskSoftmax
     """
 
-    def __init__(self, kernel_size: _IntTuple):
+    def __init__(self, kernel_size: _size_any_t):
         super().__init__()
         self.kernel_size: Tuple[int, ...] = kernel_size
 
-    def forward(self, mask: Tensor, kernel_size: _IntTuple = None) -> Tensor:
+    def forward(self, mask: Tensor, kernel_size: Optional[_size_any_t] = None) -> Tensor:
         raise NotImplementedError
 
 
