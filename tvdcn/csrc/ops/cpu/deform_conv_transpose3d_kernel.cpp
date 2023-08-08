@@ -449,7 +449,7 @@ namespace tvdcn {
                 auto grad_weight = at::zeros_like(weight_c);
                 auto grad_offset = at::zeros_like(offset_c);
                 auto grad_mask = at::zeros_like(mask_c);
-                auto grad_bias = with_bias ? grad_out_c.sum(at::IntArrayRef({0, 2, 3, 4})) : at::zeros_like(bias_c);
+                auto grad_bias = with_bias ? grad_out_c.sum(at::IntArrayRef({0, 2, 3, 4})) : at::Tensor();
 
                 // Separate into blocks
                 grad_out_c = grad_out_c.view({batch_sz / n_parallel_imgs,
