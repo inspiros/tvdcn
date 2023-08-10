@@ -20,3 +20,6 @@
 
 using std::min;
 using std::max;
+using std::clamp;
+using std::ceil;
+using std::floor;
