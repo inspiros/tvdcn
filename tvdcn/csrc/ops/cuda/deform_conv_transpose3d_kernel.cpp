@@ -69,7 +69,8 @@
 // modified from
 // https://github.com/pytorch/vision/blob/master/torchvision/csrc/cpu/deform_conv2d_kernel.cpp
 
-#include <torch/autograd.h>
+#include <ATen/ATen.h>
+#include <torch/library.h>
 
 #include "deform_conv3d_common_kernels.h"
 #include "../utils/parallel_helpers.h"
@@ -91,6 +92,7 @@ namespace tvdcn {
                     at::IntArrayRef output_padding,
                     at::IntArrayRef dilation,
                     int64_t groups) {
+                bool unbatched = input.ndimension() == 4;
                 bool deformable = offset.has_value() && offset->defined();
                 bool modulated = mask.has_value() && mask->defined();
                 bool with_bias = bias.has_value() && bias->defined();
@@ -109,16 +111,35 @@ namespace tvdcn {
                 at::checkAllSameGPUExceptUndefined(c, args);
                 at::checkAllSameTypeExceptUndefined(c, args);
 
-                at::Tensor input_c = input.contiguous();
-                at::Tensor weight_c = weight.contiguous();
-                at::Tensor offset_c = (deformable ? offset.value() : input.new_zeros(0)).contiguous();
-                at::Tensor mask_c = (modulated ? mask.value() : input.new_zeros(0)).contiguous();
-                at::Tensor bias_c = (with_bias ? bias.value() : input.new_zeros(0)).contiguous();
+                auto input_c = input.contiguous();
+                auto weight_c = weight.contiguous();
+                auto offset_c = (deformable ? offset.value() : input.new_zeros(0)).contiguous();
+                auto mask_c = (modulated ? mask.value() : input.new_zeros(0)).contiguous();
+                auto bias_c = (with_bias ? bias.value() : input.new_zeros(0)).contiguous();
 
-                TORCH_CHECK(input_c.ndimension() == 5)
-                TORCH_CHECK(weight_c.ndimension() == 5)
-                TORCH_CHECK(!deformable || offset_c.ndimension() == 5)
-                TORCH_CHECK(!modulated || mask_c.ndimension() == 5)
+                TORCH_CHECK(unbatched || input_c.ndimension() == 5,
+                            "Expected 4D (unbatched) or 5D (batched) input to deform_conv_transpose3d, "
+                            "but got input of size: ",
+                            input_c.sizes())
+                TORCH_CHECK(weight_c.ndimension() == 5,
+                            "Expected 5D weight")
+                TORCH_CHECK(!deformable ||
+                            (unbatched && offset_c.ndimension() == 4) ||
+                            (!unbatched && offset_c.ndimension() == 5),
+                            "Expected 4D (unbatched) or 5D (batched) offset, "
+                            "but got offset of size: ",
+                            offset_c.sizes())
+                TORCH_CHECK(!modulated ||
+                            (unbatched && mask_c.ndimension() == 4) ||
+                            (!unbatched && mask_c.ndimension() == 5),
+                            "Expected 4D (unbatched) or 5D (batched) mask, "
+                            "but got mask of size: ",
+                            mask_c.sizes())
+                if (unbatched) {
+                    input_c = input_c.unsqueeze(0);
+                    offset_c = offset_c.unsqueeze(0);
+                    mask_c = mask_c.unsqueeze(0);
+                }
 
                 int64_t batch_sz = input_c.size(0);
                 int64_t in_channels = input_c.size(1);
@@ -381,6 +402,8 @@ namespace tvdcn {
                 output = output.view({batch_sz, out_channels, out_d, out_h, out_w});
                 if (with_bias)
                     output.add_(bias_c.view({1, out_channels, 1, 1, 1}));
+                if (unbatched)
+                    output.squeeze_(0);
 
                 return output;
             }
@@ -398,16 +421,35 @@ namespace tvdcn {
                     at::IntArrayRef output_padding,
                     at::IntArrayRef dilation,
                     int64_t groups) {
+                bool unbatched = input.ndimension() == 4;
                 bool deformable = offset.has_value() && offset->defined();
                 bool modulated = mask.has_value() && mask->defined();
                 bool with_bias = bias.has_value() && bias->defined();
 
-                at::Tensor grad_out_c = grad_out.contiguous();
-                at::Tensor input_c = input.contiguous();
-                at::Tensor weight_c = weight.contiguous();
-                at::Tensor offset_c = (deformable ? offset.value() : input.new_zeros(0)).contiguous();
-                at::Tensor mask_c = (modulated ? mask.value() : input.new_zeros(0)).contiguous();
-                at::Tensor bias_c = (with_bias ? bias.value() : input.new_zeros(0)).contiguous();
+                auto grad_out_c = grad_out.contiguous();
+                auto input_c = input.contiguous();
+                auto weight_c = weight.contiguous();
+                auto offset_c = (deformable ? offset.value() : input.new_zeros(0)).contiguous();
+                auto mask_c = (modulated ? mask.value() : input.new_zeros(0)).contiguous();
+                auto bias_c = (with_bias ? bias.value() : input.new_zeros(0)).contiguous();
+
+                auto grad_input = at::zeros_like(input_c);
+                auto grad_weight = at::zeros_like(weight_c);
+                auto grad_offset = at::zeros_like(offset_c);
+                auto grad_mask = at::zeros_like(mask_c);
+                auto grad_bias = with_bias ? grad_out_c.sum(
+                        unbatched ? at::IntArrayRef({1, 2, 3})
+                                  : at::IntArrayRef({0, 2, 3, 4})) : at::Tensor();
+
+                if (unbatched) {
+                    grad_out_c = grad_out_c.unsqueeze(0);
+                    input_c = input_c.unsqueeze(0);
+                    grad_input.unsqueeze_(0);
+                    offset_c = offset_c.unsqueeze(0);
+                    grad_offset.unsqueeze_(0);
+                    mask_c = mask_c.unsqueeze(0);
+                    grad_mask.unsqueeze_(0);
+                }
 
                 int64_t batch_sz = input_c.size(0);
                 int64_t in_channels = input_c.size(1);
@@ -444,12 +486,6 @@ namespace tvdcn {
 
                 int64_t offset_groups = deformable ? offset_c.size(1) / (3 * weight_d * weight_h * weight_w) : 0;
                 int64_t mask_groups = modulated ? mask_c.size(1) / (weight_d * weight_h * weight_w) : 0;
-
-                auto grad_input = at::zeros_like(input_c);
-                auto grad_weight = at::zeros_like(weight_c);
-                auto grad_offset = at::zeros_like(offset_c);
-                auto grad_mask = at::zeros_like(mask_c);
-                auto grad_bias = with_bias ? grad_out_c.sum(at::IntArrayRef({0, 2, 3, 4})) : at::Tensor();
 
                 // Separate into blocks
                 grad_out_c = grad_out_c.view({batch_sz / n_parallel_imgs,
@@ -659,6 +695,11 @@ namespace tvdcn {
                 grad_weight = grad_weight.view_as(weight);
                 grad_offset = deformable ? grad_offset.view_as(offset.value()) : at::Tensor();
                 grad_mask = modulated ? grad_mask.view_as(mask.value()) : at::Tensor();
+                if (unbatched) {
+                    grad_input.squeeze_(0);
+                    grad_offset.squeeze_(0);
+                    grad_mask.squeeze_(0);
+                }
 
                 return std::make_tuple(grad_input, grad_weight, grad_offset, grad_mask, grad_bias);
             }
