@@ -22,6 +22,8 @@ class DeformConvTestArgs(nn.Module):
         self.dim = kwargs.get('dim', 2)
         self.device = torch.device(kwargs.get('device', 'cpu'))
         self.batch_size = kwargs.get('batch_size', 1)
+        self.batched = self.batch_size > 0
+        self._batch_size = (self.batch_size,) if self.batched else ()
         self.dtype = kwargs.get('dtype', torch.float64)
         self.transposed = kwargs.get('transposed', False)
         contiguous = kwargs.get('contiguous', True)
@@ -34,7 +36,7 @@ class DeformConvTestArgs(nn.Module):
 
         self.stride = tuple(range(1, 1 + self.dim))
         self.padding = tuple(range(0, 0 + self.dim))
-        self.output_padding = tuple(range(0, 0 + self.dim)) if not self.transposed else (0,) * self.dim
+        self.output_padding = tuple(range(0, 0 + self.dim)) if self.transposed else (0,) * self.dim
         self.dilation = tuple(range(1, 1 + self.dim))
 
         # self.stride = (1,) * self.dim
@@ -51,7 +53,7 @@ class DeformConvTestArgs(nn.Module):
 
         # input param
         self.input = nn.Parameter(
-            torch.rand(self.batch_size, self.in_channels,
+            torch.rand(*self._batch_size, self.in_channels,
                        *(self.in_size if not self.transposed else self.out_size),
                        device=self.device, dtype=self.dtype))
         # conv params
@@ -70,11 +72,11 @@ class DeformConvTestArgs(nn.Module):
                         device=self.device, dtype=self.dtype))
         # deformable conv params
         self.offset = nn.Parameter(
-            torch.empty(self.batch_size, self.offset_groups * self.dim * math.prod(self.kernel_size),
+            torch.empty(*self._batch_size, self.offset_groups * self.dim * math.prod(self.kernel_size),
                         *self.out_size,
                         device=self.device, dtype=self.dtype))
         self.mask = nn.Parameter(
-            torch.empty(self.batch_size, self.mask_groups * math.prod(self.kernel_size), *self.out_size,
+            torch.empty(*self._batch_size, self.mask_groups * math.prod(self.kernel_size), *self.out_size,
                         device=self.device, dtype=self.dtype))
         self.reset_parameters()
         self.set_contiguous(contiguous)
@@ -138,7 +140,7 @@ class DeformConvTestArgs(nn.Module):
     @property
     def expected_output_size(self):
         out_size = (self.out_size[_] + self.output_padding[_] for _ in range(self.dim))
-        return torch.Size([self.batch_size, self.out_channels, *out_size])
+        return torch.Size([*self._batch_size, self.out_channels, *out_size])
 
     @property
     def tol(self):
