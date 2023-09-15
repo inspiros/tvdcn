@@ -708,8 +708,10 @@ namespace tvdcn {
                 grad_mask = modulated ? grad_mask.view_as(mask.value()) : at::Tensor();
                 if (unbatched) {
                     grad_input.squeeze_(0);
-                    grad_offset.squeeze_(0);
-                    grad_mask.squeeze_(0);
+                    if (deformable)
+                        grad_offset.squeeze_(0);
+                    if (modulated)
+                        grad_mask.squeeze_(0);
                 }
 
                 return std::make_tuple(grad_input, grad_weight, grad_offset, grad_mask, grad_bias);
