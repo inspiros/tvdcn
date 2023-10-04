@@ -166,7 +166,7 @@ namespace tvdcn {
 
                 AT_DISPATCH_FLOATING_TYPES_AND_HALF(
                         input.scalar_type(), "arr2col", ([&] {
-                    TVDCN_DISPATCH_INDEX_TYPE2(n_kernels, columns.numel(), ([&] {
+                    TVDCN_DISPATCH_INDEX_TYPE_DEVICE(std::max(n_kernels, columns.numel()), CPU, ([&] {
                         auto columns_accessor =
                                 columns.accessor<scalar_t, 4>();
                         TVDCN_DISPATCH_CONDITION2(deformable, modulated, ([&] {
@@ -258,7 +258,7 @@ namespace tvdcn {
 
                 AT_DISPATCH_FLOATING_TYPES_AND_HALF(
                         columns.scalar_type(), "col2arr", ([&] {
-                    TVDCN_DISPATCH_INDEX_TYPE(n_kernels, ([&] {
+                    TVDCN_DISPATCH_INDEX_TYPE_DEVICE(n_kernels, CPU, ([&] {
                         auto grad_input_accessor =
                                 grad_input.accessor<scalar_t, 3>();
                         TVDCN_DISPATCH_CONDITION2(deformable, modulated, ([&] {
@@ -356,7 +356,7 @@ namespace tvdcn {
 
                 AT_DISPATCH_FLOATING_TYPES_AND_HALF(
                         columns.scalar_type(), "deform_conv1d_compute_grad_offset", ([&] {
-                    TVDCN_DISPATCH_INDEX_TYPE2(n_kernels, columns.numel(), ([&] {
+                    TVDCN_DISPATCH_INDEX_TYPE_DEVICE(std::max(n_kernels, columns.numel()), CPU, ([&] {
                         auto grad_offset_accessor =
                                 grad_offset.accessor<scalar_t, 5>();
                         TVDCN_DISPATCH_CONDITION(modulated, ([&] {
@@ -451,7 +451,7 @@ namespace tvdcn {
 
                 AT_DISPATCH_FLOATING_TYPES_AND_HALF(
                         columns.scalar_type(), "deform_conv1d_compute_grad_mask", ([&] {
-                    TVDCN_DISPATCH_INDEX_TYPE2(n_kernels, columns.numel(), ([&] {
+                    TVDCN_DISPATCH_INDEX_TYPE_DEVICE(std::max(n_kernels, columns.numel()), CPU, ([&] {
                         auto grad_mask_accessor =
                                 grad_mask.accessor<scalar_t, 4>();
                         TVDCN_DISPATCH_CONDITION(deformable, ([&] {

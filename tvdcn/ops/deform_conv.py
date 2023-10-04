@@ -216,7 +216,7 @@ class _DeformConvNd(_ConvNd):
                  padding: Union[str, _size_any_t],
                  dilation: _size_any_t,
                  transposed: bool,
-                 output_padding: Union[str, _size_any_t],
+                 output_padding: _size_any_t,
                  groups: int,
                  bias: bool,
                  padding_mode: str,
