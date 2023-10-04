@@ -1,16 +1,18 @@
 #pragma once
+
+#include <type_traits>
+
 #include <ATen/cuda/CUDAContext.h>
 #include <c10/cuda/CUDAGuard.h>
 #include <THC/THCAtomics.cuh>
 
-#define CUDA_1D_KERNEL_LOOP_T(i, n, index_t)     \
-    for (index_t i = (blockIdx.x * blockDim.x) + threadIdx.x; i < (n); i += (blockDim.x * gridDim.x))
+#define CUDA_1D_KERNEL_LOOP_T(i, n, index_t) \
+for (index_t i = (blockIdx.x * blockDim.x) + threadIdx.x; i < (n); i += (blockDim.x * gridDim.x))
 
-#define CUDA_1D_KERNEL_LOOP(i, n)     \
-    CUDA_1D_KERNEL_LOOP_T(i, n, int)
+#define CUDA_1D_KERNEL_LOOP(i, n) \
+CUDA_1D_KERNEL_LOOP_T(i, n, std::remove_cv_t<std::remove_reference_t<decltype(n)>>)
 
-inline unsigned int GET_THREADS(
-        const float FRACTION = 1.0) {
+inline unsigned int GET_THREADS(const float FRACTION = 1.0) {
 #ifdef __HIP_PLATFORM_HCC__
     return (unsigned int) (256 * FRACTION);
 #endif

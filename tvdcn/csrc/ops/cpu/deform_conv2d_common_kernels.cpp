@@ -155,7 +155,7 @@ namespace tvdcn {
                     const index_t c_per_offset_group,
                     const index_t c_per_mask_group,
                     at::TensorAccessor<scalar_t, 6> columns) {
-                CPU_1D_KERNEL_LOOP_T(index, n_kernels, index_t) {
+                CPU_1D_PARALLEL_KERNEL_LOOP_T(index, n_kernels, index_t) {
                     const index_t w = index % out_w;
                     const index_t h = (index / out_w) % out_h;
                     const index_t c = (index / (out_w * out_h)) % in_channels;
@@ -385,7 +385,7 @@ namespace tvdcn {
                     const index_t c_per_offset_group,
                     const index_t c_per_mask_group,
                     at::TensorAccessor<scalar_t, 7> grad_offset) {
-                CPU_1D_KERNEL_LOOP_T(index, n_kernels, index_t) {
+                CPU_1D_PARALLEL_KERNEL_LOOP_T(index, n_kernels, index_t) {
                     const index_t o = index % 2;
                     const index_t j = (index / 2) % weight_w;
                     const index_t i = (index / (2 * weight_w)) % weight_h;
@@ -507,7 +507,7 @@ namespace tvdcn {
                     const index_t c_per_offset_group,
                     const index_t c_per_mask_group,
                     at::TensorAccessor<scalar_t, 6> grad_mask) {
-                CPU_1D_KERNEL_LOOP_T(index, n_kernels, index_t) {
+                CPU_1D_PARALLEL_KERNEL_LOOP_T(index, n_kernels, index_t) {
                     const index_t j = index % weight_w;
                     const index_t i = (index / weight_w) % weight_h;
                     const index_t w = (index / (weight_w * weight_h)) % out_w;
