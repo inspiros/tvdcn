@@ -73,6 +73,7 @@
 #include <torch/library.h>
 
 #include "deform_conv1d_common_kernels.h"
+#include "../utils/ntuple.h"
 #include "../utils/parallel_helpers.h"
 #include "../utils/tensor_utils.h"
 
@@ -149,11 +150,14 @@ namespace tvdcn {
                 int64_t out_channels = weight_c.size(0);
                 int64_t weight_w = weight_c.size(2);
 
-                int64_t stride_w = stride[0];
+                auto stride_c = at::_single(stride);
+                int64_t stride_w = stride_c[0];
 
-                int64_t pad_w = padding[0];
+                auto padding_c = at::_single(padding);
+                int64_t pad_w = padding_c[0];
 
-                int64_t dilation_w = dilation[0];
+                auto dilation_c = at::_single(dilation);
+                int64_t dilation_w = dilation_c[0];
 
                 int64_t out_w = (in_w + 2 * pad_w - (dilation_w * (weight_w - 1) + 1)) / stride_w + 1;
 
@@ -387,11 +391,14 @@ namespace tvdcn {
                 int64_t out_channels = weight_c.size(0);
                 int64_t weight_w = weight_c.size(2);
 
-                int64_t stride_w = stride[0];
+                auto stride_c = at::_single(stride);
+                int64_t stride_w = stride_c[0];
 
-                int64_t pad_w = padding[0];
+                auto padding_c = at::_single(padding);
+                int64_t pad_w = padding_c[0];
 
-                int64_t dilation_w = dilation[0];
+                auto dilation_c = at::_single(dilation);
+                int64_t dilation_w = dilation_c[0];
 
                 int64_t out_w = (in_w + 2 * pad_w - (dilation_w * (weight_w - 1) + 1)) / stride_w + 1;
 

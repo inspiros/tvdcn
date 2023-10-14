@@ -73,6 +73,7 @@
 #include <torch/library.h>
 
 #include "deform_conv2d_common_kernels.h"
+#include "../utils/ntuple.h"
 #include "../utils/parallel_helpers.h"
 #include "../utils/tensor_utils.h"
 
@@ -152,17 +153,21 @@ namespace tvdcn {
                 int64_t weight_h = weight_c.size(2);
                 int64_t weight_w = weight_c.size(3);
 
-                int64_t stride_h = stride[0];
-                int64_t stride_w = stride[1];
+                auto stride_c = at::_pair(stride);
+                int64_t stride_h = stride_c[0];
+                int64_t stride_w = stride_c[1];
 
-                int64_t pad_h = padding[0];
-                int64_t pad_w = padding[1];
+                auto padding_c = at::_pair(padding);
+                int64_t pad_h = padding_c[0];
+                int64_t pad_w = padding_c[1];
 
-                int64_t out_pad_h = output_padding[0];
-                int64_t out_pad_w = output_padding[1];
+                auto output_padding_c = at::_pair(output_padding);
+                int64_t out_pad_h = output_padding_c[0];
+                int64_t out_pad_w = output_padding_c[1];
 
-                int64_t dilation_h = dilation[0];
-                int64_t dilation_w = dilation[1];
+                auto dilation_c = at::_pair(dilation);
+                int64_t dilation_h = dilation_c[0];
+                int64_t dilation_w = dilation_c[1];
 
                 int64_t out_h = (in_h - 1) * stride_h - 2 * pad_h + dilation_h * (weight_h - 1) + 1 + out_pad_h;
                 int64_t out_w = (in_w - 1) * stride_w - 2 * pad_w + dilation_w * (weight_w - 1) + 1 + out_pad_w;
@@ -420,17 +425,21 @@ namespace tvdcn {
                 int64_t weight_h = weight_c.size(2);
                 int64_t weight_w = weight_c.size(3);
 
-                int64_t stride_h = stride[0];
-                int64_t stride_w = stride[1];
+                auto stride_c = at::_pair(stride);
+                int64_t stride_h = stride_c[0];
+                int64_t stride_w = stride_c[1];
 
-                int64_t pad_h = padding[0];
-                int64_t pad_w = padding[1];
+                auto padding_c = at::_pair(padding);
+                int64_t pad_h = padding_c[0];
+                int64_t pad_w = padding_c[1];
 
-                int64_t out_pad_h = output_padding[0];
-                int64_t out_pad_w = output_padding[1];
+                auto output_padding_c = at::_pair(output_padding);
+                int64_t out_pad_h = output_padding_c[0];
+                int64_t out_pad_w = output_padding_c[1];
 
-                int64_t dilation_h = dilation[0];
-                int64_t dilation_w = dilation[1];
+                auto dilation_c = at::_pair(dilation);
+                int64_t dilation_h = dilation_c[0];
+                int64_t dilation_w = dilation_c[1];
 
                 int64_t out_h = (in_h - 1) * stride_h - 2 * pad_h + dilation_h * (weight_h - 1) + 1 + out_pad_h;
                 int64_t out_w = (in_w - 1) * stride_w - 2 * pad_w + dilation_w * (weight_w - 1) + 1 + out_pad_w;

@@ -21,12 +21,12 @@ jobs:
           path: dist/*.tar.gz
 
   build_wheels:
-    name: Build wheels on ${{ matrix.os }}
+    name: Build wheels on ${{ matrix.os }} for ${{ matrix.python }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest, macos-latest ]
-
+        python: [ 'cp38-*', 'cp39-*', 'cp310-*', 'cp311-*' ]
     steps:
       - uses: actions/checkout@v3
 
@@ -34,7 +34,9 @@ jobs:
         uses: seanmiddleditch/gha-setup-ninja@master
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.14.1
+        env:
+          CIBW_BUILD: ${{ matrix.python }}
+        uses: pypa/cibuildwheel@v2.16.2
 
       - name: Upload wheels
         uses: actions/upload-artifact@v3

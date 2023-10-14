@@ -2,8 +2,8 @@ setuptools>=42
 wheel
 
 # for ubuntu/windows
---find-links https://download.pytorch.org/whl/cu118/torch_stable.html; sys_platform == "linux" or sys_platform == "win32"
-torch>=1.9.0; sys_platform == "linux" or sys_platform == "win32"
+--find-links https://download.pytorch.org/whl/cu121/torch_stable.html; sys_platform == "linux" or sys_platform == "win32"
+torch>=2.1.0; sys_platform == "linux" or sys_platform == "win32"
 
 # for macos
-torch>=1.9.0; sys_platform == "darwin"
+torch>=2.1.0; sys_platform == "darwin"

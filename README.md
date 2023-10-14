@@ -2,6 +2,7 @@ Torchvision+ Deformable Convolution Networks
 ========
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/inspiros/tvdcn/build_wheels.yml)](https://github.com/inspiros/tvdcn/actions)
 [![PyPI](https://img.shields.io/pypi/v/tvdcn)](https://pypi.org/project/tvdcn)
+[![Downloads](https://static.pepy.tech/badge/tvdcn)](https://pepy.tech/project/tvdcn)
 [![GitHub](https://img.shields.io/github/license/inspiros/tvdcn)](LICENSE.txt)
 
 This package contains the PyTorch implementations of the **Deformable Convolution** operation
@@ -12,23 +13,23 @@ It also supports their **1D** and **3D** equivalences, which are not available i
 
 ## Highlights
 
-- **Supported operations:** _(All are implemented in C++/Cuda)_
+- **Supported operators:** _(All are implemented in C++/Cuda)_
 
-  - `tvdcn.ops.deform_conv1d`
-  - `tvdcn.ops.deform_conv2d`
-  - `tvdcn.ops.deform_conv3d`
-  - `tvdcn.ops.deform_conv_transpose1d`
-  - `tvdcn.ops.deform_conv_transpose2d`
-  - `tvdcn.ops.deform_conv_transpose3d`
+    - `tvdcn.ops.deform_conv1d`
+    - `tvdcn.ops.deform_conv2d`
+    - `tvdcn.ops.deform_conv3d`
+    - `tvdcn.ops.deform_conv_transpose1d`
+    - `tvdcn.ops.deform_conv_transpose2d`
+    - `tvdcn.ops.deform_conv_transpose3d`
 
-- And the following **supplementary operations** (`mask` activation proposed in https://arxiv.org/abs/2211.05778):
-  - `tvdcn.ops.mask_softmax1d`
-  - `tvdcn.ops.mask_softmax2d`
-  - `tvdcn.ops.mask_softmax3d`
+- And the following **supplementary operators** (`mask` activation proposed in https://arxiv.org/abs/2211.05778):
+    - `tvdcn.ops.mask_softmax1d`
+    - `tvdcn.ops.mask_softmax2d`
+    - `tvdcn.ops.mask_softmax3d`
 
 - Both `offset` and `mask` can be turned off, and can be applied in separate groups.
 
-- All the `nn.Module` wrappers for these operations are implemented,
+- All the `nn.Module` wrappers for these operators are implemented,
   everything is `@torch.jit.script`-able! Please check [Usage](#usage).
 
 **Note:** We don't care much about `onnx` exportation, but if you do, you can check this repo:
@@ -36,7 +37,7 @@ https://github.com/masamitsu-murase/deform_conv2d_onnx_exporter.
 
 ## Requirements
 
-- `torch>=1.9.0`
+- `torch>=2.1.0` (``torch>=1.9.0`` if installed from source)
 
 ## Installation
 
@@ -49,16 +50,31 @@ Run this command to install:
 pip install tvdcn
 ```
 
-The Linux and Windows wheels are built with **Cuda 11.8**.
-If you cannot find a wheel for your Arch/Python/Cuda, or there is any problem with library linking when importing,
-please proceed to [instructions to build from source](#from-source), all steps are super easy.
+Since **PyTorch** is migrating to Cuda 12 versions,
+our Linux and Windows wheels are built with **Cuda 12.1** and won't be compatible with older versions.
 
-|                  |                 Linux/Windows                 |     MacOS      |
-|------------------|:---------------------------------------------:|:--------------:|
-| Python version:  |                   3.8-3.11                    |    3.8-3.11    |
-| PyTorch version: |                `torch==2.0.1`                 | `torch==2.0.1` |
-| Cuda version:    |                     11.8                      |       -        |
-| GPU CCs:         | `3.7,5.0,6.0,6.1,7.0,7.5,8.0,8.6,8.9,9.0+PTX` |       -        |
+|                  |              Linux/Windows               |     MacOS      |
+|------------------|:----------------------------------------:|:--------------:|
+| Python version:  |                 3.8-3.11                 |    3.8-3.11    |
+| PyTorch version: |              `torch==2.1.0`              | `torch==2.1.0` |
+| Cuda version:    |                   12.1                   |       -        |
+| GPU CCs:         |  `5.0,6.0,6.1,7.0,7.5,8.0,8.6,9.0+PTX`   |       -        |
+
+When the Cuda versions of ``torch`` and ``tvdcn`` mismatch, you will see an error like this:
+
+```terminal
+RuntimeError: Detected that PyTorch and Extension were compiled with different CUDA versions.
+PyTorch has CUDA Version=11.8 and Extension has CUDA Version=12.1.
+Please reinstall the Extension that matches your PyTorch install.
+```
+
+If you see this error instead, that means there are other issues related to Python, PyTorch, device arch, e.t.c.
+Please proceed to [instructions to build from source](#from-source), all steps are super easy.
+
+```terminal
+RuntimeError: Couldn't load custom C++ ops. Recompile C++ extension with:
+     python setup.py build_ext --inplace
+```
 
 #### From Source:
 
@@ -93,12 +109,70 @@ any possible conflict.
 
 ## Usage
 
-#### Functions:
+#### Operators:
 
 Functionally, the package offers 6 functions (listed in [Highlights](#highlights)) much similar to
 `torchvision.ops.deform_conv2d`.
 However, the order of parameters is slightly different, so be cautious
 (check [this comparison](tests/test_compatibility_with_torchvision.py)).
+
+
+<table>
+<tr>
+<th>torchvision</th>
+<th>tvdcn</th>
+</tr>
+
+<tr>
+<td>
+<sub>
+
+```python
+import torch, torchvision
+
+input = torch.rand(4, 3, 10, 10)
+kh, kw = 3, 3
+weight = torch.rand(5, 3, kh, kw)
+offset = torch.rand(4, 2 * kh * kw, 8, 8)
+mask = torch.rand(4, kh * kw, 8, 8)
+bias = torch.rand(5)
+
+output = torchvision.ops.deform_conv2d(input, offset, weight, bias,
+                                       stride=(1, 1),
+                                       padding=(0, 0),
+                                       dilation=(1, 1),
+                                       mask=mask)
+print(output)
+```
+
+</sub>
+<td>
+<sub>
+
+```python
+import torch, tvdcn
+
+input = torch.rand(4, 3, 10, 10)
+kh, kw = 3, 3
+weight = torch.rand(5, 3, kh, kw)
+offset = torch.rand(4, 2 * kh * kw, 8, 8)
+mask = torch.rand(4, kh * kw, 8, 8)
+bias = torch.rand(5)
+
+output = tvdcn.ops.deform_conv2d(input, weight, offset, mask, bias,
+                                 stride=(1, 1),
+                                 padding=(0, 0),
+                                 dilation=(1, 1),
+                                 groups=1)
+print(output)
+```
+
+</sub>
+</td>
+</tr>
+
+</table>
+
 Specifically, the signatures of `deform_conv2d` and `deform_conv_transpose2d` look like this:
 
 ```python
@@ -129,7 +203,7 @@ def deform_conv_transpose2d(
     ...
 ```
 
-If `offset=None` and `mask=None`, the executed operations are identical to conventional convolution.
+If `offset=None` and `mask=None`, the executed operators are identical to conventional convolution.
 
 #### Neural Network Layers:
 
@@ -206,7 +280,7 @@ Check the [examples](examples) folder, maybe you can find something helpful.
 
 ## Acknowledgements
 
-This for fun project is directly modified and extended from `torchvision.ops.deform_conv2d`.
+This _for fun_ project is directly modified and extended from `torchvision.ops.deform_conv2d`.
 
 ## License
 
