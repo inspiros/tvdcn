@@ -17,7 +17,7 @@ def parse_args():
     parser.add_argument('--deformable', type=bool, default=True)
     parser.add_argument('--modulated', type=bool, default=True)
     parser.add_argument('--bias', type=bool, default=True)
-    parser.add_argument('--device', default='cpu')
+    parser.add_argument('--device', default='cuda')
     parser.add_argument('-n', '--n', type=int, default=1000)
     return parser.parse_args()
 

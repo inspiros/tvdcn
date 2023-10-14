@@ -14,9 +14,9 @@ It also supports their **1D** and **3D** equivalences, which are not available i
 ## Highlights
 
 - **Supported operators:** _(All are implemented in C++/Cuda)_
-
     - `tvdcn.ops.deform_conv1d`
-    - `tvdcn.ops.deform_conv2d`
+    - `tvdcn.ops.deform_conv2d` _(faster than `torchvision.ops.deform_conv2d` by at least 10% during forward pass
+       on our **Quadro RTX 5000** according to [this test](tests/test_speed.py))_
     - `tvdcn.ops.deform_conv3d`
     - `tvdcn.ops.deform_conv_transpose1d`
     - `tvdcn.ops.deform_conv_transpose2d`
@@ -173,7 +173,7 @@ print(output)
 
 </table>
 
-Specifically, the signatures of `deform_conv2d` and `deform_conv_transpose2d` look like this:
+Specifically, the signatures of `deform_conv2d` and `deform_conv_transpose2d` look like these:
 
 ```python
 def deform_conv2d(
@@ -276,7 +276,7 @@ print(output.shape)
 **Note:** For transposed packed modules, we are generating `offset` and `mask` with pointwise convolution
 as we haven't found a better way to do it.
 
-Check the [examples](examples) folder, maybe you can find something helpful.
+Do check the [examples](examples) folder, maybe you can find something helpful.
 
 ## Acknowledgements
 
