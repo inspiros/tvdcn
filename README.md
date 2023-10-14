@@ -138,10 +138,10 @@ mask = torch.rand(4, kh * kw, 8, 8)
 bias = torch.rand(5)
 
 output = deform_conv2d(input, offset, weight, bias,
-                                       stride=(1, 1),
-                                       padding=(0, 0),
-                                       dilation=(1, 1),
-                                       mask=mask)
+                       stride=(1, 1),
+                       padding=(0, 0),
+                       dilation=(1, 1),
+                       mask=mask)
 print(output)
 ```
 
