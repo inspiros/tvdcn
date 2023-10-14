@@ -32,8 +32,7 @@ It also supports their **1D** and **3D** equivalences, which are not available i
 - All the `nn.Module` wrappers for these operators are implemented,
   everything is `@torch.jit.script`-able! Please check [Usage](#usage).
 
-**Note:** We don't care much about `onnx` exportation, but if you do, you can check this repo:
-https://github.com/masamitsu-murase/deform_conv2d_onnx_exporter.
+**Note:** `tvdcn` doesn't support `onnx` exportation.
 
 ## Requirements
 
@@ -128,7 +127,8 @@ However, the order of parameters is slightly different, so be cautious
 <sub>
 
 ```python
-import torch, torchvision
+import torch
+from torchvision.ops import deform_conv2d
 
 input = torch.rand(4, 3, 10, 10)
 kh, kw = 3, 3
@@ -137,7 +137,7 @@ offset = torch.rand(4, 2 * kh * kw, 8, 8)
 mask = torch.rand(4, kh * kw, 8, 8)
 bias = torch.rand(5)
 
-output = torchvision.ops.deform_conv2d(input, offset, weight, bias,
+output = deform_conv2d(input, offset, weight, bias,
                                        stride=(1, 1),
                                        padding=(0, 0),
                                        dilation=(1, 1),
@@ -150,7 +150,8 @@ print(output)
 <sub>
 
 ```python
-import torch, tvdcn
+import torch
+from tvdcn.ops import deform_conv2d
 
 input = torch.rand(4, 3, 10, 10)
 kh, kw = 3, 3
@@ -159,11 +160,11 @@ offset = torch.rand(4, 2 * kh * kw, 8, 8)
 mask = torch.rand(4, kh * kw, 8, 8)
 bias = torch.rand(5)
 
-output = tvdcn.ops.deform_conv2d(input, weight, offset, mask, bias,
-                                 stride=(1, 1),
-                                 padding=(0, 0),
-                                 dilation=(1, 1),
-                                 groups=1)
+output = deform_conv2d(input, weight, offset, mask, bias,
+                       stride=(1, 1),
+                       padding=(0, 0),
+                       dilation=(1, 1),
+                       groups=1)
 print(output)
 ```
 
