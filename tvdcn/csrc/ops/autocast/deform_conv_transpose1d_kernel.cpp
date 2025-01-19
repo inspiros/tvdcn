@@ -1,7 +1,7 @@
 #include <ATen/autocast_mode.h>
 #include <torch/types.h>
 
-#include "../deform_conv_transpose.h"
+#include "../deform_conv_transpose1d.h"
 
 namespace tvdcn {
     namespace ops {

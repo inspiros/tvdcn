@@ -15,8 +15,8 @@ It also supports their **1D** and **3D** equivalences, which are not available i
 
 - **Supported operators:** _(All are implemented in C++/Cuda)_
     - `tvdcn.ops.deform_conv1d`
-    - `tvdcn.ops.deform_conv2d` _(faster than `torchvision.ops.deform_conv2d` by at least 10% during forward pass
-       on our **Quadro RTX 5000** according to [this test](tests/test_speed.py))_
+    - `tvdcn.ops.deform_conv2d` _(faster than `torchvision.ops.deform_conv2d` by approximately **25%** on
+       forward pass and **14%** on backward pass using a **GeForce RTX 4060** according to [this test](tests/test_speed.py))_
     - `tvdcn.ops.deform_conv3d`
     - `tvdcn.ops.deform_conv_transpose1d`
     - `tvdcn.ops.deform_conv_transpose2d`
@@ -36,7 +36,7 @@ It also supports their **1D** and **3D** equivalences, which are not available i
 
 ## Requirements
 
-- `torch>=2.1.0` (``torch>=1.9.0`` if installed from source)
+- `torch>=2.5.0` (``torch>=1.9.0`` if installed from source)
 
 ## Installation
 
@@ -49,21 +49,20 @@ Run this command to install:
 pip install tvdcn
 ```
 
-Since **PyTorch** is migrating to Cuda 12 versions,
-our Linux and Windows wheels are built with **Cuda 12.1** and won't be compatible with older versions.
+Our Linux and Windows wheels are built with **Cuda 12.4** and might not be compatible with older versions.
 
-|                  |              Linux/Windows               |     MacOS      |
-|------------------|:----------------------------------------:|:--------------:|
-| Python version:  |                 3.8-3.11                 |    3.8-3.11    |
-| PyTorch version: |              `torch==2.1.0`              | `torch==2.1.0` |
-| Cuda version:    |                   12.1                   |       -        |
-| GPU CCs:         |  `5.0,6.0,6.1,7.0,7.5,8.0,8.6,9.0+PTX`   |       -        |
+|                  |             Linux/Windows             |     MacOS      |
+|------------------|:-------------------------------------:|:--------------:|
+| Python version:  |               3.9-3.12                |    3.9-3.12    |
+| PyTorch version: |            `torch==2.5.1`             | `torch==2.5.1` |
+| Cuda version:    |                 12.4                  |       -        |
+| GPU CCs:         | `5.0,6.0,6.1,7.0,7.5,8.0,8.6,9.0+PTX` |       -        |
 
 When the Cuda versions of ``torch`` and ``tvdcn`` mismatch, you will see an error like this:
 
 ```terminal
 RuntimeError: Detected that PyTorch and Extension were compiled with different CUDA versions.
-PyTorch has CUDA Version=11.8 and Extension has CUDA Version=12.1.
+PyTorch has CUDA Version=11.8 and Extension has CUDA Version=12.4.
 Please reinstall the Extension that matches your PyTorch install.
 ```
 
@@ -99,6 +98,8 @@ import tvdcn
 
 print('Library loaded successfully:', tvdcn.has_ops())
 print('Compiled with Cuda:', tvdcn.with_cuda())
+print('Cuda version:', tvdcn.cuda_version())
+print('Cuda arch list:', tvdcn.cuda_arch_list())
 ```
 
 **Note:** We use soft Cuda version compatibility checking between the built binary and the installed PyTorch,

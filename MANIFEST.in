@@ -3,3 +3,6 @@ recursive-include tvdcn *.cu
 include README.md
 include LICENSE.txt
 include requirements*.txt
+
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]

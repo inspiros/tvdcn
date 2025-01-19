@@ -1,7 +1,7 @@
 #include <torch/autograd.h>
 #include <torch/types.h>
 
-#include "../deform_conv_transpose.h"
+#include "../deform_conv_transpose2d.h"
 
 namespace tvdcn {
     namespace ops {
@@ -16,13 +16,13 @@ namespace tvdcn {
                         const at::optional<torch::autograd::Variable> &offset,
                         const at::optional<torch::autograd::Variable> &mask,
                         const at::optional<torch::autograd::Variable> &bias,
-                        at::IntArrayRef stride,
-                        at::IntArrayRef padding,
-                        at::IntArrayRef output_padding,
-                        at::IntArrayRef dilation,
-                        int64_t groups) {
+                        at::SymIntArrayRef stride,
+                        at::SymIntArrayRef padding,
+                        at::SymIntArrayRef output_padding,
+                        at::SymIntArrayRef dilation,
+                        c10::SymInt groups) {
                     at::AutoDispatchBelowADInplaceOrView g;
-                    auto output = deform_conv_transpose2d(
+                    auto output = deform_conv_transpose2d_symint(
                             input,
                             weight,
                             offset,
@@ -58,13 +58,13 @@ namespace tvdcn {
                     auto mask = saved[3];
                     auto bias = saved[4];
 
-                    auto stride = ctx->saved_data["stride"].toIntVector();
-                    auto padding = ctx->saved_data["padding"].toIntVector();
-                    auto output_padding = ctx->saved_data["output_padding"].toIntVector();
-                    auto dilation = ctx->saved_data["dilation"].toIntVector();
-                    auto groups = ctx->saved_data["groups"].toInt();
+                    auto stride = ctx->saved_data["stride"].toSymIntVector();
+                    auto padding = ctx->saved_data["padding"].toSymIntVector();
+                    auto output_padding = ctx->saved_data["output_padding"].toSymIntVector();
+                    auto dilation = ctx->saved_data["dilation"].toSymIntVector();
+                    auto groups = ctx->saved_data["groups"].toSymInt();
 
-                    auto grads = detail::_deform_conv_transpose2d_backward(
+                    auto grads = detail::_deform_conv_transpose2d_backward_symint(
                             grad_output[0],
                             input,
                             weight,
@@ -76,6 +76,7 @@ namespace tvdcn {
                             output_padding,
                             dilation,
                             groups);
+
                     auto grad_input = std::get<0>(grads);
                     auto grad_weight = std::get<1>(grads);
                     auto grad_offset = std::get<2>(grads);
@@ -97,17 +98,70 @@ namespace tvdcn {
                 }
             };
 
+            // TODO: Update when torchvision guys found an easier way
+            class DeformConvTranspose2dBackwardFunction
+                    : public torch::autograd::Function<DeformConvTranspose2dBackwardFunction> {
+            public:
+                static torch::autograd::variable_list forward(
+                        torch::autograd::AutogradContext *ctx,
+                        const torch::autograd::Variable &grad,
+                        const torch::autograd::Variable &input,
+                        const torch::autograd::Variable &weight,
+                        const at::optional<torch::autograd::Variable> &offset,
+                        const at::optional<torch::autograd::Variable> &mask,
+                        const at::optional<torch::autograd::Variable> &bias,
+                        at::SymIntArrayRef stride,
+                        at::SymIntArrayRef padding,
+                        at::SymIntArrayRef output_padding,
+                        at::SymIntArrayRef dilation,
+                        c10::SymInt groups) {
+                    at::AutoDispatchBelowADInplaceOrView g;
+                    auto grads = detail::_deform_conv_transpose2d_backward_symint(
+                            grad,
+                            input,
+                            weight,
+                            offset,
+                            mask,
+                            bias,
+                            stride,
+                            padding,
+                            output_padding,
+                            dilation,
+                            groups);
+
+                    auto grad_input = std::get<0>(grads);
+                    auto grad_weight = std::get<1>(grads);
+                    auto grad_offset = std::get<2>(grads);
+                    auto grad_mask = std::get<3>(grads);
+                    auto grad_bias = std::get<4>(grads);
+
+                    return {
+                        grad_input,
+                        grad_weight,
+                        grad_offset,
+                        grad_mask,
+                        grad_bias,
+                    };
+                }
+
+                static torch::autograd::variable_list backward(
+                        torch::autograd::AutogradContext *ctx,
+                        const torch::autograd::variable_list &grad_output) {
+                    TORCH_CHECK(0, "double backwards on deform_conv_transpose2d not supported");
+                }
+            };
+
             at::Tensor deform_conv_transpose2d_autograd(
                     const at::Tensor &input,
                     const at::Tensor &weight,
                     const at::optional<at::Tensor> &offset,
                     const at::optional<at::Tensor> &mask,
                     const at::optional<at::Tensor> &bias,
-                    at::IntArrayRef stride,
-                    at::IntArrayRef padding,
-                    at::IntArrayRef output_padding,
-                    at::IntArrayRef dilation,
-                    int64_t groups) {
+                    at::SymIntArrayRef stride,
+                    at::SymIntArrayRef padding,
+                    at::SymIntArrayRef output_padding,
+                    at::SymIntArrayRef dilation,
+                    c10::SymInt groups) {
                 auto result = DeformConvTranspose2dFunction::apply(
                         input,
                         weight,
@@ -121,12 +175,43 @@ namespace tvdcn {
                         groups);
                 return result;
             }
+
+            std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
+            deform_conv_transpose2d_backward_autograd(
+                    const at::Tensor &grad,
+                    const at::Tensor &input,
+                    const at::Tensor &weight,
+                    const at::optional<at::Tensor> &offset,
+                    const at::optional<at::Tensor> &mask,
+                    const at::optional<at::Tensor> &bias,
+                    at::SymIntArrayRef stride,
+                    at::SymIntArrayRef padding,
+                    at::SymIntArrayRef output_padding,
+                    at::SymIntArrayRef dilation,
+                    c10::SymInt groups) {
+                auto result = DeformConvTranspose2dBackwardFunction::apply(
+                        grad,
+                        input,
+                        weight,
+                        offset,
+                        mask,
+                        bias,
+                        stride,
+                        padding,
+                        output_padding,
+                        dilation,
+                        groups);
+                return std::make_tuple(result[0], result[1], result[2], result[3], result[4]);
+            }
         }
 
         TORCH_LIBRARY_IMPL(tvdcn, Autograd, m) {
             m.impl(
                     TORCH_SELECTIVE_NAME("tvdcn::deform_conv_transpose2d"),
                     TORCH_FN(deform_conv_transpose2d_autograd));
+            m.impl(
+                    TORCH_SELECTIVE_NAME("tvdcn::_deform_conv_transpose2d_backward"),
+                    TORCH_FN(deform_conv_transpose2d_backward_autograd));
         }
     }
 }

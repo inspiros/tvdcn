@@ -5,4 +5,5 @@
 
 namespace tvdcn {
     TVDCN_API int64_t cuda_version();
+    TVDCN_API std::string cuda_arch_flags();
 }
