@@ -28,8 +28,10 @@ jobs:
         os: [ ubuntu-latest, windows-latest, macos-latest ]
         python: [ 'cp39-*', 'cp310-*', 'cp311-*', 'cp312-*', 'cp313-*' ]
         exclude:  # TODO: torch>=2.5.0 is currently not available for Windows and Mac
-          - python: 'cp313-*'
-            os: [windows-latest, macos-latest]
+          - os: windows-latest
+            python: 'cp313-*'
+          - os: macos-latest
+            python: 'cp313-*'
     steps:
       - uses: actions/checkout@v3
 

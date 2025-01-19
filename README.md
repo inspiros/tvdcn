@@ -53,7 +53,7 @@ Our Linux and Windows wheels are built with **Cuda 12.4** and might not be compa
 
 |                  |             Linux/Windows             |     MacOS      |
 |------------------|:-------------------------------------:|:--------------:|
-| Python version:  |               3.9-3.12                |    3.9-3.12    |
+| Python version:  |  3.9-3.12 (and 3.13 for Linux only)   |    3.9-3.12    |
 | PyTorch version: |            `torch==2.5.1`             | `torch==2.5.1` |
 | Cuda version:    |                 12.4                  |       -        |
 | GPU CCs:         | `5.0,6.0,6.1,7.0,7.5,8.0,8.6,9.0+PTX` |       -        |
