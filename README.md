@@ -4,6 +4,7 @@ Torchvision+ Deformable Convolution Networks
 [![PyPI](https://img.shields.io/pypi/v/tvdcn)](https://pypi.org/project/tvdcn)
 [![Downloads](https://static.pepy.tech/badge/tvdcn)](https://pepy.tech/project/tvdcn)
 [![GitHub](https://img.shields.io/github/license/inspiros/tvdcn)](LICENSE.txt)
+[![DOI](https://zenodo.org/badge/355479452.svg)](https://doi.org/10.5281/zenodo.14699341)
 
 This package contains the PyTorch implementations of the **Deformable Convolution** operation
 (the commonly used  `torchvision.ops.deform_conv2d`) proposed in https://arxiv.org/abs/1811.11168,
@@ -45,7 +46,7 @@ It also supports their **1D** and **3D** equivalences, which are not available i
 [tvdcn](https://pypi.org/project/tvdcn) provides some prebuilt wheels on **PyPI**.
 Run this command to install:
 
-```terminal
+```cmd
 pip install tvdcn
 ```
 
@@ -60,7 +61,7 @@ Our Linux and Windows wheels are built with **Cuda 12.4** and might not be compa
 
 When the Cuda versions of ``torch`` and ``tvdcn`` mismatch, you will see an error like this:
 
-```terminal
+```cmd
 RuntimeError: Detected that PyTorch and Extension were compiled with different CUDA versions.
 PyTorch has CUDA Version=11.8 and Extension has CUDA Version=12.4.
 Please reinstall the Extension that matches your PyTorch install.
@@ -69,7 +70,7 @@ Please reinstall the Extension that matches your PyTorch install.
 If you see this error instead, that means there are other issues related to Python, PyTorch, device arch, e.t.c.
 Please proceed to [instructions to build from source](#from-source), all steps are super easy.
 
-```terminal
+```cmd
 RuntimeError: Couldn't load custom C++ ops. Recompile C++ extension with:
      python setup.py build_ext --inplace
 ```
@@ -80,13 +81,13 @@ For installing from source, you need a C++ compiler (`gcc`/`msvc`) and a Cuda co
 enabled.
 Clone this repo and execute the following command:
 
-```terminal
+```cmd
 pip install .
 ```
 
 Or just compile the binary for inplace usage:
 
-```terminal
+```cmd
 python setup.py build_ext --inplace
 ```
 
@@ -283,6 +284,28 @@ Do check the [examples](examples) folder, maybe you can find something helpful.
 ## Acknowledgements
 
 This _for fun_ project is directly modified and extended from `torchvision.ops.deform_conv2d`.
+
+## Citation
+
+```bibtex
+@software{hoang_nhat_tran_2025_14699342,
+  author       = {Hoang-Nhat Tran and
+                  /},
+  title        = {inspiros/tvdcn: v1.0.0},
+  month        = jan,
+  year         = 2025,
+  publisher    = {Zenodo},
+  version      = {v1.0.0},
+  doi          = {10.5281/zenodo.14699342},
+  url          = {https://doi.org/10.5281/zenodo.14699342},
+  swhid        = {swh:1:dir:a60bb533b28fa3e84241f7cf2bda1cdb084f9572
+                   ;origin=https://doi.org/10.5281/zenodo.14699341;vi
+                   sit=swh:1:snp:be2c4dc4b3857e7294684a032516ea03c50f
+                   a170;anchor=swh:1:rel:fd575bdd9b90aef2c0e339eea6d3
+                   d384112654e5;path=inspiros-tvdcn-4a03dfc
+                  },
+}
+```
 
 ## License
 
