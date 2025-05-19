@@ -3,20 +3,20 @@
 set -e
 set -x
 
-# Install lapack, blas
-yum install -y lapack-devel blas-devel
-
 # Install CUDA 12.8:
 echo "Installing CUDA 12.8"
-yum-config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel9.repo
-yum install --setopt=obsoletes=0 -y \
-    cuda-nvcc-12-8-12.8.93-1 \
-    cuda-cudart-devel-12-8-12.8.90-1 \
-    libcublas-devel-12-8-12.8.4.1-1 \
-    libcurand-devel-12-8-10.3.9.90-1 \
-    libcusolver-devel-12-8-11.7.3.90-1 \
-    libcusparse-devel-12-8-12.5.8.93-1
-ln -s cuda-12.8 /usr/local/cuda
+
+OS=ubuntu2404
+
+wget -nv https://developer.download.nvidia.com/compute/cuda/repos/${OS}/x86_64/cuda-${OS}.pin
+sudo mv cuda-${OS}.pin /etc/apt/preferences.d/cuda-repository-pin-600
+wget https://developer.download.nvidia.com/compute/cuda/12.8.0/local_installers/cuda-repo-${OS}-12-8-local_12.8.0-570.86.10-1_amd64.deb
+sudo dpkg -i cuda-repo-${OS}-12-8-local_12.8.0-570.86.10-1_amd64.deb
+sudo cp /var/cuda-repo-${OS}-12-8-local/cuda-*-keyring.gpg /usr/share/keyrings/
+
+sudo apt-get -qq update
+sudo apt-get -y install cuda-nvcc-12-8 cuda-cudart-dev-12-8 libcublas-dev-12-8 libcurand-dev-12-8 libcusolver-dev-12-8 libcusparse-dev-12-8
+sudo apt clean
 
 export PATH=/usr/local/cuda/bin:$PATH
 export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
