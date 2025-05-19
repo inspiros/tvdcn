@@ -40,6 +40,10 @@ jobs:
         id: cuda-toolkit
         with:
           cuda: '12.8.1'
+          sub-packages: '["nvcc", "cudart-dev"]'
+          non-cuda-sub-packages: '["libcublas-dev", "libcurand-dev", "libcusolver-dev", "libcusparse-dev"]'
+          method: 'network'
+          linux-local-args: '["--toolkit"]'
 
       - name: Build wheels
         env:
