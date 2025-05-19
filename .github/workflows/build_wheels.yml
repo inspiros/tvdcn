@@ -34,16 +34,6 @@ jobs:
       - name: Install ninja-build
         uses: seanmiddleditch/gha-setup-ninja@master
 
-      - name: Install CUDA
-        if: runner.os == 'Linux' || runner.os == 'Windows'
-        uses: Jimver/cuda-toolkit@v0.2.23
-        id: cuda-toolkit
-        with:
-          cuda: '12.8.1'
-          sub-packages: ${{ runner.os == 'Linux' && '["nvcc", "cudart-dev"]' || '["nvcc", "cudart", "thrust", "libcublas_dev", "libcurand_dev", "libcusolver_dev", "libcusparse_dev"]' }}
-          non-cuda-sub-packages: ${{ runner.os == 'Linux' && '["libcublas-dev", "libcurand-dev", "libcusolver-dev", "libcusparse-dev"]' || '[]' }}
-          method: 'network'
-
       - name: Build wheels
         env:
           CIBW_BUILD: ${{ matrix.python }}
