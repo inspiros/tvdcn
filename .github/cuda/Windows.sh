@@ -12,8 +12,5 @@ rm cuda.exe
 export PATH="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/bin":$PATH
 export CUDA_HOME="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8"
 
-export FORCE_CUDA=1
-export TORCH_CUDA_ARCH_LIST='5.0 6.0 6.1 7.0 7.5 8.0 8.6 9.0 10.0 12.0+PTX'
-
 # test
 nvcc -V

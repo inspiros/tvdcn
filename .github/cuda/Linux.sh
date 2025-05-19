@@ -22,8 +22,5 @@ export PATH=/usr/local/cuda/bin:$PATH
 export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 export CUDA_HOME="/usr/local/cuda"
 
-export FORCE_CUDA=1
-export TORCH_CUDA_ARCH_LIST='5.0 6.0 6.1 7.0 7.5 8.0 8.6 9.0 10.0 12.0+PTX'
-
 # test
 nvcc -V
