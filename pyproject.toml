@@ -2,7 +2,7 @@
 requires = [
     "setuptools>=42",
     "wheel",
-#    "--find-links https://download.pytorch.org/whl/cu124; sys_platform == \"linux\" or sys_platform == \"win32\"",
+#    "--find-links https://download.pytorch.org/whl/cu128; sys_platform == \"linux\" or sys_platform == \"win32\"",
     "torch>=2.7.0,<2.8.0",
 ]
 
@@ -12,6 +12,9 @@ skip = ["*-musllinux_*", "*-manylinux_i686", "*-win32"]
 
 [tool.cibuildwheel.linux]
 before-all = "tools/packaging/prepare_build_environment_linux.sh"
+before-build = [
+    "pip install \"torch>=2.7.0,<2.8.0\" --index-url https://download.pytorch.org/whl/cu128"
+]
 environment = "FORCE_CUDA='1' TORCH_CUDA_ARCH_LIST='5.0 6.0 6.1 7.0 7.5 8.0 8.6 9.0 10.0 12.0+PTX'"
 repair-wheel-command = [
     "pip install auditwheel patchelf",
@@ -22,7 +25,7 @@ repair-wheel-command = [
 before-all = "bash tools/packaging/prepare_build_environment_windows.sh"
 before-build = [
     "pip install -U setuptools wheel",
-    "pip install torch>=2.7.0,<2.8.0 --index-url https://download.pytorch.org/whl/cu128"
+    "pip install \"torch>=2.7.0,<2.8.0\" --index-url https://download.pytorch.org/whl/cu128"
 ]
 environment = "FORCE_CUDA='1' PIP_NO_BUILD_ISOLATION='0' TORCH_CUDA_ARCH_LIST='5.0 6.0 6.1 7.0 7.5 8.0 8.6 9.0 10.0 12.0+PTX'"
 repair-wheel-command = ""
