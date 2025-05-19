@@ -34,16 +34,26 @@ jobs:
       - name: Install ninja-build
         uses: seanmiddleditch/gha-setup-ninja@master
 
-      - name: Install CUDA
-        if: runner.os == 'Linux' || runner.os == 'Windows'
+      - name: Install CUDA for Linux
+        if: runner.os == 'Linux'
         uses: Jimver/cuda-toolkit@v0.2.23
         id: cuda-toolkit
         with:
           cuda: '12.8.1'
-          sub-packages: '["nvcc", "cudart-dev"]'
+          sub-packages: '["nvcc", "cudart", "libcublas-dev", "libcurand-dev", "libcusolver-dev", "libcusparse-dev"]'
           non-cuda-sub-packages: '["libcublas-dev", "libcurand-dev", "libcusolver-dev", "libcusparse-dev"]'
           method: 'network'
           linux-local-args: '["--toolkit"]'
+
+      - name: Install CUDA for Windows
+        if: runner.os == 'Windows'
+        uses: Jimver/cuda-toolkit@v0.2.23
+        id: cuda-toolkit
+        with:
+          cuda: '12.8.1'
+          sub-packages: '["nvcc", "cudart", "thrust", "libcublas_dev", "libcurand_dev", "libcusolver_dev", "libcusparse_dev"]'
+          non-cuda-sub-packages: '["libcublas_dev", "libcurand_dev", "libcusolver_dev", "libcusparse_dev"]'
+          method: 'network'
 
       - name: Build wheels
         env:
