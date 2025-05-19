@@ -55,7 +55,7 @@ jobs:
 
       - name: Install PyTorch ${{ matrix.torch-version }}
         run: |
-          pip install torch==${{ matrix.torch-version }} --extra-index-url https://download.pytorch.org/whl/${{ ${{ runner.os == 'macOS' }} && 'cpu' || 'cu128' }}
+          pip install torch==${{ matrix.torch-version }} --extra-index-url https://download.pytorch.org/whl/${{ runner.os == 'macOS' && 'cpu' || 'cu128' }}
           python -c "import torch; print('PyTorch:', torch.__version__); print('CUDA:', torch.version.cuda)"
 
       - name: Build wheel
