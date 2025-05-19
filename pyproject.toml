@@ -25,3 +25,8 @@ before-build = [
     "pip install torch>=2.7.0,<2.8.0 --index-url https://download.pytorch.org/whl/cu128"
 ]
 environment = "FORCE_CUDA='1' PIP_NO_BUILD_ISOLATION='0' TORCH_CUDA_ARCH_LIST='5.0 6.0 6.1 7.0 7.5 8.0 8.6 9.0 10.0 12.0+PTX'"
+repair-wheel-command = ""
+
+[tool.cibuildwheel.macos]
+before-all = "bash tools/packaging/prepare_build_environment_macos.sh"
+repair-wheel-command = ""
