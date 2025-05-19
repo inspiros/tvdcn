@@ -38,14 +38,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install ninja-build
-        uses: seanmiddleditch/gha-setup-ninja@master
-
       - name: Free Disk Space (Ubuntu)
         if: ${{ runner.os == 'Linux' }}
         uses: jlumbroso/free-disk-space@main
 
-      - name: Install CUDA and set up environment
+      - name: Install ninja-build
+        uses: seanmiddleditch/gha-setup-ninja@master
+
+      - name: Install CUDA
         run: |
           bash .github/workflows/cuda/${{ runner.os }}.sh
 
