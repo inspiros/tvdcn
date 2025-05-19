@@ -38,9 +38,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Free Disk Space (Ubuntu)
-        if: ${{ runner.os == 'Linux' }}
-        uses: jlumbroso/free-disk-space@main
+#      - name: Free Disk Space (Ubuntu)
+#        if: ${{ runner.os == 'Linux' }}
+#        uses: jlumbroso/free-disk-space@main
 
       - name: Install ninja-build
         uses: seanmiddleditch/gha-setup-ninja@master
