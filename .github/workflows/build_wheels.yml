@@ -40,8 +40,8 @@ jobs:
         id: cuda-toolkit
         with:
           cuda: '12.8.1'
-          sub-packages: ${{ runner.os == 'Linux' && '["nvcc", "cudart", "libcublas-dev", "libcurand-dev", "libcusolver-dev", "libcusparse-dev"]' || '["nvcc", "cudart", "thrust", "libcublas_dev", "libcurand_dev", "libcusolver_dev", "libcusparse_dev"]' }}
-          non-cuda-sub-packages: '["libcublas_dev", "libcurand_dev", "libcusolver_dev", "libcusparse_dev"]'
+          sub-packages: ${{ runner.os == 'Linux' && '["nvcc", "cudart-dev"]' || '["nvcc", "cudart", "thrust", "libcublas_dev", "libcurand_dev", "libcusolver_dev", "libcusparse_dev"]' }}
+          non-cuda-sub-packages: ${{ runner.os == 'Linux' && '["libcublas-dev", "libcurand-dev", "libcusolver-dev", "libcusparse-dev"]' || '[]' }}
           method: 'network'
 
       - name: Build wheels
