@@ -295,21 +295,21 @@ This _for fun_ project is directly modified and extended from `torchvision.ops.d
 ## Citation
 
 ```bibtex
-@software{hoang_nhat_tran_2025_14699342,
+@software{hoang_nhat_tran_2025_15468695,
   author       = {Hoang-Nhat Tran and
-                  /},
-  title        = {inspiros/tvdcn: v1.0.0},
-  month        = jan,
+                  Van Tien Pham},
+  title        = {inspiros/tvdcn: v1.1.0},
+  month        = may,
   year         = 2025,
   publisher    = {Zenodo},
-  version      = {v1.0.0},
-  doi          = {10.5281/zenodo.14699342},
-  url          = {https://doi.org/10.5281/zenodo.14699342},
-  swhid        = {swh:1:dir:a60bb533b28fa3e84241f7cf2bda1cdb084f9572
+  version      = {v1.1.0},
+  doi          = {10.5281/zenodo.15468695},
+  url          = {https://doi.org/10.5281/zenodo.15468695},
+  swhid        = {swh:1:dir:c12477940dcb3dcdb2e019c4e53b852fb53244b2
                    ;origin=https://doi.org/10.5281/zenodo.14699341;vi
-                   sit=swh:1:snp:be2c4dc4b3857e7294684a032516ea03c50f
-                   a170;anchor=swh:1:rel:fd575bdd9b90aef2c0e339eea6d3
-                   d384112654e5;path=inspiros-tvdcn-4a03dfc
+                   sit=swh:1:snp:7ac12e5f1ab64667e1c6c84028b8ac22838b
+                   93a5;anchor=swh:1:rel:2e678a84668611ce7ea45b45d46b
+                   c7c9303bd5c3;path=inspiros-tvdcn-fabd55d
                   },
 }
 ```
