@@ -27,7 +27,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
+        os: [ ubuntu-22.04, macos-14, windows-2019 ]
         python-version: [ '3.9', '3.10', '3.11', '3.12', '3.13' ]
         torch-version: [ 2.7.0 ]
     steps:
@@ -61,15 +61,22 @@ jobs:
       - name: Build wheel
         run: |
           source .github/workflows/cuda/${{ runner.os }}-env.sh
-          python setup.py bdist_wheel --dist-dir=dist
+          python setup.py bdist_wheel --dist-dir=${{ runner.os == 'Linux' && 'dist' || 'wheelhouse' }}
         shell:
           bash
+
+#      - name: Repair wheel (Ubuntu)
+#        if: ${{ runner.os == 'Linux' }}
+#        run: |
+#          pip install auditwheel patchelf
+#          python tools/packaging/audit_torch_extension.py repair --plat manylinux_2_39_x86_64 dist/*.whl
+#          rm -r dist
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
           name: artifacts-bdist-${{ matrix.os }}-${{ strategy.job-index }}
-          path: ./dist/*.whl
+          path: ./wheelhouse/*.whl
 
   publish_on_pypi:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
