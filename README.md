@@ -39,11 +39,12 @@ It also supports their **1D** and **3D** equivalences, which are not available i
 
 - `torch>=2.7.0,<2.8.0` (``torch>=1.9.0`` if installed from source)
 
-#### Notes
+#### Notes:
 
 Since `torch` extensions are not forward compatible, I have to fix a maximum version for the PyPI package and regularly
 update it on GitHub _(but I am not always available)_.
-If you use a different version of `torch`, please follow the [instructions to install from source](#from-source).
+If you use a different version of `torch` or your platform is not supported,
+please follow the [instructions to install from source](#from-source).
 
 ## Installation
 
@@ -58,12 +59,12 @@ pip install tvdcn
 
 Our Linux and Windows wheels are built with **Cuda 12.8** but should be compatible with all 12.x versions.
 
-|                  |             Linux/Windows             |     MacOS      |
-|------------------|:-------------------------------------:|:--------------:|
-| Python version:  |               3.9-3.13                |    3.9-3.13    |
-| PyTorch version: |            `torch==2.7.0`             | `torch==2.7.0` |
-| Cuda version:    |                12.8.1                 |       -        |
-| GPU CCs:         | `5.0,6.0,6.1,7.0,7.5,8.0,8.6,9.0+PTX` |       -        |
+|                  |                  Linux/Windows                  |     MacOS      |
+|------------------|:-----------------------------------------------:|:--------------:|
+| Python version:  |                    3.9-3.13                     |    3.9-3.13    |
+| PyTorch version: |                 `torch==2.7.0`                  | `torch==2.7.0` |
+| Cuda version:    |                      12.8                       |       -        |
+| GPU CCs:         | `5.0,6.0,6.1,7.0,7.5,8.0,8.6,9.0,10.0,12.0+PTX` |       -        |
 
 When the Cuda versions of ``torch`` and ``tvdcn`` mismatch, you will see an error like this:
 

@@ -1,14 +1,13 @@
 name: Build
 
-on: push
-#on:
-#  push:
-#    tags:
-#      - 'v*'
+on:
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   build_sdist:
-    name: Build source distribution
+    name: Source distribution
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,7 +22,7 @@ jobs:
           path: dist/*.tar.gz
 
   build_wheels:
-    name: Build wheel on ${{ matrix.os }} for cp-${{ matrix.python-version }}
+    name: Wheel on ${{ matrix.os }} for cp-${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -62,21 +61,22 @@ jobs:
         run: |
           source .github/workflows/cuda/${{ runner.os }}-env.sh
           python setup.py bdist_wheel --dist-dir=wheelhouse
-# ${{ runner.os == 'Linux' && 'dist' || 'wheelhouse' }}
         shell:
           bash
 
-#      - name: Repair wheel (Ubuntu)
-#        if: ${{ runner.os == 'Linux' }}
-#        run: |
-#          pip install auditwheel patchelf
-#          python tools/packaging/audit_torch_extension.py repair --plat manylinux_2_39_x86_64 dist/*.whl
-#          rm -r dist
+      - name: Repair wheel (Ubuntu)
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          mkdir dist
+          mv wheelhouse/*.whl dist/
+          pip install auditwheel patchelf
+          python tools/packaging/audit_torch_extension.py repair --plat manylinux_2_34_x86_64 -w wheelhouse dist/*.whl
+          rm -r dist
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: artifacts-bdist-${{ matrix.os }}-${{ strategy.job-index }}
+          name: artifacts-bdist-${{ matrix.os }}-cp${{ matrix.python-version }}
           path: ./wheelhouse/*.whl
 
   publish_on_pypi:
