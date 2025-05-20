@@ -23,7 +23,7 @@ jobs:
           path: dist/*.tar.gz
 
   build_wheels:
-    name: Build wheel on ${{ matrix.os }} for ${{ matrix.python-version }}
+    name: Build wheel on ${{ matrix.os }} for cp-${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -61,7 +61,8 @@ jobs:
       - name: Build wheel
         run: |
           source .github/workflows/cuda/${{ runner.os }}-env.sh
-          python setup.py bdist_wheel --dist-dir=${{ runner.os == 'Linux' && 'dist' || 'wheelhouse' }}
+          python setup.py bdist_wheel --dist-dir=wheelhouse
+# ${{ runner.os == 'Linux' && 'dist' || 'wheelhouse' }}
         shell:
           bash
 
