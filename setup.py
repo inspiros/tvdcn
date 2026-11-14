@@ -126,7 +126,10 @@ def get_extensions():
                ('Py_LIMITED_API', '0x030A0000')]
     if sys.platform == 'win32':
         macros += [(f'{PACKAGE_ROOT}_EXPORTS', None), ('USE_PYTHON', None)]
-        cxx_flags.append('/MP')
+        # CUDA 13's CCCL needs MSVC's standard preprocessor (C1189 otherwise);
+        # /bigobj avoids C1128 on the large templated objects.
+        cxx_flags += ['/MP', '/Zc:preprocessor', '/bigobj']
+        nvcc_flags += ['-Xcompiler', '/Zc:preprocessor', '-Xcompiler', '/bigobj']
     if debug:
         cxx_flags += ['/Od', '/Zi'] if sys.platform == 'win32' else ['-g', '-O0']
         nvcc_flags = [f for f in nvcc_flags if not f.startswith(('-O', '-g'))]

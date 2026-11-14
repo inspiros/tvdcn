@@ -145,4 +145,8 @@ jobs:
           python -m pip install pytest
           python -m pip install --no-deps --no-index --find-links "$GITHUB_WORKSPACE/wheelhouse" tvdcn
           python -W error -c "import os, tvdcn; assert tvdcn.has_ops(); expected = os.environ['EXPECT_CUDA'] == '1'; assert tvdcn.with_cuda() == expected; arches = tvdcn.extension.cuda_arch_list(); print('CUDA targets:', arches); assert not expected or all(any('sm_' + a in flag for flag in arches) for a in ('75', '80', '86', '90', '100', '120'))"
-          python -m pytest "$GITHUB_WORKSPACE/tests" --device cpu -q
+          # Run a copy of the tests outside the checkout: tests/ is a package, so pytest
+          # would put the repo root on sys.path and import the unbuilt source tree.
+          rm -rf wheel-tests && mkdir wheel-tests
+          cp -r "$GITHUB_WORKSPACE/tests" "$GITHUB_WORKSPACE/tools" wheel-tests/
+          python -m pytest wheel-tests/tests --device cpu -q
