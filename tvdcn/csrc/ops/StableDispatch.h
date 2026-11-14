@@ -37,7 +37,7 @@
 
 // index type
 #define TVDCN_DISPATCH_INDEX_TYPE(N_KERNELS, ...) \
-    if (((int64_t)N_KERNELS) > (1 << 31)) {       \
+    if (((int64_t)N_KERNELS) >= (int64_t(1) << 30)) { \
         using index_t = int64_t;                  \
         __VA_ARGS__();                            \
     }                                             \
@@ -50,8 +50,10 @@
     using index_t = int64_t;                          \
     __VA_ARGS__();                                    \
 
+// 32-bit indices when every index (and the grid-stride loop variable) stays below 2^30;
+// pass stable_compat::index_bound(n_kernels, {tensors...}) as N_KERNELS.
 #define TVDCN_DISPATCH_INDEX_TYPE_CUDA(N_KERNELS, ...) \
-    if (((int64_t)N_KERNELS) > (1 << 31)) {            \
+    if (((int64_t)N_KERNELS) >= (int64_t(1) << 30)) {  \
         using index_t = int64_t;                       \
         __VA_ARGS__();                                 \
     }                                                  \

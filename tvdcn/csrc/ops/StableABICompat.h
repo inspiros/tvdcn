@@ -10,6 +10,8 @@
 #endif
 #include <algorithm>
 #include <array>
+#include <functional>
+#include <initializer_list>
 #include <optional>
 #include <vector>
 
@@ -60,6 +62,15 @@ inline std::array<int64_t, N> ntuple(IntHeaderOnlyArrayRef value) {
     for (size_t i = 0; i < N; ++i)
         result[i] = value[value.size() == 1 ? 0 : i];
     return result;
+}
+
+// Largest index a kernel uses: its work-item count or the element count of any tensor it
+// accesses (contiguous views, so offsets stay below numel). Selects 32- or 64-bit indices.
+inline int64_t index_bound(int64_t n_kernels, std::initializer_list<std::reference_wrapper<const torch::stable::Tensor>> tensors) {
+    int64_t bound = n_kernels;
+    for (const torch::stable::Tensor &t : tensors)
+        bound = std::max(bound, t.numel());
+    return bound;
 }
 
 inline constexpr int64_t kMaxParallelImgs = 32;
