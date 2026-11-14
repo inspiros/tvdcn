@@ -76,6 +76,10 @@ def deform_conv_transpose1d(
         _log_api_usage_once(deform_conv_transpose1d)
     _assert_has_ops()
 
+    stride = _single(stride)
+    padding = _single(padding)
+    output_padding = _single(output_padding)
+    dilation = _single(dilation)
     return torch.ops.tvdcn.deform_conv_transpose1d(
         input, weight, offset, mask, bias,
         stride, padding, output_padding, dilation, groups)
@@ -133,6 +137,10 @@ def deform_conv_transpose2d(
         _log_api_usage_once(deform_conv_transpose2d)
     _assert_has_ops()
 
+    stride = _pair(stride)
+    padding = _pair(padding)
+    output_padding = _pair(output_padding)
+    dilation = _pair(dilation)
     return torch.ops.tvdcn.deform_conv_transpose2d(
         input, weight, offset, mask, bias,
         stride, padding, output_padding, dilation, groups)
@@ -191,6 +199,10 @@ def deform_conv_transpose3d(
         _log_api_usage_once(deform_conv_transpose3d)
     _assert_has_ops()
 
+    stride = _triple(stride)
+    padding = _triple(padding)
+    output_padding = _triple(output_padding)
+    dilation = _triple(dilation)
     return torch.ops.tvdcn.deform_conv_transpose3d(
         input, weight, offset, mask, bias,
         stride, padding, output_padding, dilation, groups)

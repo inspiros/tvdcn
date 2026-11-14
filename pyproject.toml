@@ -3,5 +3,5 @@ requires = [
     "setuptools>=42",
     "wheel",
 #    "--find-links https://download.pytorch.org/whl/cu128; sys_platform == \"linux\" or sys_platform == \"win32\"",
-    "torch>=2.7.0,<2.8.0",
+    "torch>=2.14",
 ]

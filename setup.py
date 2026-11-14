@@ -76,7 +76,7 @@ def get_extensions():
     sources = main_file + source_cpu
     extension = CppExtension
     extra_compile_args = {'cxx': []}
-    extra_compile_args['cxx'].append('/std:c++17' if sys.platform == 'win32' else '-std=c++17')
+    extra_compile_args['cxx'].append('/std:c++20' if sys.platform == 'win32' else '-std=c++20')
     define_macros = []
 
     print('Compiling extensions with following flags:')
@@ -102,7 +102,7 @@ def get_extensions():
             nvcc_flags = []
         else:
             nvcc_flags = nvcc_flags.split(' ')
-        nvcc_flags.append('-std=c++17')
+        nvcc_flags.append('-std=c++20')
         extra_compile_args['nvcc'] = nvcc_flags
 
     if sys.platform == 'win32':

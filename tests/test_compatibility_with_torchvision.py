@@ -1,69 +1,29 @@
+import pytest
 import torch
 import torchvision
 
-import tvdcn
-from utils.deform_conv_test_args import DeformConvTestArgs
+from .utils.cases import (has_missing_optional, make_case, mark_legacy_optional_backward,
+                          output_and_grads)
 
 
-def test_deform_conv2d(dtype=torch.float64,
-                       device='cuda',
-                       with_mask=True):
-    torch.manual_seed(12)
-    args = DeformConvTestArgs(dim=2,
-                              offset_groups=1,
-                              mask_groups=1,
-                              dtype=dtype,
-                              device=device)
-    print(args)
-
-    args.zero_grad()
-    tvdcn_output = tvdcn.ops.deform_conv2d(args.input,
-                                           args.weight,
-                                           args.offset,
-                                           args.mask if with_mask else None,
-                                           args.bias,
-                                           args.stride,
-                                           args.padding,
-                                           args.dilation,
-                                           args.groups)
-    tvdcn_output.sum().backward()
-    tvdcn_input_grad = args.input.grad.clone()
-    tvdcn_weight_grad = args.weight.grad.clone()
-    tvdcn_offset_grad = args.offset.grad.clone()
-    tvdcn_mask_grad = args.mask.grad.clone() if with_mask else torch.zeros([0])
-    tvdcn_bias_grad = args.bias.grad.clone()
-
-    args.zero_grad()
-    torchvision_output = torchvision.ops.deform_conv2d(args.input,
-                                                       args.offset,
-                                                       args.weight,
-                                                       args.bias,
-                                                       args.stride,
-                                                       args.padding,
-                                                       args.dilation,
-                                                       args.mask if with_mask else None)
-    torchvision_output.sum().backward()
-    torchvision_input_grad = args.input.grad.clone()
-    torchvision_weight_grad = args.weight.grad.clone()
-    torchvision_offset_grad = args.offset.grad.clone()
-    torchvision_mask_grad = args.mask.grad.clone() if with_mask else torch.zeros([0])
-    torchvision_bias_grad = args.bias.grad.clone()
-
-    print('output_diff:', tvdcn_output - torchvision_output, sep='\n')
-    assert torch.allclose(tvdcn_output, torchvision_output)
-
-    print('\ngrad_diff:')
-    print(f'\tinput_grad:         {torch.allclose(tvdcn_input_grad, torchvision_input_grad)}')
-    assert torch.allclose(tvdcn_input_grad, torchvision_input_grad)
-    print(f'\tweight_grad:        {torch.allclose(tvdcn_weight_grad, torchvision_weight_grad)}')
-    assert torch.allclose(tvdcn_weight_grad, torchvision_weight_grad)
-    print(f'\toffset_grad:        {torch.allclose(tvdcn_offset_grad, torchvision_offset_grad)}')
-    assert torch.allclose(tvdcn_offset_grad, torchvision_offset_grad)
-    print(f'\tmask_grad:          {torch.allclose(tvdcn_mask_grad, torchvision_mask_grad)}')
-    assert torch.allclose(tvdcn_mask_grad, torchvision_mask_grad)
-    print(f'\tbias_grad:          {torch.allclose(tvdcn_bias_grad, torchvision_bias_grad)}')
-    assert torch.allclose(tvdcn_bias_grad, torchvision_bias_grad)
-
-
-if __name__ == '__main__':
-    test_deform_conv2d()
+@pytest.mark.parametrize('profile', ['offset', 'both', 'grouped'])
+@pytest.mark.parametrize('dtype', [torch.float64, torch.float32], ids=['double', 'float'])
+def test_torchvision_parity(profile, dtype, device, request):
+    case = make_case(2, False, profile, dtype=dtype, device=device)
+    mark_legacy_optional_backward(request, has_missing_optional(case))
+    if profile == 'grouped':
+        # Torchvision requires mask_groups == offset_groups.
+        case['tensors']['mask'] = case['tensors']['mask'].detach().repeat(1, 2, 1, 1).requires_grad_()
+    actual, actual_grads = output_and_grads(case)
+    tensors = {name: value.detach().clone().requires_grad_() if value is not None else None
+               for name, value in case['tensors'].items()}
+    kwargs = {key: value for key, value in case['kwargs'].items() if key != 'groups'}
+    expected = torchvision.ops.deform_conv2d(tensors['input'], tensors['offset'], tensors['weight'],
+                                            tensors['bias'], mask=tensors['mask'], **kwargs)
+    probe = torch.linspace(-0.7, 0.9, expected.numel(), device=device, dtype=dtype).reshape_as(expected)
+    names = [name for name, value in tensors.items() if value is not None]
+    expected_grads = torch.autograd.grad(expected, tuple(tensors[name] for name in names), probe)
+    tolerance = dict(rtol=1e-10, atol=1e-12) if dtype == torch.float64 else dict(rtol=2e-4, atol=2e-6)
+    torch.testing.assert_close(actual, expected, **tolerance)
+    for name, grad in zip(names, expected_grads):
+        torch.testing.assert_close(actual_grads[name], grad, **tolerance)
