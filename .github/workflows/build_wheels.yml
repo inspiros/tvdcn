@@ -95,6 +95,12 @@ jobs:
             # Git Bash ships /usr/bin/link.exe; put MSVC's linker first.
             export PATH="$(dirname "$(command -v cl)"):$PATH"
           fi
+          if [ "$RUNNER_OS" = macOS ]; then
+            # The runner's universal2 Python would build a fat x86_64+arm64 binary tagged
+            # macosx_10_9_universal2; torch ships arm64 only, for macOS 14+.
+            export ARCHFLAGS='-arch arm64' MACOSX_DEPLOYMENT_TARGET=14.0
+            export _PYTHON_HOST_PLATFORM=macosx-14.0-arm64
+          fi
           python setup.py bdist_wheel --dist-dir=wheelhouse
       - name: Upload wheel
         uses: actions/upload-artifact@v4
