@@ -140,10 +140,19 @@ def get_extensions():
             # Record the actual flags torch will use (including auto detection).
             from torch.utils.cpp_extension import _get_cuda_arch_flags
             archs = ' '.join(_get_cuda_arch_flags(nvcc_flags))
-            extension_macros += [('TVDCN_CUDA_ARCH_FLAGS', f'"{archs}"')]
+            # A generated header, not a -D string macro: quoting a string with spaces, '=' and
+            # ',' through the compiler command line differs between shells and compilers.
+            generated_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'build', 'generated')
+            os.makedirs(generated_dir, exist_ok=True)
+            with open(os.path.join(generated_dir, 'tvdcn_cuda_arch_flags.h'), 'w') as f:
+                escaped = archs.replace('\\', '\\\\').replace('"', '\\"')
+                f.write(f'#pragma once\n#define TVDCN_CUDA_ARCH_FLAGS "{escaped}"\n')
+            include_dirs = [extensions_dir, generated_dir]
+        else:
+            include_dirs = [extensions_dir]
         return factory(
             f'{PACKAGE_ROOT}.{name}', sources=extension_sources,
-            include_dirs=[extensions_dir], define_macros=extension_macros,
+            include_dirs=include_dirs, define_macros=extension_macros,
             extra_compile_args=flags, py_limited_api=True)
 
     extensions = [make_extension(CppExtension, '_C', sources)]

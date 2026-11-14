@@ -5,6 +5,7 @@
 #include <torch/csrc/stable/library.h>
 #include <torch/csrc/stable/stableivalue_conversions.h>
 #include <cuda.h>
+#include "tvdcn_cuda_arch_flags.h"
 #include <string>
 
 #if defined(_WIN32) && defined(USE_PYTHON)
