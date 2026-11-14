@@ -1,9 +1,13 @@
 name: Build
 
+# Builds and tests release artifacts only; publishing is a separate manual workflow.
 on:
   push:
-    tags:
-      - 'v*'
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build_sdist:
@@ -11,91 +15,128 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Build sdist
         run: pipx run build --sdist
-
       - name: Upload sdist
         uses: actions/upload-artifact@v4
         with:
           name: artifacts-sdist
           path: dist/*.tar.gz
+          if-no-files-found: error
 
-  build_wheels:
-    name: Wheel on ${{ matrix.os }} for cp-${{ matrix.python-version }}
-    runs-on: ${{ matrix.os }}
+  build_linux:
+    name: Wheel on manylinux_2_28 (${{ matrix.variant }})
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
     strategy:
+      fail-fast: false
       matrix:
-        os: [ ubuntu-22.04, macos-14, windows-2019 ]
-        python-version: [ '3.9', '3.10', '3.11', '3.12', '3.13' ]
-        torch-version: [ 2.7.0 ]
+        torch-version: ['2.14.1']
+        variant: [cu130]
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-
-#      - name: Free Disk Space (Ubuntu)
-#        if: ${{ runner.os == 'Linux' }}
-#        uses: jlumbroso/free-disk-space@main
-
-      - name: Install ninja-build
-        uses: seanmiddleditch/gha-setup-ninja@master
-
-      - name: Install CUDA
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+      - name: Build and repair wheel
         run: |
-          bash .github/workflows/cuda/${{ runner.os }}.sh
-
-      - name: Upgrade build tools
-        run: |
-          pip install --upgrade setuptools wheel
-
-      - name: Install PyTorch ${{ matrix.torch-version }}
-        run: |
-          pip install torch==${{ matrix.torch-version }} --extra-index-url https://download.pytorch.org/whl/${{ runner.os == 'macOS' && 'cpu' || 'cu128' }}
-          python -c "import torch; print('PyTorch:', torch.__version__); print('CUDA:', torch.version.cuda)"
-
-      - name: Build wheel
-        run: |
-          source .github/workflows/cuda/${{ runner.os }}-env.sh
-          python setup.py bdist_wheel --dist-dir=wheelhouse
-        shell:
-          bash
-
-      - name: Repair wheel (Ubuntu)
-        if: ${{ runner.os == 'Linux' }}
-        run: |
-          mkdir dist
-          mv wheelhouse/*.whl dist/
-          pip install auditwheel patchelf
-          python tools/packaging/audit_torch_extension.py repair --plat manylinux_2_34_x86_64 -w wheelhouse dist/*.whl
-          rm -r dist
-
-      - name: Upload wheels
+          docker run --rm -v "$PWD:/io" -w /io \
+            -e TORCH_VERSION=${{ matrix.torch-version }} -e TORCH_VARIANT=${{ matrix.variant }} \
+            -e MAX_JOBS=2 quay.io/pypa/manylinux_2_28_x86_64:2026.11.01-2 \
+            bash .github/workflows/cuda/manylinux.sh
+      - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
-          name: artifacts-bdist-${{ matrix.os }}-cp${{ matrix.python-version }}
-          path: ./wheelhouse/*.whl
+          name: artifacts-bdist-ubuntu-22.04-${{ matrix.variant }}
+          path: wheelhouse/*.whl
+          if-no-files-found: error
 
-  publish_on_pypi:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: [ build_sdist, build_wheels ]
-    runs-on: ubuntu-latest
-    environment: pypi
-    permissions:
-      id-token: write
+  build_wheels:
+    name: Wheel on ${{ matrix.target.os }} (${{ matrix.target.variant }})
+    runs-on: ${{ matrix.target.os }}
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11']
+        torch-version: ['2.14.1']
+        target:
+          - {os: macos-15, variant: cpu}
+          - {os: windows-2022, variant: cu130}
     steps:
-      - name: Download wheels
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Set up MSVC
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1.13.0
+      - name: Install CUDA
+        if: runner.os == 'Windows'
+        shell: bash
+        run: bash .github/workflows/cuda/Windows.sh
+      - name: Install build tools and PyTorch
+        shell: bash
+        run: |
+          python -m pip install --upgrade setuptools wheel ninja
+          python -m pip install torch==${{ matrix.torch-version }} --index-url https://download.pytorch.org/whl/${{ matrix.target.variant }}
+          python -c "import torch; print('PyTorch:', torch.__version__); print('CUDA:', torch.version.cuda)"
+      - name: Build wheel
+        shell: bash
+        env:
+          MAX_JOBS: '2'
+        run: |
+          if [ "${{ matrix.target.variant }}" = cpu ]; then
+            export TVDCN_BUILD_CUDA=0
+          else
+            source .github/workflows/cuda/Windows-env.sh
+          fi
+          python setup.py bdist_wheel --dist-dir=wheelhouse
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-bdist-${{ matrix.target.os }}-${{ matrix.target.variant }}
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+
+  test_wheels:
+    name: Test ${{ matrix.target.os }} wheel with ${{ matrix.torch-variant }} torch on Python ${{ matrix.python-version }}
+    needs: [build_linux, build_wheels]
+    runs-on: ${{ matrix.target.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
+        torch-version: ['2.14.1']
+        torch-variant: [cpu, cu130]
+        target:
+          - {os: ubuntu-22.04, variant: cu130}
+          - {os: windows-2022, variant: cu130}
+          - {os: macos-15, variant: cpu}
+        exclude:
+          - target: {os: macos-15, variant: cpu}
+            torch-variant: cu130
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Set up MSVC
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1.13.0
+      - name: Download wheel
         uses: actions/download-artifact@v4
         with:
-          pattern: artifacts-*
-          path: dist
-          merge-multiple: true
-
-      - name: Publish wheels to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.5.0
-        with:
-          user: __token__
-          password: ${{ secrets.pypi_password }}
+          name: artifacts-bdist-${{ matrix.target.os }}-${{ matrix.target.variant }}
+          path: wheelhouse
+      - name: Test installed wheel
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        env:
+          TORCHINDUCTOR_COMPILE_THREADS: '1'
+          EXPECT_CUDA: ${{ matrix.torch-variant == 'cu130' && '1' || '0' }}
+        run: |
+          python -m pip install torch==${{ matrix.torch-version }} torchvision --index-url https://download.pytorch.org/whl/${{ matrix.torch-variant }}
+          python -m pip install pytest
+          python -m pip install --no-deps --no-index --find-links "$GITHUB_WORKSPACE/wheelhouse" tvdcn
+          python -W error -c "import os, tvdcn; assert tvdcn.has_ops(); expected = os.environ['EXPECT_CUDA'] == '1'; assert tvdcn.with_cuda() == expected; arches = tvdcn.extension.cuda_arch_list(); print('CUDA targets:', arches); assert not expected or all(any('sm_' + a in flag for flag in arches) for a in ('75', '80', '86', '90', '100', '120'))"
+          python -m pytest "$GITHUB_WORKSPACE/tests" --device cpu -q

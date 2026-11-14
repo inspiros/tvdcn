@@ -1,0 +1,59 @@
+name: Publish
+
+# Manual only: publish artifacts from one successful Build run.
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: Run ID of a successful Build workflow
+        required: true
+        type: string
+      repository:
+        description: Package index
+        type: choice
+        options: [pypi, testpypi]
+        default: testpypi
+        required: true
+
+jobs:
+  publish_on_pypi:
+    name: Publish to ${{ inputs.repository }}
+    if: github.actor == github.repository_owner && github.triggering_actor == github.repository_owner
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.repository }}
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    steps:
+      - name: Check the selected Build run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.build_run_id }}
+        run: |
+          read -r name conclusion < <(gh api "repos/${{ github.repository }}/actions/runs/$RUN_ID" --jq '[.name, .conclusion] | @tsv')
+          test "$name" = Build && test "$conclusion" = success
+      - name: Download wheels and sdist
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ inputs.build_run_id }}
+          github-token: ${{ github.token }}
+          pattern: artifacts-*
+          path: dist
+          merge-multiple: true
+      - name: Check artifact set
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          files = list(Path('dist').iterdir())
+          wheels = [p.name for p in files if p.suffix == '.whl']
+          assert len(files) == 4 and len(wheels) == 3
+          assert sum('manylinux_2_28_x86_64' in w for w in wheels) == 1
+          assert sum('win_amd64' in w for w in wheels) == 1
+          assert sum('macosx_' in w and 'arm64' in w for w in wheels) == 1
+          assert sum(p.name.endswith('.tar.gz') for p in files) == 1
+          PY
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: ${{ inputs.repository == 'testpypi' && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}
