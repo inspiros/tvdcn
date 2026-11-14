@@ -353,3 +353,6 @@ wheelhouse/
 
 # secret
 develop/
+
+# Disposable agent/developer scripts and output
+develop/
