@@ -1,5 +1,6 @@
 """Dispatcher, compiler, export and dtype coverage for the stable operator families."""
 import itertools
+import sys
 
 import pytest
 import torch
@@ -39,6 +40,11 @@ def test_opcheck(dim, transposed, profile, bias, dtype, device):
                           test_utils=('test_schema', 'test_faketensor'))
 
 
+# torch 2.14 CUDA builds crash (access violation) in torch.cuda.current_device() on
+# Windows machines without a GPU, which Inductor calls while hashing the graph.
+@pytest.mark.skipif(sys.platform == 'win32' and torch.version.cuda is not None
+                    and not torch.cuda.is_available(),
+                    reason='torch CUDA init crashes on GPU-less Windows')
 @pytest.mark.parametrize('profile', ['plain', 'offset', 'mask', 'both', 'geometry'])
 def test_compile_forward_backward(dim, transposed, profile, device):
     case = make_case(dim, transposed, profile, device=device, dtype=torch.float32)
