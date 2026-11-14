@@ -8,12 +8,22 @@
 #ifdef USE_CUDA
 #include <torch/csrc/inductor/aoti_torch/generated/c_shim_cuda.h>
 #endif
+#include <torch/headeronly/util/Half.h>
+#include <torch/headeronly/util/BFloat16.h>
 #include <algorithm>
 #include <array>
 #include <functional>
 #include <initializer_list>
 #include <optional>
 #include <vector>
+
+namespace tvdcn::ops {
+// Accumulator type for reductions: 16-bit floats sum in float.
+template<typename T> struct acc_type { using type = T; };
+template<> struct acc_type<c10::Half> { using type = float; };
+template<> struct acc_type<c10::BFloat16> { using type = float; };
+template<typename T> using acc_t = typename acc_type<T>::type;
+}  // namespace tvdcn::ops
 
 namespace tvdcn::ops::stable_compat {
 using torch::stable::Tensor;

@@ -410,7 +410,7 @@ namespace tvdcn {
                     const index_t g = (index / (2 * weight_w * weight_h * out_w * out_h)) % offset_groups;
                     const index_t b = index / (2 * weight_w * weight_h * out_w * out_h * offset_groups);
 
-                    scalar_t grad_offset_val = 0;
+                    acc_t<scalar_t> grad_offset_val = 0;
 
                     const index_t c_start = g * c_per_offset_group;
                     const index_t c_end = c_start + c_per_offset_group;
@@ -432,10 +432,10 @@ namespace tvdcn {
                         else
                             mask_val = static_cast<scalar_t>(1);
 
-                        grad_offset_val += columns[c][i][j][b][h][w] * weight * mask_val;
+                        grad_offset_val += static_cast<acc_t<scalar_t>>(columns[c][i][j][b][h][w]) * static_cast<acc_t<scalar_t>>(weight) * static_cast<acc_t<scalar_t>>(mask_val);
                     }
 
-                    grad_offset[b][g][i][j][o][h][w] = grad_offset_val;
+                    grad_offset[b][g][i][j][o][h][w] = static_cast<scalar_t>(grad_offset_val);
                 }
             }
 
@@ -537,7 +537,7 @@ namespace tvdcn {
                     const index_t g = (index / (weight_w * weight_h * out_w * out_h)) % mask_groups;
                     const index_t b = index / (out_w * out_h * weight_w * weight_h * mask_groups);
 
-                    scalar_t grad_mask_val = 0;
+                    acc_t<scalar_t> grad_mask_val = 0;
 
                     const index_t c_start = g * c_per_mask_group;
                     const index_t c_end = c_start + c_per_mask_group;
@@ -556,10 +556,10 @@ namespace tvdcn {
                         else
                             val = sample(input, b, c, height, width, y, x);
 
-                        grad_mask_val += columns[c][i][j][b][h][w] * val;
+                        grad_mask_val += static_cast<acc_t<scalar_t>>(columns[c][i][j][b][h][w]) * static_cast<acc_t<scalar_t>>(val);
                     }
 
-                    grad_mask[b][g][i][j][h][w] = grad_mask_val;
+                    grad_mask[b][g][i][j][h][w] = static_cast<scalar_t>(grad_mask_val);
                 }
             }
 

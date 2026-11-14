@@ -323,7 +323,7 @@ namespace tvdcn {
                     const index_t g = (index / (out_w * weight_w)) % offset_groups;
                     const index_t b = index / (out_w * weight_w * offset_groups);
 
-                    scalar_t grad_offset_val = 0;
+                    acc_t<scalar_t> grad_offset_val = 0;
 
                     const index_t c_start = g * c_per_offset_group;
                     const index_t c_end = c_start + c_per_offset_group;
@@ -342,10 +342,10 @@ namespace tvdcn {
                         else
                             mask_val = static_cast<scalar_t>(1);
 
-                        grad_offset_val += columns[c][i][b][w] * weight * mask_val;
+                        grad_offset_val += static_cast<acc_t<scalar_t>>(columns[c][i][b][w]) * static_cast<acc_t<scalar_t>>(weight) * static_cast<acc_t<scalar_t>>(mask_val);
                     }
 
-                    grad_offset[b][g][i][0][w] = grad_offset_val;
+                    grad_offset[b][g][i][0][w] = static_cast<scalar_t>(grad_offset_val);
                 }
             }
 
@@ -427,7 +427,7 @@ namespace tvdcn {
                     const index_t g = (index / (out_w * weight_w)) % mask_groups;
                     const index_t b = index / (out_w * weight_w * mask_groups);
 
-                    scalar_t grad_mask_val = 0;
+                    acc_t<scalar_t> grad_mask_val = 0;
 
                     const index_t c_start = g * c_per_mask_group;
                     const index_t c_end = c_start + c_per_mask_group;
@@ -444,10 +444,10 @@ namespace tvdcn {
                         else
                             val = sample(input, b, c, width, x);
 
-                        grad_mask_val += columns[c][i][b][w] * val;
+                        grad_mask_val += static_cast<acc_t<scalar_t>>(columns[c][i][b][w]) * static_cast<acc_t<scalar_t>>(val);
                     }
 
-                    grad_mask[b][g][i][w] = grad_mask_val;
+                    grad_mask[b][g][i][w] = static_cast<scalar_t>(grad_mask_val);
                 }
             }
 

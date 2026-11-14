@@ -209,33 +209,39 @@ namespace tvdcn {
                     const index_t c_per_offset_group,
                     const index_t c_per_mask_group,
                     torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 3> grad_input) {
-                CPU_1D_KERNEL_LOOP_T(index, n_kernels, index_t) {
-                    const index_t i = index % weight_w;
-                    const index_t w = (index / weight_w) % out_w;
-                    const index_t c = (index / (weight_w * out_w)) % in_channels;
-                    const index_t b = (index / (weight_w * out_w * in_channels));
+                // Each (b, c) plane is a contiguous index range that writes only
+                // grad_input[b][c], so planes can run in parallel without atomics.
+                if (n_kernels == 0) return;
+                const index_t plane_size = weight_w * out_w;
+                torch::stable::parallel_for(0, n_kernels / plane_size, 1, [&](int64_t p_begin, int64_t p_end) {
+                    for (index_t index = p_begin * plane_size; index < p_end * plane_size; ++index) {
+                        const index_t i = index % weight_w;
+                        const index_t w = (index / weight_w) % out_w;
+                        const index_t c = (index / (weight_w * out_w)) % in_channels;
+                        const index_t b = (index / (weight_w * out_w * in_channels));
 
-                    const index_t offset_group_idx = c / c_per_offset_group;
-                    const index_t mask_group_idx = c / c_per_mask_group;
+                        const index_t offset_group_idx = c / c_per_offset_group;
+                        const index_t mask_group_idx = c / c_per_mask_group;
 
-                    const index_t x = (w * stride_w - pad_w) + i * dilation_w;
+                        const index_t x = (w * stride_w - pad_w) + i * dilation_w;
 
-                    scalar_t mask_val;
-                    if constexpr (modulated)
-                        mask_val = mask[b][mask_group_idx][i][w];
-                    else
-                        mask_val = static_cast<scalar_t>(1);
+                        scalar_t mask_val;
+                        if constexpr (modulated)
+                            mask_val = mask[b][mask_group_idx][i][w];
+                        else
+                            mask_val = static_cast<scalar_t>(1);
 
-                    scalar_t val = columns[c][i][b][w] * mask_val;
+                        scalar_t val = columns[c][i][b][w] * mask_val;
 
-                    if constexpr (deformable)
-                        interpolate_insert(
-                                grad_input, b, c, width,
-                                x + offset[b][offset_group_idx][i][0][w],
-                                val);
-                    else
-                        insert(grad_input, b, c, width, x, val);
-                }
+                        if constexpr (deformable)
+                            interpolate_insert(
+                                    grad_input, b, c, width,
+                                    x + offset[b][offset_group_idx][i][0][w],
+                                    val);
+                        else
+                            insert(grad_input, b, c, width, x, val);
+                    }
+                });
             }
 
             void col2arr(
@@ -310,7 +316,7 @@ namespace tvdcn {
                         const index_t g = (index / (weight_w * out_w)) % offset_groups;
                         const index_t b = index / (weight_w * out_w * offset_groups);
 
-                        scalar_t grad_offset_val = 0;
+                        acc_t<scalar_t> grad_offset_val = 0;
 
                         const index_t c_start = g * c_per_offset_group;
                         const index_t c_end = c_start + c_per_offset_group;
@@ -329,10 +335,10 @@ namespace tvdcn {
                             else
                                 mask_val = static_cast<scalar_t>(1);
 
-                            grad_offset_val += columns[c][i][b][w] * weight * mask_val;
+                            grad_offset_val += static_cast<acc_t<scalar_t>>(columns[c][i][b][w]) * static_cast<acc_t<scalar_t>>(weight) * static_cast<acc_t<scalar_t>>(mask_val);
                         }
 
-                        grad_offset[b][g][i][0][w] = grad_offset_val;
+                        grad_offset[b][g][i][0][w] = static_cast<scalar_t>(grad_offset_val);
                     }
                 });
             }
@@ -411,7 +417,7 @@ namespace tvdcn {
                         const index_t g = (index / (weight_w * out_w)) % mask_groups;
                         const index_t b = index / (out_w * weight_w * mask_groups);
 
-                        scalar_t grad_mask_val = 0;
+                        acc_t<scalar_t> grad_mask_val = 0;
 
                         const index_t c_start = g * c_per_mask_group;
                         const index_t c_end = c_start + c_per_mask_group;
@@ -428,10 +434,10 @@ namespace tvdcn {
                             else
                                 val = sample(input, b, c, width, x);
 
-                            grad_mask_val += columns[c][i][b][w] * val;
+                            grad_mask_val += static_cast<acc_t<scalar_t>>(columns[c][i][b][w]) * static_cast<acc_t<scalar_t>>(val);
                         }
 
-                        grad_mask[b][g][i][w] = grad_mask_val;
+                        grad_mask[b][g][i][w] = static_cast<scalar_t>(grad_mask_val);
                     }
                 });
             }
