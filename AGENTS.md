@@ -23,7 +23,7 @@ These rules apply to every agent (Claude, Codex) working in this repository.
 
 - Target the PyTorch stable ABI (`torch/csrc/stable`, `torch/headeronly`)
   with `TORCH_TARGET_VERSION` set in `setup.py`. Do not include ATen, c10 or
-  `torch/extension.h` headers in extension sources once a family is ported.
+  `torch/extension.h` headers in extension sources.
   Ops with no stable wrapper go through `torch_call_dispatcher` shims in
   `tvdcn/csrc/ops/StableABICompat.h`.
 - Layers follow torchvision: schemas in `csrc/ops/*.cpp`, kernels in

@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 import tvdcn
 
-from .utils.cases import forward, make_case, mark_legacy_optional_backward
+from .utils.cases import forward, make_case
 
 
 @pytest.mark.parametrize('dim', [1, 2, 3])
@@ -36,8 +36,7 @@ def test_module_forward_and_reset(dim, transposed, profile, device):
 @pytest.mark.parametrize('transposed', [False, True], ids=['conv', 'transpose'])
 @pytest.mark.parametrize('deformable,modulated', [(False, False), (True, False), (False, True), (True, True)])
 @pytest.mark.parametrize('activation', ['sigmoid', 'softmax'])
-def test_packed_modules(dim, transposed, deformable, modulated, activation, device, request):
-    mark_legacy_optional_backward(request, not (deformable and modulated))
+def test_packed_modules(dim, transposed, deformable, modulated, activation, device):
     cls = getattr(tvdcn, f"PackedDeformConv{'Transpose' if transposed else ''}{dim}d")
     kwargs = dict(stride=2, padding=1, dilation=2, groups=2)
     if transposed:

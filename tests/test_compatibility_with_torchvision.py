@@ -2,15 +2,13 @@ import pytest
 import torch
 import torchvision
 
-from .utils.cases import (has_missing_optional, make_case, mark_legacy_optional_backward,
-                          output_and_grads)
+from .utils.cases import (make_case, output_and_grads)
 
 
 @pytest.mark.parametrize('profile', ['offset', 'both', 'grouped'])
 @pytest.mark.parametrize('dtype', [torch.float64, torch.float32], ids=['double', 'float'])
-def test_torchvision_parity(profile, dtype, device, request):
+def test_torchvision_parity(profile, dtype, device):
     case = make_case(2, False, profile, dtype=dtype, device=device)
-    mark_legacy_optional_backward(request, has_missing_optional(case))
     if profile == 'grouped':
         # Torchvision requires mask_groups == offset_groups.
         case['tensors']['mask'] = case['tensors']['mask'].detach().repeat(1, 2, 1, 1).requires_grad_()

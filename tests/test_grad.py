@@ -2,19 +2,15 @@ import pytest
 import torch
 import torch.nn.functional as F
 
-from .utils.cases import (PROFILES, forward, has_missing_optional, make_case, operator,
-                          mark_legacy_optional_backward, output_and_grads)
+from .utils.cases import (PROFILES, forward, make_case, operator, output_and_grads)
 
 
 @pytest.mark.parametrize('dim', [1, 2, 3])
 @pytest.mark.parametrize('transposed', [False, True], ids=['conv', 'transpose'])
 @pytest.mark.parametrize('profile', PROFILES)
 @pytest.mark.parametrize('dtype', [torch.float64, torch.float32, torch.float16], ids=['double', 'float', 'half'])
-def test_operator_paths(dim, transposed, profile, dtype, device, request):
-    if dtype == torch.float16 and device == 'cpu' and transposed:
-        pytest.skip('legacy transposed float16 kernels are CUDA-only')
+def test_operator_paths(dim, transposed, profile, dtype, device):
     case = make_case(dim, transposed, profile, device=device, dtype=dtype)
-    mark_legacy_optional_backward(request, has_missing_optional(case))
     output, grads = output_and_grads(case)
     assert tuple(output.shape) == case['output_shape']
     assert output.dtype == dtype
@@ -28,9 +24,8 @@ def test_operator_paths(dim, transposed, profile, dtype, device, request):
 @pytest.mark.parametrize('dim', [1, 2, 3])
 @pytest.mark.parametrize('transposed', [False, True], ids=['conv', 'transpose'])
 @pytest.mark.parametrize('profile', ['plain', 'offset', 'mask', 'both'])
-def test_gradcheck(dim, transposed, profile, device, request):
+def test_gradcheck(dim, transposed, profile, device):
     case = make_case(dim, transposed, profile, device=device, small=True)
-    mark_legacy_optional_backward(request, has_missing_optional(case))
     names = [name for name, value in case['tensors'].items() if value is not None]
 
     def call(*values):
@@ -45,9 +40,8 @@ def test_gradcheck(dim, transposed, profile, device, request):
 @pytest.mark.parametrize('dim', [1, 2, 3])
 @pytest.mark.parametrize('transposed', [False, True], ids=['conv', 'transpose'])
 @pytest.mark.parametrize('profile', ['plain', 'grouped', 'geometry'])
-def test_ordinary_convolution_parity(dim, transposed, profile, device, request):
+def test_ordinary_convolution_parity(dim, transposed, profile, device):
     case = make_case(dim, transposed, profile, device=device)
-    mark_legacy_optional_backward(request, has_missing_optional(case))
     tensors = case['tensors']
     # Zero offsets and unit masks must reduce to the corresponding torch op.
     for name, fill in [('offset', 0), ('mask', 1)]:

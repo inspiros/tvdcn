@@ -26,8 +26,8 @@ def _cast(t):
     return t
 
 
-def _register_family(dim):
-    name = f'deform_conv{dim}d'
+def _register_family(dim, transposed):
+    name = f"deform_conv{'_transpose' if transposed else ''}{dim}d"
     if not hasattr(torch.ops.tvdcn, name):
         return
     forward_op = getattr(torch.ops.tvdcn, name)
@@ -39,38 +39,67 @@ def _register_family(dim):
         grads = backward_op(grad, *tensors, *ctx.geometry)
         return tuple(g if t is not None and i < len(ctx.needs_input_grad)
                      and ctx.needs_input_grad[i] else None
-                     for i, (g, t) in enumerate(zip(grads, tensors))) + (None,) * 4
+                     for i, (g, t) in enumerate(zip(grads, tensors))) + (None,) * len(ctx.geometry)
 
     def _no_double_backward(ctx, *grads):
         raise RuntimeError(f'double backwards on {name} not supported')
 
-    def _fake_forward(input, weight, offset=None, mask=None, bias=None,
-                      stride=ones, padding=zeros, dilation=ones, groups=1):
+    def _fake_output(input, weight, stride, padding, dilation, groups, output_padding=None):
         torch._check(input.dim() in (dim + 1, dim + 2),
                      lambda: f'Expected {dim + 1}D or {dim + 2}D input')
         torch._check(weight.dim() == dim + 2, lambda: f'Expected {dim + 2}D weight')
-        out = tuple((input.shape[-dim + i] + 2 * padding[i]
-                     - dilation[i] * (weight.shape[2 + i] - 1) - 1) // stride[i] + 1
-                    for i in range(dim))
+        if transposed:
+            out = tuple((input.shape[-dim + i] - 1) * stride[i] - 2 * padding[i]
+                        + dilation[i] * (weight.shape[2 + i] - 1) + 1 + output_padding[i]
+                        for i in range(dim))
+            channels = weight.shape[1] * groups
+        else:
+            out = tuple((input.shape[-dim + i] + 2 * padding[i]
+                         - dilation[i] * (weight.shape[2 + i] - 1) - 1) // stride[i] + 1
+                        for i in range(dim))
+            channels = weight.shape[0]
         for size in out:
             torch._check(size > 0, lambda: 'Calculated output size too small')
-        shape = (*input.shape[:-dim - 1], weight.shape[0], *out)
-        return input.new_empty(shape)
+        return input.new_empty((*input.shape[:-dim - 1], channels, *out))
 
-    def _autocast(input, weight, offset=None, mask=None, bias=None,
-                  stride=ones, padding=zeros, dilation=ones, groups=1):
+    def _autocast_impl(tensors, geometry):
         with torch._C._ExcludeDispatchKeyGuard(_autocast_keys):
-            return forward_op(*(_cast(t) for t in (input, weight, offset, mask, bias)),
-                              stride, padding, dilation, groups).to(input.dtype)
+            return forward_op(*(_cast(t) for t in tensors), *geometry).to(tensors[0].dtype)
+
+    if transposed:
+        def _fake_forward(input, weight, offset=None, mask=None, bias=None,
+                          stride=ones, padding=zeros, output_padding=zeros, dilation=ones, groups=1):
+            return _fake_output(input, weight, stride, padding, dilation, groups, output_padding)
+
+        def _family_fake_backward(grad, input, weight, offset=None, mask=None, bias=None,
+                                  stride=ones, padding=zeros, output_padding=zeros, dilation=ones, groups=1):
+            return _fake_backward(grad, input, weight, offset, mask, bias)
+
+        def _autocast(input, weight, offset=None, mask=None, bias=None,
+                      stride=ones, padding=zeros, output_padding=zeros, dilation=ones, groups=1):
+            return _autocast_impl((input, weight, offset, mask, bias),
+                                  (stride, padding, output_padding, dilation, groups))
+    else:
+        def _fake_forward(input, weight, offset=None, mask=None, bias=None,
+                          stride=ones, padding=zeros, dilation=ones, groups=1):
+            return _fake_output(input, weight, stride, padding, dilation, groups)
+
+        _family_fake_backward = _fake_backward
+
+        def _autocast(input, weight, offset=None, mask=None, bias=None,
+                      stride=ones, padding=zeros, dilation=ones, groups=1):
+            return _autocast_impl((input, weight, offset, mask, bias),
+                                  (stride, padding, dilation, groups))
 
     torch.library.register_autograd(f'tvdcn::{name}', _backward,
                                     setup_context=_setup_context)
     torch.library.register_autograd(f'tvdcn::_{name}_backward', _no_double_backward)
     torch.library.register_fake(f'tvdcn::{name}', _fake_forward)
-    torch.library.register_fake(f'tvdcn::_{name}_backward', _fake_backward)
+    torch.library.register_fake(f'tvdcn::_{name}_backward', _family_fake_backward)
     for key in ('AutocastCPU', 'AutocastCUDA'):
         _autocast_lib.impl(name, _autocast, key)
 
 
 for _dim in (1, 2, 3):
-    _register_family(_dim)
+    for _transposed in (False, True):
+        _register_family(_dim, _transposed)

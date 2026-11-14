@@ -1,4 +1,4 @@
-"""Build a standalone stable C++ consumer of the public non-transposed wrappers."""
+"""Build a standalone stable C++ consumer of the public convolution wrappers."""
 import os
 from pathlib import Path
 import subprocess

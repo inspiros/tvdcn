@@ -1,7 +1,6 @@
 """Small deterministic cases shared by pytest and the legacy fixture generator."""
 import math
 
-import pytest
 import torch
 import tvdcn
 
@@ -76,23 +75,3 @@ def output_and_grads(case):
     active = {name: tensor for name, tensor in case['tensors'].items() if tensor is not None}
     grads = torch.autograd.grad(output, tuple(active.values()), probe)
     return output, dict(zip(active, grads))
-
-
-# The legacy C++ autograd saves an absent offset/mask/bias as an undefined tensor
-# and re-enters autograd with it in backward; torch 2.14 rejects that with
-# "get_autograd_meta() on undefined tensor". The stable-ABI port moves autograd
-# to Python. strict=True makes these XPASS-fail once fixed: then delete this.
-LEGACY_OPTIONAL_BACKWARD = pytest.mark.xfail(
-    raises=RuntimeError, strict=True,
-    reason='legacy C++ backward fails when offset, mask or bias is absent')
-
-
-def mark_legacy_optional_backward(request, missing):
-    params = request.node.callspec.params
-    ported = not params.get('transposed', False)
-    if missing and not ported:
-        request.applymarker(LEGACY_OPTIONAL_BACKWARD)
-
-
-def has_missing_optional(case):
-    return any(case['tensors'][name] is None for name in ('offset', 'mask', 'bias'))

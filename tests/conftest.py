@@ -22,6 +22,17 @@ def pytest_collection_modifyitems(config, items):
                 item.add_marker(skip)
 
 
+def pytest_sessionstart(session):
+    names = [f"{prefix}deform_conv{transpose}{dim}d{suffix}"
+             for transpose in ('', '_transpose') for dim in (1, 2, 3)
+             for prefix, suffix in (('', ''), ('_', '_backward'))]
+    missing = [name for name in names if not hasattr(torch.ops.tvdcn, name)]
+    if missing:
+        raise pytest.UsageError(
+            'tvdcn._C is missing required operators: ' + ', '.join(missing)
+            + '. Rebuild with: python setup.py build_ext --inplace')
+
+
 def pytest_generate_tests(metafunc):
     if 'device' in metafunc.fixturenames:
         requested = metafunc.config.getoption('--device')
@@ -32,12 +43,6 @@ def pytest_generate_tests(metafunc):
 @pytest.fixture(autouse=True)
 def device_availability(request):
     callspec = getattr(request.node, 'callspec', None)
-    if callspec is not None and 'dim' in callspec.params and 'activations' not in request.node.nodeid:
-        dim = callspec.params['dim']
-        transposed = callspec.params.get('transposed', 'transposed_output_size' in request.node.name)
-        name = f"deform_conv{'_transpose' if transposed else ''}{dim}d"
-        if not hasattr(torch.ops.tvdcn, name):
-            pytest.skip(f'{name} is not registered in this build')
     if callspec is not None and callspec.params.get('device') == 'cuda':
         if not torch.cuda.is_available():
             pytest.skip('CUDA requested but unavailable')
