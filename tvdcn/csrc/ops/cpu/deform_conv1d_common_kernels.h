@@ -1,14 +1,14 @@
 #pragma once
 
-#include <ATen/ATen.h>
+#include "../StableABICompat.h"
 
 namespace tvdcn {
     namespace ops {
         namespace cpu {
             void arr2col(
-                    const at::Tensor &input,
-                    const at::Tensor &offset,
-                    const at::Tensor &mask,
+                    const torch::stable::Tensor &input,
+                    const torch::stable::Tensor &offset,
+                    const torch::stable::Tensor &mask,
                     int64_t in_channels,
                     int64_t width,
                     int64_t weight_w,
@@ -21,12 +21,12 @@ namespace tvdcn {
                     int64_t mask_groups,
                     bool deformable,
                     bool modulated,
-                    at::Tensor &columns);
+                    torch::stable::Tensor &columns);
 
             void col2arr(
-                    const at::Tensor &columns,
-                    const at::Tensor &offset,
-                    const at::Tensor &mask,
+                    const torch::stable::Tensor &columns,
+                    const torch::stable::Tensor &offset,
+                    const torch::stable::Tensor &mask,
                     int64_t in_channels,
                     int64_t width,
                     int64_t weight_w,
@@ -39,13 +39,13 @@ namespace tvdcn {
                     int64_t mask_groups,
                     bool deformable,
                     bool modulated,
-                    at::Tensor &grad_input);
+                    torch::stable::Tensor &grad_input);
 
             void deform_conv1d_compute_grad_offset(
-                    const at::Tensor &columns,
-                    const at::Tensor &input,
-                    const at::Tensor &offset,
-                    const at::Tensor &mask,
+                    const torch::stable::Tensor &columns,
+                    const torch::stable::Tensor &input,
+                    const torch::stable::Tensor &offset,
+                    const torch::stable::Tensor &mask,
                     int64_t in_channels,
                     int64_t width,
                     int64_t weight_w,
@@ -58,12 +58,12 @@ namespace tvdcn {
                     int64_t mask_groups,
                     bool deformable,
                     bool modulated,
-                    at::Tensor &grad_offset);
+                    torch::stable::Tensor &grad_offset);
 
             void deform_conv1d_compute_grad_mask(
-                    const at::Tensor &columns,
-                    const at::Tensor &input,
-                    const at::Tensor &offset,
+                    const torch::stable::Tensor &columns,
+                    const torch::stable::Tensor &input,
+                    const torch::stable::Tensor &offset,
                     int64_t in_channels,
                     int64_t width,
                     int64_t weight_w,
@@ -76,7 +76,7 @@ namespace tvdcn {
                     int64_t mask_groups,
                     bool deformable,
                     bool modulated,
-                    at::Tensor &grad_mask);
+                    torch::stable::Tensor &grad_mask);
         }
     }
 }

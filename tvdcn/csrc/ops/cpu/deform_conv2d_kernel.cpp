@@ -137,15 +137,15 @@ namespace tvdcn {
                 int64_t weight_h = weight_c.size(2);
                 int64_t weight_w = weight_c.size(3);
 
-                auto stride_c = stable_compat::pair(stride);
+                auto stride_c = stable_compat::ntuple<2>(stride);
                 int64_t stride_h = stride_c[0];
                 int64_t stride_w = stride_c[1];
 
-                auto padding_c = stable_compat::pair(padding);
+                auto padding_c = stable_compat::ntuple<2>(padding);
                 int64_t pad_h = padding_c[0];
                 int64_t pad_w = padding_c[1];
 
-                auto dilation_c = stable_compat::pair(dilation);
+                auto dilation_c = stable_compat::ntuple<2>(dilation);
                 int64_t dilation_h = dilation_c[0];
                 int64_t dilation_w = dilation_c[1];
 
@@ -420,15 +420,15 @@ namespace tvdcn {
                 int64_t weight_h = weight_c.size(2);
                 int64_t weight_w = weight_c.size(3);
 
-                auto stride_c = stable_compat::pair(stride);
+                auto stride_c = stable_compat::ntuple<2>(stride);
                 int64_t stride_h = stride_c[0];
                 int64_t stride_w = stride_c[1];
 
-                auto padding_c = stable_compat::pair(padding);
+                auto padding_c = stable_compat::ntuple<2>(padding);
                 int64_t pad_h = padding_c[0];
                 int64_t pad_w = padding_c[1];
 
-                auto dilation_c = stable_compat::pair(dilation);
+                auto dilation_c = stable_compat::ntuple<2>(dilation);
                 int64_t dilation_h = dilation_c[0];
                 int64_t dilation_w = dilation_c[1];
 

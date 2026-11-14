@@ -23,7 +23,7 @@ from torch.utils.cpp_extension import CppExtension
 
 PACKAGE_ROOT = 'tvdcn'
 # Single source of truth for the families included in a stable-only build.
-PORTED_FAMILIES = ('deform_conv2d',)
+PORTED_FAMILIES = ('deform_conv1d', 'deform_conv2d', 'deform_conv3d')
 
 
 class TVDCNDistribution(Distribution):

@@ -1,7 +1,7 @@
-#include <ATen/ATen.h>
+#include "../StableABICompat.h"
 
 #include "cpu_helpers.h"
-#include "../utils/dispatch.h"
+#include "../StableDispatch.h"
 
 namespace tvdcn {
     namespace ops {
@@ -9,7 +9,7 @@ namespace tvdcn {
             namespace {
                 template<typename scalar_t, typename index_t>
                 __forceinline__ scalar_t sample(
-                        const at::TensorAccessor<scalar_t, 5> input,
+                        const torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 5> input,
                         const index_t b,
                         const index_t c,
                         const index_t depth,
@@ -24,7 +24,7 @@ namespace tvdcn {
 
                 template<typename scalar_t, typename index_t>
                 __forceinline__ scalar_t interpolate_sample(
-                        const at::TensorAccessor<scalar_t, 5> input,
+                        const torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 5> input,
                         const index_t b,
                         const index_t c,
                         const index_t depth,
@@ -79,7 +79,7 @@ namespace tvdcn {
 
                 template<typename scalar_t, typename index_t>
                 __forceinline__ void insert(
-                        at::TensorAccessor<scalar_t, 5> output,
+                        torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 5> output,
                         const index_t b,
                         const index_t c,
                         const index_t depth,
@@ -95,7 +95,7 @@ namespace tvdcn {
 
                 template<typename scalar_t, typename index_t>
                 __forceinline__ void interpolate_insert(
-                        at::TensorAccessor<scalar_t, 5> output,
+                        torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 5> output,
                         const index_t b,
                         const index_t c,
                         const index_t depth,
@@ -146,7 +146,7 @@ namespace tvdcn {
 
                 template<typename scalar_t, typename index_t>
                 __forceinline__ scalar_t coordinate_weight(
-                        const at::TensorAccessor<scalar_t, 5> input,
+                        const torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 5> input,
                         const index_t b,
                         const index_t c,
                         const index_t depth,
@@ -201,9 +201,9 @@ namespace tvdcn {
             template<bool deformable, bool modulated, typename scalar_t, typename index_t>
             static void vol2col_kernel(
                     const index_t n_kernels,
-                    const at::TensorAccessor<scalar_t, 5> input,
-                    const at::TensorAccessor<scalar_t, 9> offset,
-                    const at::TensorAccessor<scalar_t, 8> mask,
+                    const torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 5> input,
+                    const torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 9> offset,
+                    const torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 8> mask,
                     const index_t depth,
                     const index_t height,
                     const index_t width,
@@ -225,50 +225,52 @@ namespace tvdcn {
                     const index_t in_channels,
                     const index_t c_per_offset_group,
                     const index_t c_per_mask_group,
-                    at::TensorAccessor<scalar_t, 8> columns) {
-                CPU_1D_PARALLEL_KERNEL_LOOP_T(index, n_kernels, index_t) {
-                    const index_t w = index % out_w;
-                    const index_t h = (index / out_w) % out_h;
-                    const index_t d = (index / (out_w * out_h)) % out_d;
-                    const index_t c = (index / (out_w * out_h * out_d)) % in_channels;
-                    const index_t b = index / (out_w * out_h * out_d * in_channels);
+                    torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 8> columns) {
+                torch::stable::parallel_for(0, n_kernels, 0, [&](int64_t begin, int64_t end) {
+                    for (index_t index = begin; index < end; ++index) {
+                        const index_t w = index % out_w;
+                        const index_t h = (index / out_w) % out_h;
+                        const index_t d = (index / (out_w * out_h)) % out_d;
+                        const index_t c = (index / (out_w * out_h * out_d)) % in_channels;
+                        const index_t b = index / (out_w * out_h * out_d * in_channels);
 
-                    const index_t offset_group_idx = c / c_per_offset_group;
-                    const index_t mask_group_idx = c / c_per_mask_group;
+                        const index_t offset_group_idx = c / c_per_offset_group;
+                        const index_t mask_group_idx = c / c_per_mask_group;
 
-                    for (index_t i = 0; i < weight_d; ++i) {
-                        for (index_t j = 0; j < weight_h; ++j) {
-                            for (index_t k = 0; k < weight_w; ++k) {
-                                const index_t z = (d * stride_d - pad_d) + i * dilation_d;
-                                const index_t y = (h * stride_h - pad_h) + j * dilation_h;
-                                const index_t x = (w * stride_w - pad_w) + k * dilation_w;
+                        for (index_t i = 0; i < weight_d; ++i) {
+                            for (index_t j = 0; j < weight_h; ++j) {
+                                for (index_t k = 0; k < weight_w; ++k) {
+                                    const index_t z = (d * stride_d - pad_d) + i * dilation_d;
+                                    const index_t y = (h * stride_h - pad_h) + j * dilation_h;
+                                    const index_t x = (w * stride_w - pad_w) + k * dilation_w;
 
-                                scalar_t val, mask_val;
-                                if constexpr (deformable)
-                                    val = interpolate_sample(
-                                            input, b, c, depth, height, width,
-                                            z + offset[b][offset_group_idx][i][j][k][0][d][h][w],
-                                            y + offset[b][offset_group_idx][i][j][k][1][d][h][w],
-                                            x + offset[b][offset_group_idx][i][j][k][2][d][h][w]);
-                                else
-                                    val = sample(input, b, c, depth, height, width, z, y, x);
+                                    scalar_t val, mask_val;
+                                    if constexpr (deformable)
+                                        val = interpolate_sample(
+                                                input, b, c, depth, height, width,
+                                                z + offset[b][offset_group_idx][i][j][k][0][d][h][w],
+                                                y + offset[b][offset_group_idx][i][j][k][1][d][h][w],
+                                                x + offset[b][offset_group_idx][i][j][k][2][d][h][w]);
+                                    else
+                                        val = sample(input, b, c, depth, height, width, z, y, x);
 
-                                if constexpr (modulated)
-                                    mask_val = mask[b][mask_group_idx][i][j][k][d][h][w];
-                                else
-                                    mask_val = static_cast<scalar_t>(1);
+                                    if constexpr (modulated)
+                                        mask_val = mask[b][mask_group_idx][i][j][k][d][h][w];
+                                    else
+                                        mask_val = static_cast<scalar_t>(1);
 
-                                columns[c][i][j][k][b][d][h][w] = val * mask_val;
+                                    columns[c][i][j][k][b][d][h][w] = val * mask_val;
+                                }
                             }
                         }
                     }
-                }
+                });
             }
 
             void vol2col(
-                    const at::Tensor &input,
-                    const at::Tensor &offset,
-                    const at::Tensor &mask,
+                    const torch::stable::Tensor &input,
+                    const torch::stable::Tensor &offset,
+                    const torch::stable::Tensor &mask,
                     const int64_t in_channels,
                     const int64_t depth,
                     const int64_t height,
@@ -293,22 +295,22 @@ namespace tvdcn {
                     const int64_t mask_groups,
                     const bool deformable,
                     const bool modulated,
-                    at::Tensor &columns) {
+                    torch::stable::Tensor &columns) {
                 const int64_t n_kernels = (int64_t) batch_sz * in_channels * out_d * out_h * out_w;
                 const int64_t c_per_offset_group = deformable ? in_channels / offset_groups : 1;
                 const int64_t c_per_mask_group = modulated ? in_channels / mask_groups : 1;
 
-                AT_DISPATCH_FLOATING_TYPES_AND_HALF(
+                THO_DISPATCH_V2(
                         input.scalar_type(), "vol2col", ([&] {
                     TVDCN_DISPATCH_INDEX_TYPE_DEVICE(n_kernels, CPU, ([&] {
                         auto columns_accessor =
-                                columns.accessor<scalar_t, 8>();
+                                stable_compat::accessor<scalar_t, 8>(columns);
                         TVDCN_DISPATCH_CONDITION2(deformable, modulated, ([&] {
                             vol2col_kernel<deformable, modulated, scalar_t, index_t>(
                                     n_kernels,
-                                    input.accessor<scalar_t, 5>(),
-                                    offset.accessor<scalar_t, 9>(),
-                                    mask.accessor<scalar_t, 8>(),
+                                    stable_compat::accessor<scalar_t, 5>(input),
+                                    stable_compat::accessor<scalar_t, 9>(offset),
+                                    stable_compat::accessor<scalar_t, 8>(mask),
                                     depth,
                                     height,
                                     width,
@@ -333,15 +335,16 @@ namespace tvdcn {
                                     columns_accessor);
                         }));
                     }));
-                }));
+                }), AT_FLOATING_TYPES, torch::headeronly::ScalarType::Half,
+                    torch::headeronly::ScalarType::BFloat16);
             }
 
             template<bool deformable, bool modulated, typename scalar_t, typename index_t>
             static void col2vol_kernel(
                     const index_t n_kernels,
-                    const at::TensorAccessor<scalar_t, 8> columns,
-                    const at::TensorAccessor<scalar_t, 9> offset,
-                    const at::TensorAccessor<scalar_t, 8> mask,
+                    const torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 8> columns,
+                    const torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 9> offset,
+                    const torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 8> mask,
                     const index_t in_channels,
                     const index_t depth,
                     const index_t height,
@@ -363,7 +366,7 @@ namespace tvdcn {
                     const index_t out_w,
                     const index_t c_per_offset_group,
                     const index_t c_per_mask_group,
-                    at::TensorAccessor<scalar_t, 5> grad_input) {
+                    torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 5> grad_input) {
                 CPU_1D_KERNEL_LOOP_T(index, n_kernels, index_t) {
                     const index_t k = index % weight_w;
                     const index_t j = (index / weight_w) % weight_h;
@@ -402,9 +405,9 @@ namespace tvdcn {
             }
 
             void col2vol(
-                    const at::Tensor &columns,
-                    const at::Tensor &offset,
-                    const at::Tensor &mask,
+                    const torch::stable::Tensor &columns,
+                    const torch::stable::Tensor &offset,
+                    const torch::stable::Tensor &mask,
                     const int64_t in_channels,
                     const int64_t depth,
                     const int64_t height,
@@ -429,23 +432,23 @@ namespace tvdcn {
                     const int64_t mask_groups,
                     const bool deformable,
                     const bool modulated,
-                    at::Tensor &grad_input) {
+                    torch::stable::Tensor &grad_input) {
                 const int64_t n_kernels =
                         (int64_t) batch_sz * in_channels * out_d * out_h * out_w * weight_d * weight_h * weight_w;
                 const int64_t c_per_offset_group = deformable ? in_channels / offset_groups : 1;
                 const int64_t c_per_mask_group = modulated ? in_channels / mask_groups : 1;
 
-                AT_DISPATCH_FLOATING_TYPES_AND_HALF(
+                THO_DISPATCH_V2(
                         columns.scalar_type(), "col2vol", ([&] {
                     TVDCN_DISPATCH_INDEX_TYPE_DEVICE(n_kernels, CPU, ([&] {
                         auto grad_input_accessor =
-                                grad_input.accessor<scalar_t, 5>();
+                                stable_compat::accessor<scalar_t, 5>(grad_input);
                         TVDCN_DISPATCH_CONDITION2(deformable, modulated, ([&] {
                             col2vol_kernel<deformable, modulated, scalar_t, index_t>(
                                     n_kernels,
-                                    columns.accessor<scalar_t, 8>(),
-                                    offset.accessor<scalar_t, 9>(),
-                                    mask.accessor<scalar_t, 8>(),
+                                    stable_compat::accessor<scalar_t, 8>(columns),
+                                    stable_compat::accessor<scalar_t, 9>(offset),
+                                    stable_compat::accessor<scalar_t, 8>(mask),
                                     in_channels,
                                     depth,
                                     height,
@@ -470,16 +473,17 @@ namespace tvdcn {
                                     grad_input_accessor);
                         }));
                     }));
-                }));
+                }), AT_FLOATING_TYPES, torch::headeronly::ScalarType::Half,
+                    torch::headeronly::ScalarType::BFloat16);
             }
 
             template<bool modulated, typename scalar_t, typename index_t>
             static void deform_conv3d_compute_grad_offset_kernel(
                     const index_t n_kernels,
-                    const at::TensorAccessor<scalar_t, 8> columns,
-                    const at::TensorAccessor<scalar_t, 5> input,
-                    const at::TensorAccessor<scalar_t, 9> offset,
-                    const at::TensorAccessor<scalar_t, 8> mask,
+                    const torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 8> columns,
+                    const torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 5> input,
+                    const torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 9> offset,
+                    const torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 8> mask,
                     const index_t depth,
                     const index_t height,
                     const index_t width,
@@ -501,57 +505,59 @@ namespace tvdcn {
                     const index_t offset_groups,
                     const index_t c_per_offset_group,
                     const index_t c_per_mask_group,
-                    at::TensorAccessor<scalar_t, 9> grad_offset) {
-                CPU_1D_PARALLEL_KERNEL_LOOP_T(index, n_kernels, index_t) {
-                    const index_t o = index % 3;
-                    const index_t k = (index / 3) % weight_w;
-                    const index_t j = (index / (3 * weight_w)) % weight_h;
-                    const index_t i = (index / (3 * weight_w * weight_h)) % weight_d;
-                    const index_t w = (index / (3 * weight_w * weight_h * weight_d)) % out_w;
-                    const index_t h = (index / (3 * weight_w * weight_h * weight_d * out_w)) % out_h;
-                    const index_t d = (index / (3 * weight_w * weight_h * weight_d * out_w * out_h)) % out_d;
-                    const index_t g =
-                            (index / (3 * weight_w * weight_h * weight_d * out_w * out_h * out_d)) % offset_groups;
-                    const index_t b =
-                            index / (3 * weight_w * weight_h * weight_d * out_w * out_h * out_d * offset_groups);
+                    torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 9> grad_offset) {
+                torch::stable::parallel_for(0, n_kernels, 0, [&](int64_t begin, int64_t end) {
+                    for (index_t index = begin; index < end; ++index) {
+                        const index_t o = index % 3;
+                        const index_t k = (index / 3) % weight_w;
+                        const index_t j = (index / (3 * weight_w)) % weight_h;
+                        const index_t i = (index / (3 * weight_w * weight_h)) % weight_d;
+                        const index_t w = (index / (3 * weight_w * weight_h * weight_d)) % out_w;
+                        const index_t h = (index / (3 * weight_w * weight_h * weight_d * out_w)) % out_h;
+                        const index_t d = (index / (3 * weight_w * weight_h * weight_d * out_w * out_h)) % out_d;
+                        const index_t g =
+                                (index / (3 * weight_w * weight_h * weight_d * out_w * out_h * out_d)) % offset_groups;
+                        const index_t b =
+                                index / (3 * weight_w * weight_h * weight_d * out_w * out_h * out_d * offset_groups);
 
-                    scalar_t grad_offset_val = 0;
+                        scalar_t grad_offset_val = 0;
 
-                    const index_t c_start = g * c_per_offset_group;
-                    const index_t c_end = c_start + c_per_offset_group;
-                    for (index_t c = c_start; c < c_end; ++c) {
-                        const index_t mask_group_idx = c / c_per_mask_group;
+                        const index_t c_start = g * c_per_offset_group;
+                        const index_t c_end = c_start + c_per_offset_group;
+                        for (index_t c = c_start; c < c_end; ++c) {
+                            const index_t mask_group_idx = c / c_per_mask_group;
 
-                        const index_t z = (d * stride_d - pad_d) + i * dilation_d;
-                        const index_t y = (h * stride_h - pad_h) + j * dilation_h;
-                        const index_t x = (w * stride_w - pad_w) + k * dilation_w;
+                            const index_t z = (d * stride_d - pad_d) + i * dilation_d;
+                            const index_t y = (h * stride_h - pad_h) + j * dilation_h;
+                            const index_t x = (w * stride_w - pad_w) + k * dilation_w;
 
-                        scalar_t weight =
-                                coordinate_weight(
-                                        input, b, c, depth, height, width,
-                                        z + offset[b][g][i][j][k][0][d][h][w],
-                                        y + offset[b][g][i][j][k][1][d][h][w],
-                                        x + offset[b][g][i][j][k][2][d][h][w],
-                                        o);
+                            scalar_t weight =
+                                    coordinate_weight(
+                                            input, b, c, depth, height, width,
+                                            z + offset[b][g][i][j][k][0][d][h][w],
+                                            y + offset[b][g][i][j][k][1][d][h][w],
+                                            x + offset[b][g][i][j][k][2][d][h][w],
+                                            o);
 
-                        scalar_t mask_val;
-                        if constexpr (modulated)
-                            mask_val = mask[b][mask_group_idx][i][j][k][d][h][w];
-                        else
-                            mask_val = static_cast<scalar_t>(1);
+                            scalar_t mask_val;
+                            if constexpr (modulated)
+                                mask_val = mask[b][mask_group_idx][i][j][k][d][h][w];
+                            else
+                                mask_val = static_cast<scalar_t>(1);
 
-                        grad_offset_val += columns[c][i][j][k][b][d][h][w] * weight * mask_val;
+                            grad_offset_val += columns[c][i][j][k][b][d][h][w] * weight * mask_val;
+                        }
+
+                        grad_offset[b][g][i][j][k][o][d][h][w] = grad_offset_val;
                     }
-
-                    grad_offset[b][g][i][j][k][o][d][h][w] = grad_offset_val;
-                }
+                });
             }
 
             void deform_conv3d_compute_grad_offset(
-                    const at::Tensor &columns,
-                    const at::Tensor &input,
-                    const at::Tensor &offset,
-                    const at::Tensor &mask,
+                    const torch::stable::Tensor &columns,
+                    const torch::stable::Tensor &input,
+                    const torch::stable::Tensor &offset,
+                    const torch::stable::Tensor &mask,
                     const int64_t in_channels,
                     const int64_t depth,
                     const int64_t height,
@@ -576,25 +582,25 @@ namespace tvdcn {
                     const int64_t mask_groups,
                     const bool deformable,
                     const bool modulated,
-                    at::Tensor &grad_offset) {
+                    torch::stable::Tensor &grad_offset) {
                 if (!deformable) return;
                 const int64_t n_kernels =
                         (int64_t) batch_sz * offset_groups * out_d * out_h * out_w * weight_d * weight_h * weight_w * 3;
                 const int64_t c_per_offset_group = deformable ? in_channels / offset_groups : 1;
                 const int64_t c_per_mask_group = modulated ? in_channels / mask_groups : 1;
 
-                AT_DISPATCH_FLOATING_TYPES_AND_HALF(
+                THO_DISPATCH_V2(
                         columns.scalar_type(), "deform_conv3d_compute_grad_offset", ([&] {
                     TVDCN_DISPATCH_INDEX_TYPE_DEVICE(n_kernels, CPU, ([&] {
                         auto grad_offset_accessor =
-                                grad_offset.accessor<scalar_t, 9>();
+                                stable_compat::accessor<scalar_t, 9>(grad_offset);
                         TVDCN_DISPATCH_CONDITION(modulated, ([&] {
                             deform_conv3d_compute_grad_offset_kernel<modulated, scalar_t, index_t>(
                                     n_kernels,
-                                    columns.accessor<scalar_t, 8>(),
-                                    input.accessor<scalar_t, 5>(),
-                                    offset.accessor<scalar_t, 9>(),
-                                    mask.accessor<scalar_t, 8>(),
+                                    stable_compat::accessor<scalar_t, 8>(columns),
+                                    stable_compat::accessor<scalar_t, 5>(input),
+                                    stable_compat::accessor<scalar_t, 9>(offset),
+                                    stable_compat::accessor<scalar_t, 8>(mask),
                                     depth,
                                     height,
                                     width,
@@ -619,15 +625,16 @@ namespace tvdcn {
                                     grad_offset_accessor);
                         }));
                     }));
-                }));
+                }), AT_FLOATING_TYPES, torch::headeronly::ScalarType::Half,
+                    torch::headeronly::ScalarType::BFloat16);
             }
 
             template<bool deformable, typename scalar_t, typename index_t>
             static void deform_conv3d_compute_grad_mask_kernel(
                     const index_t n_kernels,
-                    const at::TensorAccessor<scalar_t, 8> columns,
-                    const at::TensorAccessor<scalar_t, 5> input,
-                    const at::TensorAccessor<scalar_t, 9> offset,
+                    const torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 8> columns,
+                    const torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 5> input,
+                    const torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 9> offset,
                     const index_t depth,
                     const index_t height,
                     const index_t width,
@@ -649,49 +656,51 @@ namespace tvdcn {
                     const index_t mask_groups,
                     const index_t c_per_offset_group,
                     const index_t c_per_mask_group,
-                    at::TensorAccessor<scalar_t, 8> grad_mask) {
-                CPU_1D_PARALLEL_KERNEL_LOOP_T(index, n_kernels, index_t) {
-                    const index_t k = index % weight_w;
-                    const index_t j = (index / weight_w) % weight_h;
-                    const index_t i = (index / (weight_w * weight_h)) % weight_d;
-                    const index_t w = (index / (weight_w * weight_h * weight_d)) % out_w;
-                    const index_t h = (index / (weight_w * weight_h * weight_d * out_w)) % out_h;
-                    const index_t d = (index / (weight_w * weight_h * weight_d * out_w * out_h)) % out_d;
-                    const index_t g = (index / (weight_w * weight_h * weight_d * out_w * out_h * out_d)) % mask_groups;
-                    const index_t b = index / (weight_w * weight_h * weight_d * out_w * out_h * out_d * mask_groups);
+                    torch::headeronly::HeaderOnlyTensorAccessor<scalar_t, 8> grad_mask) {
+                torch::stable::parallel_for(0, n_kernels, 0, [&](int64_t begin, int64_t end) {
+                    for (index_t index = begin; index < end; ++index) {
+                        const index_t k = index % weight_w;
+                        const index_t j = (index / weight_w) % weight_h;
+                        const index_t i = (index / (weight_w * weight_h)) % weight_d;
+                        const index_t w = (index / (weight_w * weight_h * weight_d)) % out_w;
+                        const index_t h = (index / (weight_w * weight_h * weight_d * out_w)) % out_h;
+                        const index_t d = (index / (weight_w * weight_h * weight_d * out_w * out_h)) % out_d;
+                        const index_t g = (index / (weight_w * weight_h * weight_d * out_w * out_h * out_d)) % mask_groups;
+                        const index_t b = index / (weight_w * weight_h * weight_d * out_w * out_h * out_d * mask_groups);
 
-                    scalar_t grad_mask_val = 0;
+                        scalar_t grad_mask_val = 0;
 
-                    const index_t c_start = g * c_per_mask_group;
-                    const index_t c_end = c_start + c_per_mask_group;
-                    for (index_t c = c_start; c < c_end; ++c) {
-                        const index_t offset_group_idx = c / c_per_offset_group;
+                        const index_t c_start = g * c_per_mask_group;
+                        const index_t c_end = c_start + c_per_mask_group;
+                        for (index_t c = c_start; c < c_end; ++c) {
+                            const index_t offset_group_idx = c / c_per_offset_group;
 
-                        const index_t z = (d * stride_d - pad_d) + i * dilation_d;
-                        const index_t y = (h * stride_h - pad_h) + j * dilation_h;
-                        const index_t x = (w * stride_w - pad_w) + k * dilation_w;
+                            const index_t z = (d * stride_d - pad_d) + i * dilation_d;
+                            const index_t y = (h * stride_h - pad_h) + j * dilation_h;
+                            const index_t x = (w * stride_w - pad_w) + k * dilation_w;
 
-                        scalar_t val;
-                        if constexpr (deformable)
-                            val = interpolate_sample(
-                                    input, b, c, depth, height, width,
-                                    z + offset[b][offset_group_idx][i][j][k][0][d][h][w],
-                                    y + offset[b][offset_group_idx][i][j][k][1][d][h][w],
-                                    x + offset[b][offset_group_idx][i][j][k][2][d][h][w]);
-                        else
-                            val = sample(input, b, c, depth, height, width, z, y, x);
+                            scalar_t val;
+                            if constexpr (deformable)
+                                val = interpolate_sample(
+                                        input, b, c, depth, height, width,
+                                        z + offset[b][offset_group_idx][i][j][k][0][d][h][w],
+                                        y + offset[b][offset_group_idx][i][j][k][1][d][h][w],
+                                        x + offset[b][offset_group_idx][i][j][k][2][d][h][w]);
+                            else
+                                val = sample(input, b, c, depth, height, width, z, y, x);
 
-                        grad_mask_val += columns[c][i][j][k][b][d][h][w] * val;
+                            grad_mask_val += columns[c][i][j][k][b][d][h][w] * val;
+                        }
+
+                        grad_mask[b][g][i][j][k][d][h][w] = grad_mask_val;
                     }
-
-                    grad_mask[b][g][i][j][k][d][h][w] = grad_mask_val;
-                }
+                });
             }
 
             void deform_conv3d_compute_grad_mask(
-                    const at::Tensor &columns,
-                    const at::Tensor &input,
-                    const at::Tensor &offset,
+                    const torch::stable::Tensor &columns,
+                    const torch::stable::Tensor &input,
+                    const torch::stable::Tensor &offset,
                     const int64_t in_channels,
                     const int64_t depth,
                     const int64_t height,
@@ -716,24 +725,24 @@ namespace tvdcn {
                     const int64_t mask_groups,
                     const bool deformable,
                     const bool modulated,
-                    at::Tensor &grad_mask) {
+                    torch::stable::Tensor &grad_mask) {
                 if (!modulated) return;
                 const int64_t n_kernels =
                         (int64_t) batch_sz * mask_groups * out_d * out_h * out_w * weight_d * weight_h * weight_w;
                 const int64_t c_per_offset_group = deformable ? in_channels / offset_groups : 1;
                 const int64_t c_per_mask_group = modulated ? in_channels / mask_groups : 1;
 
-                AT_DISPATCH_FLOATING_TYPES_AND_HALF(
+                THO_DISPATCH_V2(
                         columns.scalar_type(), "deform_conv3d_compute_grad_mask", ([&] {
                     TVDCN_DISPATCH_INDEX_TYPE_DEVICE(n_kernels, CPU, ([&] {
                         auto grad_mask_accessor =
-                                grad_mask.accessor<scalar_t, 8>();
+                                stable_compat::accessor<scalar_t, 8>(grad_mask);
                         TVDCN_DISPATCH_CONDITION(deformable, ([&] {
                             deform_conv3d_compute_grad_mask_kernel<deformable, scalar_t, index_t>(
                                     n_kernels,
-                                    columns.accessor<scalar_t, 8>(),
-                                    input.accessor<scalar_t, 5>(),
-                                    offset.accessor<scalar_t, 9>(),
+                                    stable_compat::accessor<scalar_t, 8>(columns),
+                                    stable_compat::accessor<scalar_t, 5>(input),
+                                    stable_compat::accessor<scalar_t, 9>(offset),
                                     depth,
                                     height,
                                     width,
@@ -758,7 +767,8 @@ namespace tvdcn {
                                     grad_mask_accessor);
                         }));
                     }));
-                }));
+                }), AT_FLOATING_TYPES, torch::headeronly::ScalarType::Half,
+                    torch::headeronly::ScalarType::BFloat16);
             }
         }
     }

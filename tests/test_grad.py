@@ -11,8 +11,8 @@ from .utils.cases import (PROFILES, forward, has_missing_optional, make_case, op
 @pytest.mark.parametrize('profile', PROFILES)
 @pytest.mark.parametrize('dtype', [torch.float64, torch.float32, torch.float16], ids=['double', 'float', 'half'])
 def test_operator_paths(dim, transposed, profile, dtype, device, request):
-    if dtype == torch.float16 and device == 'cpu':
-        pytest.skip('float16 kernels are CUDA-only')
+    if dtype == torch.float16 and device == 'cpu' and transposed:
+        pytest.skip('legacy transposed float16 kernels are CUDA-only')
     case = make_case(dim, transposed, profile, device=device, dtype=dtype)
     mark_legacy_optional_backward(request, has_missing_optional(case))
     output, grads = output_and_grads(case)

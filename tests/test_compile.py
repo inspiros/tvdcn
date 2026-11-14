@@ -1,4 +1,4 @@
-"""Dispatcher, compiler, export and dtype coverage for the ported 2D family."""
+"""Dispatcher, compiler, export and dtype coverage for the ported non-transposed families."""
 import itertools
 
 import pytest
@@ -8,6 +8,9 @@ import tvdcn
 from .utils.cases import PROFILES, forward, make_case, output_and_grads
 
 
+pytestmark = pytest.mark.parametrize('dim', [1, 2, 3])
+
+
 def _args(case):
     return (*case['tensors'].values(), *case['kwargs'].values())
 
@@ -15,21 +18,21 @@ def _args(case):
 @pytest.mark.parametrize('dtype', [torch.float32, torch.float64])
 @pytest.mark.parametrize('profile', PROFILES)
 @pytest.mark.parametrize('bias', [True, False], ids=['bias', 'no-bias'])
-def test_opcheck(profile, bias, dtype, device):
-    case = make_case(2, False, profile, device=device, dtype=dtype)
+def test_opcheck(dim, profile, bias, dtype, device):
+    case = make_case(dim, False, profile, device=device, dtype=dtype)
     if not bias:
         case['tensors']['bias'] = None
-    torch.library.opcheck(torch.ops.tvdcn.deform_conv2d.default, _args(case))
+    torch.library.opcheck(getattr(torch.ops.tvdcn, f'deform_conv{dim}d').default, _args(case))
     grad = torch.ones(case['output_shape'], device=device, dtype=dtype)
     # This also checks defined empty outputs for absent optional gradients.
-    torch.library.opcheck(torch.ops.tvdcn._deform_conv2d_backward.default,
+    torch.library.opcheck(getattr(torch.ops.tvdcn, f'_deform_conv{dim}d_backward').default,
                           (grad, *_args(case)),
                           test_utils=('test_schema', 'test_faketensor'))
 
 
 @pytest.mark.parametrize('profile', ['plain', 'offset', 'mask', 'both', 'geometry'])
-def test_compile_forward_backward(profile, device):
-    case = make_case(2, False, profile, device=device, dtype=torch.float32)
+def test_compile_forward_backward(dim, profile, device):
+    case = make_case(dim, False, profile, device=device, dtype=torch.float32)
     names = [k for k, v in case['tensors'].items() if v is not None]
     values = tuple(case['tensors'][k] for k in names)
 
@@ -52,34 +55,35 @@ def test_compile_forward_backward(profile, device):
         torch.testing.assert_close(a, b)
 
 
-def test_export(device):
-    case = make_case(2, False, 'geometry', device=device, dtype=torch.float32)
-    module = tvdcn.DeformConv2d(2, 2, 2, device=device, **case['kwargs'])
+def test_export(dim, device):
+    case = make_case(dim, False, 'geometry', device=device, dtype=torch.float32)
+    module = getattr(tvdcn, f'DeformConv{dim}d')(2, 2, 2, device=device, **case['kwargs'])
     args = tuple(case['tensors'][k] for k in ('input', 'offset', 'mask'))
     exported = torch.export.export(module, args)
     torch.testing.assert_close(exported.module()(*args), module(*args))
 
 
 @pytest.mark.parametrize('profile', PROFILES)
-def test_bfloat16(profile, device):
-    reference = make_case(2, False, profile, device=device, dtype=torch.float32)
-    case = make_case(2, False, profile, device=device, dtype=torch.bfloat16)
+@pytest.mark.parametrize('dtype', [torch.bfloat16, torch.float16], ids=['bf16', 'half'])
+def test_low_precision(dim, profile, dtype, device):
+    reference = make_case(dim, False, profile, device=device, dtype=torch.float32)
+    case = make_case(dim, False, profile, device=device, dtype=dtype)
     # Compare against float32 evaluated at exactly the same quantized inputs.
     reference['tensors'] = {k: v.detach().float().requires_grad_() if v is not None else None
                             for k, v in case['tensors'].items()}
     actual, grads = output_and_grads(case)
     expected, expected_grads = output_and_grads(reference)
-    assert actual.dtype == torch.bfloat16
+    assert actual.dtype == dtype
     torch.testing.assert_close(actual.float(), expected, rtol=0.04, atol=0.006)
     for name, grad in grads.items():
-        assert grad.dtype == torch.bfloat16
+        assert grad.dtype == dtype
         torch.testing.assert_close(grad.float(), expected_grads[name], rtol=0.06, atol=0.012)
 
 
 @pytest.mark.parametrize('dtype', [torch.float32, torch.float64, torch.bfloat16])
 @pytest.mark.parametrize('profile', ['plain', 'both'])
-def test_autocast(profile, dtype, device):
-    case = make_case(2, False, profile, device=device, dtype=dtype)
+def test_autocast(dim, profile, dtype, device):
+    case = make_case(dim, False, profile, device=device, dtype=dtype)
     # Autocast computes in float32 (float64 stays double), then casts back.
     ref = dict(case)
     ref['tensors'] = {k: (v.detach().to(torch.float64 if dtype == torch.float64 else torch.float32)
@@ -95,8 +99,8 @@ def test_autocast(profile, dtype, device):
 
 
 @pytest.mark.parametrize('optional', list(itertools.product([False, True], repeat=3)))
-def test_optional_needs_grad_and_unbatched(optional, device):
-    case = make_case(2, False, device=device)
+def test_optional_needs_grad_and_unbatched(dim, optional, device):
+    case = make_case(dim, False, device=device)
     for name, enabled in zip(('offset', 'mask', 'bias'), optional):
         if not enabled:
             case['tensors'][name] = None
@@ -111,8 +115,8 @@ def test_optional_needs_grad_and_unbatched(optional, device):
     assert case['tensors']['input'].grad.shape == case['tensors']['input'].shape
 
 
-def test_double_backward_rejected(device):
-    case = make_case(2, False, device=device)
+def test_double_backward_rejected(dim, device):
+    case = make_case(dim, False, device=device)
     value = case['tensors']['input']
     first, = torch.autograd.grad(forward(case).sum(), value, create_graph=True)
     with pytest.raises(RuntimeError, match='double backwards'):
@@ -120,12 +124,16 @@ def test_double_backward_rejected(device):
 
 
 @pytest.mark.parametrize('unbatched', [False, True])
-def test_opcheck_noncontiguous_single_channel(unbatched, device):
-    case = make_case(2, False, device=device)
+def test_opcheck_noncontiguous_single_channel(dim, unbatched, device):
+    case = make_case(dim, False, device=device)
     tensors = case['tensors']
-    tensors['input'] = tensors['input'][:, :1].transpose(-1, -2).detach().requires_grad_()
-    tensors['weight'] = tensors['weight'][:, :1].transpose(-1, -2).detach().requires_grad_()
+    for name in ('input', 'weight'):
+        value = tensors[name][:, :1]
+        value = (value.repeat_interleave(2, dim=-1)[..., ::2] if dim == 1
+                 else value.transpose(-1, -2))
+        assert not value.is_contiguous()
+        tensors[name] = value.detach().requires_grad_()
     if unbatched:
         for name in ('input', 'offset', 'mask'):
             tensors[name] = tensors[name].squeeze(0).detach().requires_grad_()
-    torch.library.opcheck(torch.ops.tvdcn.deform_conv2d.default, _args(case))
+    torch.library.opcheck(getattr(torch.ops.tvdcn, f'deform_conv{dim}d').default, _args(case))

@@ -89,7 +89,7 @@ LEGACY_OPTIONAL_BACKWARD = pytest.mark.xfail(
 
 def mark_legacy_optional_backward(request, missing):
     params = request.node.callspec.params
-    ported = params.get('dim', 2) == 2 and not params.get('transposed', False)
+    ported = not params.get('transposed', False)
     if missing and not ported:
         request.applymarker(LEGACY_OPTIONAL_BACKWARD)
 

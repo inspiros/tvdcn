@@ -52,10 +52,14 @@ inline Tensor add_(Tensor self, const Tensor& other) {
     return self;
 }
 
-inline std::array<int64_t, 2> pair(IntHeaderOnlyArrayRef value) {
-    STD_TORCH_CHECK(value.size() == 1 || value.size() == 2,
-                    "Expected a sequence of 2 elements. Got ", value.size());
-    return {value[0], value[value.size() == 1 ? 0 : 1]};
+template <size_t N>
+inline std::array<int64_t, N> ntuple(IntHeaderOnlyArrayRef value) {
+    STD_TORCH_CHECK(value.size() == 1 || value.size() == N,
+                    "Expected a sequence of ", N, " elements. Got ", value.size());
+    std::array<int64_t, N> result;
+    for (size_t i = 0; i < N; ++i)
+        result[i] = value[value.size() == 1 ? 0 : i];
+    return result;
 }
 
 inline constexpr int64_t kMaxParallelImgs = 32;
