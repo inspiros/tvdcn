@@ -1,7 +1,7 @@
-#include <ATen/ATen.h>
+#include "../StableABICompat.h"
 
-#include "cuda_helpers.h"
-#include "../utils/dispatch.h"
+#include "stable_cuda_helpers.h"
+#include "../StableDispatch.h"
 
 namespace tvdcn {
     namespace ops {
@@ -11,7 +11,7 @@ namespace tvdcn {
 
                 template<typename scalar_t, typename index_t>
                 __device__ __forceinline__ scalar_t sample(
-                        const at::GenericPackedTensorAccessor<scalar_t, 4, at::RestrictPtrTraits, index_t> input,
+                        const torch::headeronly::HeaderOnlyGenericPackedTensorAccessor<scalar_t, 4, torch::headeronly::RestrictPtrTraits, index_t> input,
                         const index_t b,
                         const index_t c,
                         const index_t height,
@@ -23,7 +23,7 @@ namespace tvdcn {
 
                 template<typename scalar_t, typename index_t>
                 __device__ __forceinline__ scalar_t interpolate_sample(
-                        const at::GenericPackedTensorAccessor<scalar_t, 4, at::RestrictPtrTraits, index_t> input,
+                        const torch::headeronly::HeaderOnlyGenericPackedTensorAccessor<scalar_t, 4, torch::headeronly::RestrictPtrTraits, index_t> input,
                         const index_t b,
                         const index_t c,
                         const index_t height,
@@ -58,7 +58,7 @@ namespace tvdcn {
 
                 template<typename scalar_t, typename index_t>
                 __device__ __forceinline__ void insert(
-                        at::GenericPackedTensorAccessor<scalar_t, 4, at::RestrictPtrTraits, index_t> output,
+                        torch::headeronly::HeaderOnlyGenericPackedTensorAccessor<scalar_t, 4, torch::headeronly::RestrictPtrTraits, index_t> output,
                         const index_t b,
                         const index_t c,
                         const index_t height,
@@ -72,7 +72,7 @@ namespace tvdcn {
 
                 template<typename scalar_t, typename index_t>
                 __device__ __forceinline__ void interpolate_insert(
-                        at::GenericPackedTensorAccessor<scalar_t, 4, at::RestrictPtrTraits, index_t> output,
+                        torch::headeronly::HeaderOnlyGenericPackedTensorAccessor<scalar_t, 4, torch::headeronly::RestrictPtrTraits, index_t> output,
                         const index_t b,
                         const index_t c,
                         const index_t height,
@@ -103,7 +103,7 @@ namespace tvdcn {
 
                 template<typename scalar_t, typename index_t>
                 __device__ __forceinline__ scalar_t coordinate_weight(
-                        const at::GenericPackedTensorAccessor<scalar_t, 4, at::RestrictPtrTraits, index_t> input,
+                        const torch::headeronly::HeaderOnlyGenericPackedTensorAccessor<scalar_t, 4, torch::headeronly::RestrictPtrTraits, index_t> input,
                         const index_t b,
                         const index_t c,
                         const index_t height,
@@ -138,9 +138,9 @@ namespace tvdcn {
             template<bool deformable, bool modulated, typename scalar_t, typename index_t>
             static __launch_bounds__(1024) __global__ void im2col_kernel(
                     const index_t n_kernels,
-                    const at::GenericPackedTensorAccessor<scalar_t, 4, at::RestrictPtrTraits, index_t> input,
-                    const at::GenericPackedTensorAccessor<scalar_t, 7, at::RestrictPtrTraits, index_t> offset,
-                    const at::GenericPackedTensorAccessor<scalar_t, 6, at::RestrictPtrTraits, index_t> mask,
+                    const torch::headeronly::HeaderOnlyGenericPackedTensorAccessor<scalar_t, 4, torch::headeronly::RestrictPtrTraits, index_t> input,
+                    const torch::headeronly::HeaderOnlyGenericPackedTensorAccessor<scalar_t, 7, torch::headeronly::RestrictPtrTraits, index_t> offset,
+                    const torch::headeronly::HeaderOnlyGenericPackedTensorAccessor<scalar_t, 6, torch::headeronly::RestrictPtrTraits, index_t> mask,
                     const index_t height,
                     const index_t width,
                     const index_t weight_h,
@@ -156,7 +156,7 @@ namespace tvdcn {
                     const index_t in_channels,
                     const index_t c_per_offset_group,
                     const index_t c_per_mask_group,
-                    at::GenericPackedTensorAccessor<scalar_t, 6, at::RestrictPtrTraits, index_t> columns) {
+                    torch::headeronly::HeaderOnlyGenericPackedTensorAccessor<scalar_t, 6, torch::headeronly::RestrictPtrTraits, index_t> columns) {
                 CUDA_1D_KERNEL_LOOP_T(index, n_kernels, index_t) {
                     const index_t w = index % out_w;
                     const index_t h = (index / out_w) % out_h;
@@ -192,9 +192,9 @@ namespace tvdcn {
             }
 
             void im2col(
-                    const at::Tensor &input,
-                    const at::Tensor &offset,
-                    const at::Tensor &mask,
+                    const torch::stable::Tensor &input,
+                    const torch::stable::Tensor &offset,
+                    const torch::stable::Tensor &mask,
                     const int64_t in_channels,
                     const int64_t height,
                     const int64_t width,
@@ -213,8 +213,8 @@ namespace tvdcn {
                     const int64_t mask_groups,
                     const bool deformable,
                     const bool modulated,
-                    at::Tensor &columns) {
-                at::cuda::CUDAGuard device_guard(input.get_device());
+                    torch::stable::Tensor &columns) {
+                torch::stable::accelerator::DeviceGuard device_guard(input.get_device());
                 const int64_t n_kernels = (int64_t) batch_sz * in_channels * out_h * out_w;
                 const int64_t c_per_offset_group = deformable ? in_channels / offset_groups : 1;
                 const int64_t c_per_mask_group = modulated ? in_channels / mask_groups : 1;
@@ -222,17 +222,17 @@ namespace tvdcn {
                 const unsigned int threads = GET_THREADS(threadsFraction);
                 const unsigned int blocks = GET_BLOCKS(threads, n_kernels);
 
-                AT_DISPATCH_FLOATING_TYPES_AND_HALF(
+                THO_DISPATCH_V2(
                         input.scalar_type(), "im2col", ([&] {
                     TVDCN_DISPATCH_INDEX_TYPE_DEVICE(n_kernels, CUDA, ([&] {
                         auto columns_accessor =
-                                columns.generic_packed_accessor<scalar_t, 6, at::RestrictPtrTraits, index_t>();
+                                stable_compat::packed_accessor<scalar_t, 6, torch::headeronly::RestrictPtrTraits, index_t>(columns);
                         TVDCN_DISPATCH_CONDITION2(deformable, modulated, ([&] {
-                            im2col_kernel<deformable, modulated, scalar_t, index_t><<<blocks, threads>>>(
+                            im2col_kernel<deformable, modulated, scalar_t, index_t><<<blocks, threads, 0, stable_compat::current_cuda_stream()>>>(
                                     n_kernels,
-                                    input.generic_packed_accessor<scalar_t, 4, at::RestrictPtrTraits, index_t>(),
-                                    offset.generic_packed_accessor<scalar_t, 7, at::RestrictPtrTraits, index_t>(),
-                                    mask.generic_packed_accessor<scalar_t, 6, at::RestrictPtrTraits, index_t>(),
+                                    stable_compat::packed_accessor<scalar_t, 4, torch::headeronly::RestrictPtrTraits, index_t>(input),
+                                    stable_compat::packed_accessor<scalar_t, 7, torch::headeronly::RestrictPtrTraits, index_t>(offset),
+                                    stable_compat::packed_accessor<scalar_t, 6, torch::headeronly::RestrictPtrTraits, index_t>(mask),
                                     height,
                                     width,
                                     weight_h,
@@ -251,16 +251,17 @@ namespace tvdcn {
                                     columns_accessor);
                         }));
                     }));
-                }));
-                C10_CUDA_KERNEL_LAUNCH_CHECK();
+                }), AT_FLOATING_TYPES, torch::headeronly::ScalarType::Half,
+                    torch::headeronly::ScalarType::BFloat16);
+                STD_TORCH_CHECK(cudaGetLastError() == cudaSuccess, "deform_conv2d CUDA kernel launch failed");
             }
 
             template<bool deformable, bool modulated, typename scalar_t, typename index_t>
             static __launch_bounds__(1024) __global__ void col2im_kernel(
                     const index_t n_kernels,
-                    const at::GenericPackedTensorAccessor<scalar_t, 6, at::RestrictPtrTraits, index_t> columns,
-                    const at::GenericPackedTensorAccessor<scalar_t, 7, at::RestrictPtrTraits, index_t> offset,
-                    const at::GenericPackedTensorAccessor<scalar_t, 6, at::RestrictPtrTraits, index_t> mask,
+                    const torch::headeronly::HeaderOnlyGenericPackedTensorAccessor<scalar_t, 6, torch::headeronly::RestrictPtrTraits, index_t> columns,
+                    const torch::headeronly::HeaderOnlyGenericPackedTensorAccessor<scalar_t, 7, torch::headeronly::RestrictPtrTraits, index_t> offset,
+                    const torch::headeronly::HeaderOnlyGenericPackedTensorAccessor<scalar_t, 6, torch::headeronly::RestrictPtrTraits, index_t> mask,
                     const index_t in_channels,
                     const index_t height,
                     const index_t width,
@@ -276,7 +277,7 @@ namespace tvdcn {
                     const index_t out_w,
                     const index_t c_per_offset_group,
                     const index_t c_per_mask_group,
-                    at::GenericPackedTensorAccessor<scalar_t, 4, at::RestrictPtrTraits, index_t> grad_input) {
+                    torch::headeronly::HeaderOnlyGenericPackedTensorAccessor<scalar_t, 4, torch::headeronly::RestrictPtrTraits, index_t> grad_input) {
                 CUDA_1D_KERNEL_LOOP_T(index, n_kernels, index_t) {
                     const index_t j = index % weight_w;
                     const index_t i = (index / weight_w) % weight_h;
@@ -311,9 +312,9 @@ namespace tvdcn {
             }
 
             void col2im(
-                    const at::Tensor &columns,
-                    const at::Tensor &offset,
-                    const at::Tensor &mask,
+                    const torch::stable::Tensor &columns,
+                    const torch::stable::Tensor &offset,
+                    const torch::stable::Tensor &mask,
                     const int64_t in_channels,
                     const int64_t height,
                     const int64_t width,
@@ -332,8 +333,8 @@ namespace tvdcn {
                     const int64_t mask_groups,
                     const bool deformable,
                     const bool modulated,
-                    at::Tensor &grad_input) {
-                at::cuda::CUDAGuard device_guard(columns.get_device());
+                    torch::stable::Tensor &grad_input) {
+                torch::stable::accelerator::DeviceGuard device_guard(columns.get_device());
                 const int64_t n_kernels = (int64_t) batch_sz * in_channels * out_h * out_w * weight_h * weight_w;
                 const int64_t c_per_offset_group = deformable ? in_channels / offset_groups : 1;
                 const int64_t c_per_mask_group = modulated ? in_channels / mask_groups : 1;
@@ -341,17 +342,17 @@ namespace tvdcn {
                 const unsigned int threads = GET_THREADS(threadsFraction);
                 const unsigned int blocks = GET_BLOCKS(threads, n_kernels);
 
-                AT_DISPATCH_FLOATING_TYPES_AND_HALF(
+                THO_DISPATCH_V2(
                         columns.scalar_type(), "col2im", ([&] {
                     TVDCN_DISPATCH_INDEX_TYPE_DEVICE(n_kernels, CUDA, ([&] {
                         auto grad_input_accessor =
-                                grad_input.generic_packed_accessor<scalar_t, 4, at::RestrictPtrTraits, index_t>();
+                                stable_compat::packed_accessor<scalar_t, 4, torch::headeronly::RestrictPtrTraits, index_t>(grad_input);
                         TVDCN_DISPATCH_CONDITION2(deformable, modulated, ([&] {
-                            col2im_kernel<deformable, modulated, scalar_t, index_t><<<blocks, threads>>>(
+                            col2im_kernel<deformable, modulated, scalar_t, index_t><<<blocks, threads, 0, stable_compat::current_cuda_stream()>>>(
                                     n_kernels,
-                                    columns.generic_packed_accessor<scalar_t, 6, at::RestrictPtrTraits, index_t>(),
-                                    offset.generic_packed_accessor<scalar_t, 7, at::RestrictPtrTraits, index_t>(),
-                                    mask.generic_packed_accessor<scalar_t, 6, at::RestrictPtrTraits, index_t>(),
+                                    stable_compat::packed_accessor<scalar_t, 6, torch::headeronly::RestrictPtrTraits, index_t>(columns),
+                                    stable_compat::packed_accessor<scalar_t, 7, torch::headeronly::RestrictPtrTraits, index_t>(offset),
+                                    stable_compat::packed_accessor<scalar_t, 6, torch::headeronly::RestrictPtrTraits, index_t>(mask),
                                     in_channels,
                                     height,
                                     width,
@@ -370,17 +371,18 @@ namespace tvdcn {
                                     grad_input_accessor);
                         }));
                     }));
-                }));
-                C10_CUDA_KERNEL_LAUNCH_CHECK();
+                }), AT_FLOATING_TYPES, torch::headeronly::ScalarType::Half,
+                    torch::headeronly::ScalarType::BFloat16);
+                STD_TORCH_CHECK(cudaGetLastError() == cudaSuccess, "deform_conv2d CUDA kernel launch failed");
             }
 
             template<bool modulated, typename scalar_t, typename index_t>
             static __launch_bounds__(1024) __global__ void deform_conv2d_compute_grad_offset_kernel(
                     const index_t n_kernels,
-                    const at::GenericPackedTensorAccessor<scalar_t, 6, at::RestrictPtrTraits, index_t> columns,
-                    const at::GenericPackedTensorAccessor<scalar_t, 4, at::RestrictPtrTraits, index_t> input,
-                    const at::GenericPackedTensorAccessor<scalar_t, 7, at::RestrictPtrTraits, index_t> offset,
-                    const at::GenericPackedTensorAccessor<scalar_t, 6, at::RestrictPtrTraits, index_t> mask,
+                    const torch::headeronly::HeaderOnlyGenericPackedTensorAccessor<scalar_t, 6, torch::headeronly::RestrictPtrTraits, index_t> columns,
+                    const torch::headeronly::HeaderOnlyGenericPackedTensorAccessor<scalar_t, 4, torch::headeronly::RestrictPtrTraits, index_t> input,
+                    const torch::headeronly::HeaderOnlyGenericPackedTensorAccessor<scalar_t, 7, torch::headeronly::RestrictPtrTraits, index_t> offset,
+                    const torch::headeronly::HeaderOnlyGenericPackedTensorAccessor<scalar_t, 6, torch::headeronly::RestrictPtrTraits, index_t> mask,
                     const index_t height,
                     const index_t width,
                     const index_t weight_h,
@@ -396,7 +398,7 @@ namespace tvdcn {
                     const index_t offset_groups,
                     const index_t c_per_offset_group,
                     const index_t c_per_mask_group,
-                    at::GenericPackedTensorAccessor<scalar_t, 7, at::RestrictPtrTraits, index_t> grad_offset) {
+                    torch::headeronly::HeaderOnlyGenericPackedTensorAccessor<scalar_t, 7, torch::headeronly::RestrictPtrTraits, index_t> grad_offset) {
                 CUDA_1D_KERNEL_LOOP_T(index, n_kernels, index_t) {
                     const index_t o = index % 2;
                     const index_t j = (index / 2) % weight_w;
@@ -436,10 +438,10 @@ namespace tvdcn {
             }
 
             void deform_conv2d_compute_grad_offset(
-                    const at::Tensor &columns,
-                    const at::Tensor &input,
-                    const at::Tensor &offset,
-                    const at::Tensor &mask,
+                    const torch::stable::Tensor &columns,
+                    const torch::stable::Tensor &input,
+                    const torch::stable::Tensor &offset,
+                    const torch::stable::Tensor &mask,
                     const int64_t in_channels,
                     const int64_t height,
                     const int64_t width,
@@ -458,9 +460,9 @@ namespace tvdcn {
                     const int64_t mask_groups,
                     const bool deformable,
                     const bool modulated,
-                    at::Tensor &grad_offset) {
+                    torch::stable::Tensor &grad_offset) {
                 if (!deformable) return;
-                at::cuda::CUDAGuard device_guard(columns.get_device());
+                torch::stable::accelerator::DeviceGuard device_guard(columns.get_device());
                 const int64_t n_kernels = (int64_t) batch_sz * offset_groups * out_h * out_w * weight_h * weight_w * 2;
                 const int64_t c_per_offset_group = deformable ? in_channels / offset_groups : 1;
                 const int64_t c_per_mask_group = modulated ? in_channels / mask_groups : 1;
@@ -468,18 +470,18 @@ namespace tvdcn {
                 const unsigned int threads = GET_THREADS(threadsFraction);
                 const unsigned int blocks = GET_BLOCKS(threads, n_kernels);
 
-                AT_DISPATCH_FLOATING_TYPES_AND_HALF(
+                THO_DISPATCH_V2(
                         columns.scalar_type(), "deform_conv2d_compute_grad_offset", ([&] {
                     TVDCN_DISPATCH_INDEX_TYPE_DEVICE(n_kernels, CUDA, ([&] {
                         auto grad_offset_accessor =
-                                grad_offset.generic_packed_accessor<scalar_t, 7, at::RestrictPtrTraits, index_t>();
+                                stable_compat::packed_accessor<scalar_t, 7, torch::headeronly::RestrictPtrTraits, index_t>(grad_offset);
                         TVDCN_DISPATCH_CONDITION(modulated, ([&] {
-                            deform_conv2d_compute_grad_offset_kernel<modulated, scalar_t, index_t><<<blocks, threads>>>(
+                            deform_conv2d_compute_grad_offset_kernel<modulated, scalar_t, index_t><<<blocks, threads, 0, stable_compat::current_cuda_stream()>>>(
                                     n_kernels,
-                                    columns.generic_packed_accessor<scalar_t, 6, at::RestrictPtrTraits, index_t>(),
-                                    input.generic_packed_accessor<scalar_t, 4, at::RestrictPtrTraits, index_t>(),
-                                    offset.generic_packed_accessor<scalar_t, 7, at::RestrictPtrTraits, index_t>(),
-                                    mask.generic_packed_accessor<scalar_t, 6, at::RestrictPtrTraits, index_t>(),
+                                    stable_compat::packed_accessor<scalar_t, 6, torch::headeronly::RestrictPtrTraits, index_t>(columns),
+                                    stable_compat::packed_accessor<scalar_t, 4, torch::headeronly::RestrictPtrTraits, index_t>(input),
+                                    stable_compat::packed_accessor<scalar_t, 7, torch::headeronly::RestrictPtrTraits, index_t>(offset),
+                                    stable_compat::packed_accessor<scalar_t, 6, torch::headeronly::RestrictPtrTraits, index_t>(mask),
                                     height,
                                     width,
                                     weight_h,
@@ -498,16 +500,17 @@ namespace tvdcn {
                                     grad_offset_accessor);
                         }));
                     }));
-                }));
-                C10_CUDA_KERNEL_LAUNCH_CHECK();
+                }), AT_FLOATING_TYPES, torch::headeronly::ScalarType::Half,
+                    torch::headeronly::ScalarType::BFloat16);
+                STD_TORCH_CHECK(cudaGetLastError() == cudaSuccess, "deform_conv2d CUDA kernel launch failed");
             }
 
             template<bool deformable, typename scalar_t, typename index_t>
             static __launch_bounds__(1024) __global__ void deform_conv2d_compute_grad_mask_kernel(
                     const index_t n_kernels,
-                    const at::GenericPackedTensorAccessor<scalar_t, 6, at::RestrictPtrTraits, index_t> columns,
-                    const at::GenericPackedTensorAccessor<scalar_t, 4, at::RestrictPtrTraits, index_t> input,
-                    const at::GenericPackedTensorAccessor<scalar_t, 7, at::RestrictPtrTraits, index_t> offset,
+                    const torch::headeronly::HeaderOnlyGenericPackedTensorAccessor<scalar_t, 6, torch::headeronly::RestrictPtrTraits, index_t> columns,
+                    const torch::headeronly::HeaderOnlyGenericPackedTensorAccessor<scalar_t, 4, torch::headeronly::RestrictPtrTraits, index_t> input,
+                    const torch::headeronly::HeaderOnlyGenericPackedTensorAccessor<scalar_t, 7, torch::headeronly::RestrictPtrTraits, index_t> offset,
                     const index_t height,
                     const index_t width,
                     const index_t weight_h,
@@ -523,7 +526,7 @@ namespace tvdcn {
                     const index_t mask_groups,
                     const index_t c_per_offset_group,
                     const index_t c_per_mask_group,
-                    at::GenericPackedTensorAccessor<scalar_t, 6, at::RestrictPtrTraits, index_t> grad_mask) {
+                    torch::headeronly::HeaderOnlyGenericPackedTensorAccessor<scalar_t, 6, torch::headeronly::RestrictPtrTraits, index_t> grad_mask) {
                 CUDA_1D_KERNEL_LOOP_T(index, n_kernels, index_t) {
                     const index_t j = index % weight_w;
                     const index_t i = (index / weight_w) % weight_h;
@@ -559,9 +562,9 @@ namespace tvdcn {
             }
 
             void deform_conv2d_compute_grad_mask(
-                    const at::Tensor &columns,
-                    const at::Tensor &input,
-                    const at::Tensor &offset,
+                    const torch::stable::Tensor &columns,
+                    const torch::stable::Tensor &input,
+                    const torch::stable::Tensor &offset,
                     const int64_t in_channels,
                     const int64_t height,
                     const int64_t width,
@@ -580,9 +583,9 @@ namespace tvdcn {
                     const int64_t mask_groups,
                     const bool deformable,
                     const bool modulated,
-                    at::Tensor &grad_mask) {
+                    torch::stable::Tensor &grad_mask) {
                 if (!modulated) return;
-                at::cuda::CUDAGuard device_guard(columns.get_device());
+                torch::stable::accelerator::DeviceGuard device_guard(columns.get_device());
                 const int64_t n_kernels = (int64_t) batch_sz * mask_groups * out_h * out_w * weight_h * weight_w;
                 const int64_t c_per_offset_group = deformable ? in_channels / offset_groups : 1;
                 const int64_t c_per_mask_group = modulated ? in_channels / mask_groups : 1;
@@ -590,17 +593,17 @@ namespace tvdcn {
                 const unsigned int threads = GET_THREADS(threadsFraction);
                 const unsigned int blocks = GET_BLOCKS(threads, n_kernels);
 
-                AT_DISPATCH_FLOATING_TYPES_AND_HALF(
+                THO_DISPATCH_V2(
                         columns.scalar_type(), "deform_conv2d_compute_grad_mask", ([&] {
                     TVDCN_DISPATCH_INDEX_TYPE_DEVICE(n_kernels, CUDA, ([&] {
                         auto grad_mask_accessor =
-                                grad_mask.generic_packed_accessor<scalar_t, 6, at::RestrictPtrTraits, index_t>();
+                                stable_compat::packed_accessor<scalar_t, 6, torch::headeronly::RestrictPtrTraits, index_t>(grad_mask);
                         TVDCN_DISPATCH_CONDITION(deformable, ([&] {
-                            deform_conv2d_compute_grad_mask_kernel<deformable, scalar_t, index_t><<<blocks, threads>>>(
+                            deform_conv2d_compute_grad_mask_kernel<deformable, scalar_t, index_t><<<blocks, threads, 0, stable_compat::current_cuda_stream()>>>(
                                     n_kernels,
-                                    columns.generic_packed_accessor<scalar_t, 6, at::RestrictPtrTraits, index_t>(),
-                                    input.generic_packed_accessor<scalar_t, 4, at::RestrictPtrTraits, index_t>(),
-                                    offset.generic_packed_accessor<scalar_t, 7, at::RestrictPtrTraits, index_t>(),
+                                    stable_compat::packed_accessor<scalar_t, 6, torch::headeronly::RestrictPtrTraits, index_t>(columns),
+                                    stable_compat::packed_accessor<scalar_t, 4, torch::headeronly::RestrictPtrTraits, index_t>(input),
+                                    stable_compat::packed_accessor<scalar_t, 7, torch::headeronly::RestrictPtrTraits, index_t>(offset),
                                     height,
                                     width,
                                     weight_h,
@@ -619,8 +622,9 @@ namespace tvdcn {
                                     grad_mask_accessor);
                         }));
                     }));
-                }));
-                C10_CUDA_KERNEL_LAUNCH_CHECK();
+                }), AT_FLOATING_TYPES, torch::headeronly::ScalarType::Half,
+                    torch::headeronly::ScalarType::BFloat16);
+                STD_TORCH_CHECK(cudaGetLastError() == cudaSuccess, "deform_conv2d CUDA kernel launch failed");
             }
         }
     }

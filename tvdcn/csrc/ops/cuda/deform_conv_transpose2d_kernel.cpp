@@ -72,7 +72,7 @@
 #include <ATen/ATen.h>
 #include <torch/library.h>
 
-#include "deform_conv2d_common_kernels.h"
+#include "legacy_deform_conv2d_common_kernels.h"
 #include "../utils/ntuple.h"
 #include "../utils/parallel_helpers.h"
 #include "../utils/tensor_utils.h"

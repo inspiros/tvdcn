@@ -2,7 +2,8 @@
 #ifdef USE_PYTHON
 #include <Python.h>
 #endif
-#include <torch/library.h>
+#include <torch/csrc/stable/library.h>
+#include <torch/csrc/stable/stableivalue_conversions.h>
 #include <cuda.h>
 #include <string>
 
@@ -13,16 +14,15 @@ PyMODINIT_FUNC PyInit__C_cuda(void) {
 #endif
 
 namespace {
-int64_t cuda_build_version() {
-    return CUDA_VERSION;
-}
-
-std::string cuda_build_arch_flags() {
-    return TVDCN_CUDA_ARCH_FLAGS;
-}
-}
-
-TORCH_LIBRARY_FRAGMENT(tvdcn, m) {
-    m.def("_cuda_build_version", &cuda_build_version);
-    m.def("_cuda_build_arch_flags", &cuda_build_arch_flags);
+// extension.py loads _C first. Publish metadata through its stable dispatcher
+// op rather than a cross-DSO C++ symbol (torch loads these libraries locally).
+struct RegisterCudaMetadata {
+    RegisterCudaMetadata() {
+        StableIValue stack[] = {
+            torch::stable::detail::from(int64_t{CUDA_VERSION}),
+            torch::stable::detail::from(std::string(TVDCN_CUDA_ARCH_FLAGS))};
+        STABLE_TORCH_ERROR_CODE_CHECK(torch_call_dispatcher(
+            "tvdcn::_set_cuda_metadata", "", stack, TORCH_ABI_VERSION));
+    }
+} register_cuda_metadata;
 }

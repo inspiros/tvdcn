@@ -22,6 +22,8 @@ from torch.utils.cpp_extension import CUDA_HOME
 from torch.utils.cpp_extension import CppExtension
 
 PACKAGE_ROOT = 'tvdcn'
+# Single source of truth for the families included in a stable-only build.
+PORTED_FAMILIES = ('deform_conv2d',)
 
 
 class TVDCNDistribution(Distribution):
@@ -112,6 +114,14 @@ def get_extensions():
     if stable_mode not in ('0', '1'):
         raise ValueError('TVDCN_STABLE_ABI must be 0 or 1')
     stable = stable_mode == '1'
+    if stable:
+        def ported(source):
+            name = Path(source).name
+            return name in ('tvdcn.cpp', 'tvdcn_cuda.cpp') or any(
+                name == f'{family}.cpp' or name.startswith(f'{family}_')
+                for family in PORTED_FAMILIES)
+        sources = [source for source in sources if ported(source)]
+        cuda_sources = [source for source in cuda_sources if ported(source)]
     if 'TVDCN_CUDA_ARCH_LIST' in os.environ:
         os.environ['TORCH_CUDA_ARCH_LIST'] = os.environ['TVDCN_CUDA_ARCH_LIST']
 
@@ -120,11 +130,14 @@ def get_extensions():
     cxx_flags, macros = get_parallel_options('openmp')
     # torch 2.14's BuildExtension selects C++20 for both cxx and nvcc.
     nvcc_flags = shlex.split(os.getenv('NVCC_FLAGS', ''))
+    if build_cuda:
+        macros += [('USE_CUDA', None)]
     if stable:
+        if sys.platform != 'win32':
+            cxx_flags += ['-fvisibility=hidden']
+            nvcc_flags += ['-Xcompiler=-fvisibility=hidden']
         macros += [('TORCH_TARGET_VERSION', '0x020e000000000000'),
                    ('Py_LIMITED_API', '0x030A0000')]
-        if build_cuda:
-            macros += [('USE_CUDA', None)]  # define_macros reaches cxx and nvcc
     if sys.platform == 'win32':
         macros += [(f'{PACKAGE_ROOT}_EXPORTS', None), ('USE_PYTHON', None)]
         cxx_flags.append('/MP')

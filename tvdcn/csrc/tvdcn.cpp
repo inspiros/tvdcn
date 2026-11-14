@@ -1,35 +1,37 @@
 #ifdef USE_PYTHON
 #include <Python.h>
-#endif // USE_PYTHON
+#endif
+#include <torch/csrc/stable/library.h>
+#include "macros.h"
+#include <string>
 
-#include <torch/script.h>
-#include "tvdcn.h"
-
-// If we are in a Windows environment, we need to define
-// initialization functions for the _C extension
-#ifdef _WIN32
-#ifdef USE_PYTHON
+#if defined(_WIN32) && defined(USE_PYTHON)
 PyMODINIT_FUNC PyInit__C(void) {
-    // No need to do anything.
-    // extension.py will run on load
     return nullptr;
 }
-#endif // USE_PYTHON
-#endif // _WIN32
+#endif
 
 namespace tvdcn {
-    int64_t cuda_version() {
-        auto op = c10::Dispatcher::singleton().findSchema({"tvdcn::_cuda_build_version", ""});
-        return op ? op->typed<int64_t()>().call() : -1;
-    }
+namespace {
+int64_t build_version = -1;
+std::string build_arch_flags;
+void set_cuda_metadata(int64_t version, const std::string& arch_flags) {
+    build_version = version;
+    build_arch_flags = arch_flags;
+}
+}
+// Defaults remain usable when the optional CUDA module is absent or unloadable.
+TVDCN_API int64_t cuda_version() { return build_version; }
+TVDCN_API std::string cuda_arch_flags() { return build_arch_flags; }
 
-    std::string cuda_arch_flags() {
-        auto op = c10::Dispatcher::singleton().findSchema({"tvdcn::_cuda_build_arch_flags", ""});
-        return op ? op->typed<std::string()>().call() : std::string{};
-    }
-
-    TORCH_LIBRARY_FRAGMENT(tvdcn, m) {
-        m.def("_cuda_version", &cuda_version);
-        m.def("_cuda_arch_flags", &cuda_arch_flags);
-    }
+STABLE_TORCH_LIBRARY_FRAGMENT(tvdcn, m) {
+    m.def("_cuda_version() -> int");
+    m.def("_cuda_arch_flags() -> str");
+    m.def("_set_cuda_metadata(int version, str arch_flags) -> ()");
+}
+STABLE_TORCH_LIBRARY_IMPL(tvdcn, CompositeExplicitAutograd, m) {
+    m.impl("_cuda_version", TORCH_BOX(&cuda_version));
+    m.impl("_cuda_arch_flags", TORCH_BOX(&cuda_arch_flags));
+    m.impl("_set_cuda_metadata", TORCH_BOX(&set_cuda_metadata));
+}
 }

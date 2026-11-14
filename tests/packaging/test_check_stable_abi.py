@@ -1,4 +1,3 @@
-import importlib.machinery
 import os
 from pathlib import Path
 import shutil
@@ -45,11 +44,14 @@ def test_stable_extension_passes(stable_extension):
     assert result.returncode == 0, result.stdout
 
 
-def test_legacy_extension_fails():
-    candidates = [ROOT / 'tvdcn' / ('_C' + suffix)
-                  for suffix in importlib.machinery.EXTENSION_SUFFIXES]
-    module = next((path for path in candidates if path.exists()), None)
-    assert module is not None, 'Build the legacy extension with setup.py build_ext --inplace first'
+def test_legacy_extension_fails(tmp_path):
+    # Independent of the selected in-place ABI mode. A DSO exposing an ATen
+    # symbol is a legacy extension even when the ported build is currently loaded.
+    source = tmp_path / 'legacy.cpp'
+    source.write_text('namespace at { void legacy_extension_symbol() {} }\n')
+    module = tmp_path / 'legacy.so'
+    result = run('c++', '-shared', '-fPIC', source, '-o', module)
+    assert result.returncode == 0, result.stdout
     result = run(sys.executable, CHECKER, module)
     assert result.returncode == 1, result.stdout
     assert 'FAIL' in result.stdout

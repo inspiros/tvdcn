@@ -6,6 +6,8 @@
 #else
 #define TVDCN_API __declspec(dllimport)
 #endif
+#elif defined(__GNUC__)
+#define TVDCN_API __attribute__((visibility("default")))
 #else
 #define TVDCN_API
 #endif
