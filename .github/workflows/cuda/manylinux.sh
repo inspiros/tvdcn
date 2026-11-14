@@ -21,6 +21,7 @@ python setup.py bdist_wheel --dist-dir=dist
 # Strip the packaged modules: bdist_wheel may relink after build_ext.
 python -m wheel unpack dist/*.whl -d wheel-unpacked
 find wheel-unpacked -name '*.so' -exec ls -lh {} \; -exec strip --strip-debug {} \; -exec ls -lh {} \;
+mkdir -p stripped
 python -m wheel pack wheel-unpacked/* -d stripped
 rm -r wheel-unpacked
 # Torch and CUDA dependencies are provided by the installed torch distribution.

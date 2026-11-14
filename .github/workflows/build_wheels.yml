@@ -84,6 +84,7 @@ jobs:
         shell: bash
         env:
           MAX_JOBS: '2'
+          DISTUTILS_USE_SDK: '1'
         run: |
           if [ "${{ matrix.target.variant }}" = cpu ]; then
             export TVDCN_BUILD_CUDA=0
@@ -133,6 +134,7 @@ jobs:
         working-directory: ${{ runner.temp }}
         env:
           TORCHINDUCTOR_COMPILE_THREADS: '1'
+          DISTUTILS_USE_SDK: '1'
           EXPECT_CUDA: ${{ matrix.torch-variant == 'cu130' && '1' || '0' }}
         run: |
           python -m pip install torch==${{ matrix.torch-version }} torchvision --index-url https://download.pytorch.org/whl/${{ matrix.torch-variant }}
