@@ -91,6 +91,10 @@ jobs:
           else
             source .github/workflows/cuda/Windows-env.sh
           fi
+          if [ "$RUNNER_OS" = Windows ]; then
+            # Git Bash ships /usr/bin/link.exe; put MSVC's linker first.
+            export PATH="$(dirname "$(command -v cl)"):$PATH"
+          fi
           python setup.py bdist_wheel --dist-dir=wheelhouse
       - name: Upload wheel
         uses: actions/upload-artifact@v4
