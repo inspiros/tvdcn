@@ -144,6 +144,13 @@ jobs:
           python -m pip install torch==${{ matrix.torch-version }} torchvision --index-url https://download.pytorch.org/whl/${{ matrix.torch-variant }}
           python -m pip install pytest
           python -m pip install --no-deps --no-index --find-links "$GITHUB_WORKSPACE/wheelhouse" tvdcn
+          if [ "$RUNNER_OS" = Windows ] && [ "$EXPECT_CUDA" = 1 ]; then
+            # Diagnostic: does CUDA init crash on a GPU-less runner with or without tvdcn?
+            for pre in "" "import tvdcn; "; do
+              python -X faulthandler -c "${pre}import torch; print('[${pre}] available:', torch.cuda.is_available()); torch.cuda.current_device()" 2>&1 | tail -n 3
+              echo "[${pre}] exit=${PIPESTATUS[0]}"
+            done
+          fi
           python -W error -c "import os, tvdcn; assert tvdcn.has_ops(); expected = os.environ['EXPECT_CUDA'] == '1'; assert tvdcn.with_cuda() == expected; arches = tvdcn.extension.cuda_arch_list(); print('CUDA targets:', arches); assert not expected or all(any('sm_' + a in flag for flag in arches) for a in ('75', '80', '86', '90', '100', '120'))"
           # Run a copy of the tests outside the checkout: tests/ is a package, so pytest
           # would put the repo root on sys.path and import the unbuilt source tree.
