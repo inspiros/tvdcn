@@ -5,6 +5,20 @@ import torch
 def pytest_addoption(parser):
     parser.addoption('--device', choices=('cpu', 'cuda', 'all'), default='cpu',
                      help='Devices on which to run operator tests (default: cpu).')
+    parser.addoption('--run-packaging', action='store_true', default=False,
+                     help='Run slow extension-build and packaging checks.')
+
+
+def pytest_configure(config):
+    config.addinivalue_line('markers', 'slow: builds native extensions or wheels')
+
+
+def pytest_collection_modifyitems(config, items):
+    if not config.getoption('--run-packaging'):
+        skip = pytest.mark.skip(reason='requires --run-packaging')
+        for item in items:
+            if item.get_closest_marker('slow'):
+                item.add_marker(skip)
 
 
 def pytest_generate_tests(metafunc):

@@ -1,9 +1,22 @@
+# Build options (environment variables):
+# TVDCN_BUILD_CUDA=auto|0|1: auto uses CUDA_HOME and a CUDA-enabled torch,
+#   without requiring an accessible GPU. FORCE_CUDA=1 is a deprecated alias.
+# TVDCN_STABLE_ABI=0|1: default 0 until the native sources are ported (WP3).
+#   1 targets torch 2.14 and CPython 3.10's limited API (cp310-abi3 wheels).
+# TVDCN_LOCAL_VERSION=<label>: append +<label> to the PEP 621 version.
+# TVDCN_CUDA_ARCH_LIST: override TORCH_CUDA_ARCH_LIST; otherwise torch chooses.
+# DEBUG=1 and NVCC_FLAGS retain their usual debug/compiler flag behavior.
 import glob
+import importlib.machinery
 import os
+import shlex
 import sys
+import warnings
+from pathlib import Path
 
 import torch
-from setuptools import setup
+from setuptools import Distribution, setup
+from packaging.version import Version
 from torch.utils.cpp_extension import CUDAExtension
 from torch.utils.cpp_extension import CUDA_HOME
 from torch.utils.cpp_extension import CppExtension
@@ -11,16 +24,30 @@ from torch.utils.cpp_extension import CppExtension
 PACKAGE_ROOT = 'tvdcn'
 
 
-def get_version(version_file='_version.py'):
-    import importlib.util
-    version_file_path = os.path.abspath(os.path.join(PACKAGE_ROOT, version_file))
-    try:
-        spec = importlib.util.spec_from_file_location('_version', version_file_path)
-        version_module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(version_module)
-        return str(version_module.__version__)
-    except:
-        return '0.0.0'
+class TVDCNDistribution(Distribution):
+    def parse_config_files(self, *args, **kwargs):
+        super().parse_config_files(*args, **kwargs)
+        label = os.getenv('TVDCN_LOCAL_VERSION')
+        if label:
+            self.metadata.version = str(Version(f'{self.metadata.version}+{label}'))
+
+
+class TVDCNBuildExtension(torch.utils.cpp_extension.BuildExtension):
+    def run(self):
+        super().run()
+        # Switching CUDA or ABI modes must not package/load an old in-place
+        # binary, or an old binary left in build/lib by a previous wheel.
+        expected = {ext.name.rsplit('.', 1)[1]: self.get_ext_filename(ext.name).split(os.sep)[-1]
+                    for ext in self.extensions}
+        directories = [Path(self.build_lib) / PACKAGE_ROOT]
+        if self.inplace:
+            directories.append(Path(PACKAGE_ROOT))
+        for directory in directories:
+            for name in ('_C', '_C_cuda'):
+                for suffix in importlib.machinery.EXTENSION_SUFFIXES:
+                    path = directory / (name + suffix)
+                    if path.name != expected.get(name) and path.exists():
+                        path.unlink()
 
 
 def get_parallel_options(backend=None):
@@ -57,89 +84,83 @@ def get_parallel_options(backend=None):
 
 def get_extensions():
     extensions_dir = os.path.join(PACKAGE_ROOT, 'csrc')
+    sources = [os.path.join(extensions_dir, 'tvdcn.cpp')]
+    for directory in ('ops', 'ops/cpu', 'ops/autograd', 'ops/autocast',
+                      'ops/quantized/cpu', 'ops/utils'):
+        sources += sorted(glob.glob(os.path.join(extensions_dir, directory, '*.cpp')))
+    cuda_sources = [os.path.join(extensions_dir, 'tvdcn_cuda.cpp')]
+    # Legacy validation helpers are used by both sets of kernels. Compile them
+    # into each module: torch loads libraries locally, and Windows cannot
+    # resolve these private helpers through the separately loaded _C DLL.
+    cuda_sources += sorted(glob.glob(os.path.join(extensions_dir, 'ops/utils', '*.cpp')))
+    for suffix in ('*.cu', '*.cpp'):
+        cuda_sources += sorted(glob.glob(os.path.join(extensions_dir, 'ops/cuda', suffix)))
 
-    main_file = (glob.glob(os.path.join(extensions_dir, '*.cpp')) +
-                 glob.glob(os.path.join(extensions_dir, 'ops', '*.cpp'))
-                 )
+    cuda_mode = os.getenv('TVDCN_BUILD_CUDA', 'auto')
+    if cuda_mode not in ('auto', '0', '1'):
+        raise ValueError('TVDCN_BUILD_CUDA must be auto, 0, or 1')
+    if os.getenv('FORCE_CUDA') == '1':
+        warnings.warn('FORCE_CUDA=1 is deprecated; use TVDCN_BUILD_CUDA=1',
+                      FutureWarning)
+        if 'TVDCN_BUILD_CUDA' not in os.environ:
+            cuda_mode = '1'
+    build_cuda = cuda_mode == '1' or (
+        cuda_mode == 'auto' and CUDA_HOME is not None and torch.version.cuda is not None)
+    if build_cuda and (CUDA_HOME is None or torch.version.cuda is None):
+        raise RuntimeError('CUDA builds require CUDA_HOME and a CUDA-enabled torch')
+    stable_mode = os.getenv('TVDCN_STABLE_ABI', '0')
+    if stable_mode not in ('0', '1'):
+        raise ValueError('TVDCN_STABLE_ABI must be 0 or 1')
+    stable = stable_mode == '1'
+    if 'TVDCN_CUDA_ARCH_LIST' in os.environ:
+        os.environ['TORCH_CUDA_ARCH_LIST'] = os.environ['TVDCN_CUDA_ARCH_LIST']
 
-    source_cpu = (glob.glob(os.path.join(extensions_dir, 'ops', 'cpu', '*.cpp')) +
-                  glob.glob(os.path.join(extensions_dir, 'ops', 'autograd', '*.cpp')) +
-                  glob.glob(os.path.join(extensions_dir, 'ops', 'quantized', 'cpu', '*.cpp')) +
-                  glob.glob(os.path.join(extensions_dir, 'ops', 'utils', '*.cpp'))
-                  )
-
-    source_cuda = (glob.glob(os.path.join(extensions_dir, 'ops', 'cuda', '*.cu')) +
-                   glob.glob(os.path.join(extensions_dir, 'ops', 'cuda', '*.cpp')) +
-                   glob.glob(os.path.join(extensions_dir, 'ops', 'autocast', '*.cpp'))
-                   )
-
-    sources = main_file + source_cpu
-    extension = CppExtension
-    extra_compile_args = {'cxx': []}
-    extra_compile_args['cxx'].append('/std:c++20' if sys.platform == 'win32' else '-std=c++20')
-    define_macros = []
-
-    print('Compiling extensions with following flags:')
-    force_cuda = os.getenv('FORCE_CUDA', '0') == '1'
-    print(f'  FORCE_CUDA: {force_cuda}')
-    debug_mode = os.getenv('DEBUG', '0') == '1'
-    print(f'  DEBUG: {debug_mode}')
-
-    nvcc_flags = os.getenv('NVCC_FLAGS', '')
-    print(f'  NVCC_FLAGS: {nvcc_flags}')
-
-    # enable cpu parallel
-    parallel_extra_compile_args, parallel_define_macros = get_parallel_options('openmp')
-    extra_compile_args['cxx'] += parallel_extra_compile_args
-    define_macros += parallel_define_macros
-
-    # enable cuda
-    if (torch.cuda.is_available() and CUDA_HOME is not None) or force_cuda:
-        extension = CUDAExtension
-        sources += source_cuda
-        define_macros += [('WITH_CUDA', None)]
-        if nvcc_flags == '':
-            nvcc_flags = []
-        else:
-            nvcc_flags = nvcc_flags.split(' ')
-        nvcc_flags.append('-std=c++20')
-        extra_compile_args['nvcc'] = nvcc_flags
-
+    debug = os.getenv('DEBUG', '0') == '1'
+    print(f'Build options: CUDA={build_cuda} ({cuda_mode}), stable ABI={stable}, DEBUG={debug}')
+    cxx_flags, macros = get_parallel_options('openmp')
+    # torch 2.14's BuildExtension selects C++20 for both cxx and nvcc.
+    nvcc_flags = shlex.split(os.getenv('NVCC_FLAGS', ''))
+    if stable:
+        macros += [('TORCH_TARGET_VERSION', '0x020e000000000000'),
+                   ('Py_LIMITED_API', '0x030A0000')]
+        if build_cuda:
+            macros += [('USE_CUDA', None)]  # define_macros reaches cxx and nvcc
     if sys.platform == 'win32':
-        define_macros += [(f'{PACKAGE_ROOT}_EXPORTS', None)]
-        define_macros += [('USE_PYTHON', None)]
-        extra_compile_args['cxx'].append('/MP')
+        macros += [(f'{PACKAGE_ROOT}_EXPORTS', None), ('USE_PYTHON', None)]
+        cxx_flags.append('/MP')
+    if debug:
+        cxx_flags += ['/Od', '/Zi'] if sys.platform == 'win32' else ['-g', '-O0']
+        nvcc_flags = [f for f in nvcc_flags if not f.startswith(('-O', '-g'))]
+        nvcc_flags += ['-O0', '-g']
 
-    if debug_mode:
-        print('Compiling in debug mode')
-        extra_compile_args['cxx'].append('-g')
-        extra_compile_args['cxx'].append('-O0')
-        if 'nvcc' in extra_compile_args:
-            # we have to remove '-OX' and '-g' flag if exists and append
-            nvcc_flags = extra_compile_args['nvcc']
-            extra_compile_args['nvcc'] = [f for f in nvcc_flags if not ('-O' in f or '-g' in f)]
-            extra_compile_args['nvcc'].append('-O0')
-            extra_compile_args['nvcc'].append('-g')
+    def make_extension(factory, name, extension_sources, cuda=False):
+        flags = {'cxx': list(cxx_flags)}
+        extension_macros = list(macros)
+        if cuda:
+            flags['nvcc'] = list(nvcc_flags)
+            # Record the actual flags torch will use (including auto detection).
+            from torch.utils.cpp_extension import _get_cuda_arch_flags
+            archs = ' '.join(_get_cuda_arch_flags(nvcc_flags))
+            extension_macros += [('TVDCN_CUDA_ARCH_FLAGS', f'"{archs}"')]
+        return factory(
+            f'{PACKAGE_ROOT}.{name}', sources=extension_sources,
+            include_dirs=[extensions_dir], define_macros=extension_macros,
+            extra_compile_args=flags, py_limited_api=stable)
 
-    include_dirs = [extensions_dir]
-    ext_modules = [
-        extension(
-            f'{PACKAGE_ROOT}._C',
-            sources=sources,
-            include_dirs=include_dirs,
-            define_macros=define_macros,
-            extra_compile_args=extra_compile_args,
-        )
-    ]
-    return ext_modules
+    extensions = [make_extension(CppExtension, '_C', sources)]
+    if build_cuda:
+        extensions.append(make_extension(CUDAExtension, '_C_cuda', cuda_sources, cuda=True))
+    return extensions
 
 
 def setup_package():
     setup(
-        version=get_version(),
+        distclass=TVDCNDistribution,
         ext_modules=get_extensions(),
+        options={'bdist_wheel': {'py_limited_api': 'cp310'}}
+        if os.getenv('TVDCN_STABLE_ABI', '0') == '1' else {},
         cmdclass={
-            'build_ext': torch.utils.cpp_extension.BuildExtension
+            'build_ext': TVDCNBuildExtension
         },
     )
 

@@ -1,7 +1,53 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel",
-#    "--find-links https://download.pytorch.org/whl/cu128; sys_platform == \"linux\" or sys_platform == \"win32\"",
-    "torch>=2.14",
+requires = ["setuptools>=77", "wheel", "packaging", "torch>=2.14"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tvdcn"
+dynamic = ["version"]
+description = "Torchvision+ Deformable Convolutional Networks"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE.txt"]
+authors = [{name = "Hoang-Nhat Tran (inspiros)", email = "hnhat.tran@gmail.com"}]
+dependencies = ["torch>=2.14"]
+keywords = ["deform_conv", "deform_conv_transposed", "deformable_convolution", "transposed_deformable_convolution"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: GPU :: NVIDIA CUDA :: 13",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
+
+[project.urls]
+Homepage = "https://github.com/inspiros/tvdcn"
+Download = "https://test_pypi.org/project/tvdcn"
+Source = "https://github.com/inspiros/tvdcn"
+
+[project.optional-dependencies]
+tests = ["pytest", "torchvision"]
+examples = ["tqdm"]
+
+[tool.setuptools]
+zip-safe = false
+include-package-data = true
+
+[tool.setuptools.dynamic]
+version = {attr = "tvdcn._version.__version__"}
+
+[tool.setuptools.packages.find]
+include = ["tvdcn*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.h", "*.hpp", "*.cuh", "*.c", "*.cpp", "*.cu", "*."]

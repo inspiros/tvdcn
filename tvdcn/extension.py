@@ -52,6 +52,7 @@ def _get_extension_path(lib_name):
 
 
 _HAS_OPS = False
+_HAS_CUDA_OPS = False
 
 
 def _has_ops():
@@ -90,6 +91,24 @@ finally:
     _ops = _OpNamespace(extension_namespace)
 
 
+if _HAS_OPS and torch.version.cuda is not None:
+    try:
+        cuda_lib_path = _get_extension_path('_C_cuda')
+    except ImportError:
+        pass  # CPU-only builds intentionally have no CUDA module.
+    else:
+        try:
+            torch.ops.load_library(cuda_lib_path)
+            _HAS_CUDA_OPS = True
+        except (ImportError, OSError, RuntimeError) as error:
+            cause = error
+            while cause.__cause__ is not None:
+                cause = cause.__cause__
+            warn(f'Could not load tvdcn CUDA extension {cuda_lib_path}: {cause}. '
+                 'CPU operators remain available; reinstall or rebuild tvdcn '
+                 'for your PyTorch CUDA version.', RuntimeWarning)
+
+
 def _assert_has_ops():
     if not _has_ops():
         raise RuntimeError(
@@ -98,36 +117,21 @@ def _assert_has_ops():
         )
 
 
-def _check_cuda_version(minor=True):
-    r"""
-    Make sure that CUDA versions match between the pytorch install and C++ extension install
-
-    Args:
-        minor (bool): If ``False``, ignore minor version difference.
-         Defaults to ``True``.
-    """
-    if not _HAS_OPS:
+def _check_cuda_version():
+    """Require the same CUDA major; CUDA minor versions are compatible."""
+    if not _HAS_CUDA_OPS:
         return -1
     from torch.version import cuda as torch_version_cuda
 
     _version = _ops._cuda_version()
     if _version != -1 and torch_version_cuda is not None:
-        ext_version = str(_version)
-        if int(ext_version) < 10000:
-            ext_major = int(ext_version[0])
-            ext_minor = int(ext_version[2])
-        else:
-            ext_major = int(ext_version[0:2])
-            ext_minor = int(ext_version[3])
-        t_version = torch_version_cuda.split('.')
-        t_major = int(t_version[0])
-        t_minor = int(t_version[1])
-        if t_major != ext_major or (minor and t_minor != ext_minor):
+        ext_major, ext_minor = _version // 1000, (_version % 1000) // 10
+        t_major = int(torch_version_cuda.split('.')[0])
+        if t_major != ext_major:
             raise RuntimeError(
-                'Detected that PyTorch and Extension were compiled with different CUDA versions. '
-                f'PyTorch has CUDA Version={t_major}.{t_minor} and '
-                f'Extension has CUDA Version={ext_major}.{ext_minor}. '
-                'Please reinstall the Extension that matches your PyTorch install.'
+                f'tvdcn was built with CUDA {ext_major}.{ext_minor}, but PyTorch uses '
+                f'CUDA {torch_version_cuda}. CUDA major versions must match; '
+                'reinstall or rebuild tvdcn for this PyTorch installation.'
             )
     return _version
 
@@ -150,7 +154,7 @@ def _load_library(lib_name):
     torch.ops.load_library(lib_path)
 
 
-_check_cuda_version(False)
+_check_cuda_version()
 
 
 ###################
@@ -167,7 +171,7 @@ def cuda_version() -> int:
     r"""
     Get compiled Cuda version.
     """
-    if not _HAS_OPS:
+    if not _HAS_CUDA_OPS:
         return -1
     return _ops._cuda_version()
 
@@ -183,6 +187,6 @@ def cuda_arch_list() -> List[str]:
     r"""
     Returns list CUDA architectures this library was compiled for.
     """
-    if not _HAS_OPS:
+    if not _HAS_CUDA_OPS:
         return []
     return _ops._cuda_arch_flags().split()
