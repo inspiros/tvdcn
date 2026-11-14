@@ -76,7 +76,7 @@ Build options are documented at the top of [`setup.py`](setup.py), including `TV
 #### Operators
 
 The package offers six deformable convolution functions, listed in [Highlights](#highlights). Their argument order
-differs slightly from `torchvision.ops.deform_conv2d`; see [this comparison](tests/test_compatibility_with_torchvision.py).
+differs slightly from `torchvision.ops.deform_conv2d`; see [the migration guide](docs/torchvision-migration.md).
 
 ```python
 import torch
@@ -150,6 +150,10 @@ print(exported.module()(x, offset, mask).shape)
 For transposed packed modules, offsets and masks are generated with pointwise convolution.
 
 See the [examples](examples) folder for more.
+
+## Documentation
+
+See the [documentation](docs/index.md) and [changelog](CHANGELOG.md).
 
 ## Acknowledgements
 
