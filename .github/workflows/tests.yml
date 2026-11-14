@@ -3,6 +3,7 @@ name: Tests
 on:
   push:
     branches: [master, stable-abi]
+    tags: ['v*']
   pull_request:
     branches: [master, stable-abi]
 

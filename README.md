@@ -6,313 +6,154 @@ Torchvision+ Deformable Convolution Networks
 [![GitHub](https://img.shields.io/github/license/inspiros/tvdcn)](LICENSE.txt)
 [![DOI](https://zenodo.org/badge/355479452.svg)](https://doi.org/10.5281/zenodo.14699341)
 
-This package contains the PyTorch implementations of the **Deformable Convolution** operation
-(the commonly used  `torchvision.ops.deform_conv2d`) proposed in https://arxiv.org/abs/1811.11168,
-and the **Transposed Deformable Convolution** proposed in https://arxiv.org/abs/2210.09446
-(currently without interpolation kernel scaling).
-It also supports their **1D** and **3D** equivalences, which are not available in `torchvision` (thus the name).
+This package contains PyTorch implementations of **Deformable Convolution** (the commonly used
+`torchvision.ops.deform_conv2d`) proposed in https://arxiv.org/abs/1811.11168, and **Transposed Deformable Convolution**
+proposed in https://arxiv.org/abs/2210.09446 (currently without interpolation kernel scaling). It also supports their
+**1D** and **3D** equivalents, which are not available in `torchvision` (thus the name).
 
 ## Highlights
 
-- **Supported operators:** _(All are implemented in C++/Cuda)_
-    - `tvdcn.ops.deform_conv1d`
-    - `tvdcn.ops.deform_conv2d` _(faster than `torchvision.ops.deform_conv2d` by approximately **25%** on
-       forward pass and **14%** on backward pass using a **GeForce RTX 4060** according to [this test](tests/test_speed.py))_
-    - `tvdcn.ops.deform_conv3d`
-    - `tvdcn.ops.deform_conv_transpose1d`
-    - `tvdcn.ops.deform_conv_transpose2d`
-    - `tvdcn.ops.deform_conv_transpose3d`
+- **Supported operators:** _(implemented in C++/CUDA)_
+    - `tvdcn.ops.deform_conv1d`, `tvdcn.ops.deform_conv2d`, `tvdcn.ops.deform_conv3d`
+    - `tvdcn.ops.deform_conv_transpose1d`, `tvdcn.ops.deform_conv_transpose2d`,
+      `tvdcn.ops.deform_conv_transpose3d`
+- **Supplementary operators:** `tvdcn.ops.mask_softmax1d`, `mask_softmax2d`, and `mask_softmax3d` (the mask activation
+  proposed in https://arxiv.org/abs/2211.05778).
+- Offsets, masks, and bias are optional. Offset and mask groups can be configured separately from convolution groups.
+- Packed modules can generate offsets and masks, with sigmoid or softmax mask activations.
+- Supports float32, float64, float16, and bfloat16 on CPU and CUDA.
+- Autograd, autocast, and fake kernels are registered with `torch.library`. Operators work with
+  `torch.compile(fullgraph=True)` and `torch.export`.
 
-- And the following **supplementary operators** (`mask` activation proposed in https://arxiv.org/abs/2211.05778):
-    - `tvdcn.ops.mask_softmax1d`
-    - `tvdcn.ops.mask_softmax2d`
-    - `tvdcn.ops.mask_softmax3d`
+**Note:** `tvdcn` doesn't support ONNX export.
 
-- Both `offset` and `mask` can be turned off, and can be applied in separate groups.
+## What's New in 2.0
 
-- All the `nn.Module` wrappers for these operators are implemented,
-  everything is `@torch.jit.script`-able! Please check [Usage](#usage).
-
-**Note:** `tvdcn` doesn't support `onnx` exportation.
+Version 2.0 uses the PyTorch stable ABI. Operator names and schemas are unchanged from 1.x. PyPI provides one `abi3`
+wheel per platform, compatible with Python 3.10 and later and with PyTorch 2.14 and later. The C++ API is still available through the header-inline wrappers in [`tvdcn/csrc/ops`](tvdcn/csrc/ops);
+see the [C++ API smoke example](tests/packaging/cpp_api/smoke.cpp).
 
 ## Requirements
 
-- `torch>=2.7.0,<2.8.0` (``torch>=1.9.0`` if installed from source)
-
-#### Notes:
-
-Since `torch` extensions are not forward compatible, I have to fix a maximum version for the PyPI package and regularly
-update it on GitHub _(but I am not always available)_.
-If you use a different version of `torch` or your platform is not supported,
-please follow the [instructions to install from source](#from-source).
+- Python >= 3.10
+- PyTorch >= 2.14
 
 ## Installation
 
-#### From PyPI:
+### From PyPI
 
-[tvdcn](https://pypi.org/project/tvdcn) provides some prebuilt wheels on **PyPI**.
-Run this command to install:
+Install tvdcn with pip:
 
-```cmd
+```console
 pip install tvdcn
 ```
 
-Our Linux and Windows wheels are built with **Cuda 12.8** but should be compatible with all 12.x versions.
+PyPI wheels are available for Linux x86_64 and Windows with CPU and CUDA kernels, and for macOS arm64 with CPU kernels.
+The Linux and Windows CUDA kernels are built with CUDA 13.0 for `sm_75`, `sm_80`, `sm_86`, `sm_90`, `sm_100`, and
+`sm_120`, plus PTX. CUDA kernels load only when PyTorch has CUDA; the same wheel works on CPU with a CPU-only PyTorch
+installation. For CUDA 12 or older drivers, build tvdcn from source.
 
-|                  |                  Linux/Windows                  |     MacOS      |
-|------------------|:-----------------------------------------------:|:--------------:|
-| Python version:  |                    3.9-3.13                     |    3.9-3.13    |
-| PyTorch version: |                 `torch==2.7.0`                  | `torch==2.7.0` |
-| Cuda version:    |                      12.8                       |       -        |
-| GPU CCs:         | `5.0,6.0,6.1,7.0,7.5,8.0,8.6,9.0,10.0,12.0+PTX` |       -        |
+### From Source
 
-When the Cuda versions of ``torch`` and ``tvdcn`` mismatch, you will see an error like this:
+Install a C++ compiler and, for CUDA kernels, a CUDA toolkit with `nvcc`. With PyTorch installed in the build
+environment, run:
 
-```cmd
-RuntimeError: Detected that PyTorch and Extension were compiled with different CUDA versions.
-PyTorch has CUDA Version=11.8 and Extension has CUDA Version=12.8.
-Please reinstall the Extension that matches your PyTorch install.
+```console
+pip install . --no-build-isolation
 ```
 
-If you see this error instead, that means there are other issues related to Python, PyTorch, device arch, e.t.c.
-Please proceed to [instructions to build from source](#from-source), all steps are super easy.
+For in-place use, run:
 
-```cmd
-RuntimeError: Couldn't load custom C++ ops. Recompile C++ extension with:
-     python setup.py build_ext --inplace
-```
-
-#### From Source:
-
-For installing from source, you need a C++ compiler (`gcc`/`msvc`) and a Cuda compiler (`nvcc`) with C++17 features
-enabled.
-Clone this repo and execute the following command:
-
-```cmd
-pip install .
-```
-
-Or just compile the binary for inplace usage:
-
-```cmd
+```console
 python setup.py build_ext --inplace
 ```
 
-A binary (`.so` file for Unix and `.pyd` file for Windows) should be compiled inside the `tvdcn` folder.
-To check if installation is successful, try:
-
-```python
-import tvdcn
-
-print('Library loaded successfully:', tvdcn.has_ops())
-print('Compiled with Cuda:', tvdcn.with_cuda())
-print('Cuda version:', tvdcn.cuda_version())
-print('Cuda arch list:', tvdcn.cuda_arch_list())
-```
-
-**Note:** We use soft Cuda version compatibility checking between the built binary and the installed PyTorch,
-which means only major version matching is required.
-However, we suggest building the binaries with the same Cuda version with installed PyTorch's Cuda version to prevent
-any possible conflict.
+Build options are documented at the top of [`setup.py`](setup.py), including `TVDCN_BUILD_CUDA`,
+`TVDCN_CUDA_ARCH_LIST`, and `TVDCN_LOCAL_VERSION`.
 
 ## Usage
 
-#### Operators:
+#### Operators
 
-Functionally, the package offers 6 functions (listed in [Highlights](#highlights)) much similar to
-`torchvision.ops.deform_conv2d`.
-However, the order of parameters is slightly different, so be cautious
-(check [this comparison](tests/test_compatibility_with_torchvision.py)).
-
-
-<table>
-<tr>
-<th>torchvision</th>
-<th>tvdcn</th>
-</tr>
-
-<tr>
-<td>
-<sub>
-
-```python
-import torch
-from torchvision.ops import deform_conv2d
-
-input = torch.rand(4, 3, 10, 10)
-kh, kw = 3, 3
-weight = torch.rand(5, 3, kh, kw)
-offset = torch.rand(4, 2 * kh * kw, 8, 8)
-mask = torch.rand(4, kh * kw, 8, 8)
-bias = torch.rand(5)
-
-output = deform_conv2d(input, offset, weight, bias,
-                       stride=(1, 1),
-                       padding=(0, 0),
-                       dilation=(1, 1),
-                       mask=mask)
-print(output)
-```
-
-</sub>
-<td>
-<sub>
+The package offers six deformable convolution functions, listed in [Highlights](#highlights). Their argument order
+differs slightly from `torchvision.ops.deform_conv2d`; see [this comparison](tests/test_compatibility_with_torchvision.py).
 
 ```python
 import torch
 from tvdcn.ops import deform_conv2d
 
-input = torch.rand(4, 3, 10, 10)
-kh, kw = 3, 3
-weight = torch.rand(5, 3, kh, kw)
-offset = torch.rand(4, 2 * kh * kw, 8, 8)
-mask = torch.rand(4, kh * kw, 8, 8)
-bias = torch.rand(5)
-
-output = deform_conv2d(input, weight, offset, mask, bias,
-                       stride=(1, 1),
-                       padding=(0, 0),
-                       dilation=(1, 1),
-                       groups=1)
-print(output)
+x = torch.rand(1, 3, 8, 8)
+weight = torch.rand(4, 3, 3, 3)
+offset = torch.rand(1, 18, 6, 6)
+mask = torch.rand(1, 9, 6, 6).sigmoid()
+y = deform_conv2d(x, weight, offset, mask)
+print(y.shape)
 ```
 
-</sub>
-</td>
-</tr>
+If `offset=None` and `mask=None`, the operation is identical to conventional convolution.
 
-</table>
-
-Specifically, the signatures of `deform_conv2d` and `deform_conv_transpose2d` look like these:
-
-```python
-def deform_conv2d(
-        input: Tensor,
-        weight: Tensor,
-        offset: Optional[Tensor] = None,
-        mask: Optional[Tensor] = None,
-        bias: Optional[Tensor] = None,
-        stride: Union[int, Tuple[int, int]] = 1,
-        padding: Union[int, Tuple[int, int]] = 0,
-        dilation: Union[int, Tuple[int, int]] = 1,
-        groups: int = 1) -> Tensor:
-    ...
-
-
-def deform_conv_transpose2d(
-        input: Tensor,
-        weight: Tensor,
-        offset: Optional[Tensor] = None,
-        mask: Optional[Tensor] = None,
-        bias: Optional[Tensor] = None,
-        stride: Union[int, Tuple[int, int]] = 1,
-        padding: Union[int, Tuple[int, int]] = 0,
-        output_padding: Union[int, Tuple[int, int]] = 0,
-        dilation: Union[int, Tuple[int, int]] = 1,
-        groups: int = 1) -> Tensor:
-    ...
-```
-
-If `offset=None` and `mask=None`, the executed operators are identical to conventional convolution.
-
-#### Neural Network Layers:
-
-The `nn.Module` wrappers are:
-
-- `tvdcn.ops.DeformConv1d`
-- `tvdcn.ops.DeformConv2d`
-- `tvdcn.ops.DeformConv3d`
-- `tvdcn.ops.DeformConvTranspose1d`
-- `tvdcn.ops.DeformConvTranspose2d`
-- `tvdcn.ops.DeformConvTranspose3d`
-
-They are subclasses of the `torch.nn.modules._ConvNd`,
-but you have to specify `offset` and optionally `mask` as extra inputs for the `forward` function.
-For example:
+The transposed operators take offsets and masks with the spatial size of the input:
 
 ```python
 import torch
+from tvdcn.ops import deform_conv_transpose2d
 
+x = torch.rand(1, 4, 6, 6)
+weight = torch.rand(4, 3, 3, 3)  # (in_channels, out_channels // groups, kH, kW)
+offset = torch.rand(1, 18, 6, 6)
+mask = torch.rand(1, 9, 6, 6).sigmoid()
+y = deform_conv_transpose2d(x, weight, offset, mask, stride=2)
+print(y.shape)  # torch.Size([1, 3, 13, 13])
+```
+
+#### Neural Network Layers
+
+The `nn.Module` wrappers are `DeformConv1d/2d/3d` and `DeformConvTranspose1d/2d/3d`, available from `tvdcn`. Pass
+offsets and optionally masks to their `forward` method:
+
+```python
+import torch
 from tvdcn import DeformConv2d
 
-input = torch.rand(2, 3, 64, 64)
-offset = torch.rand(2, 2 * 3 * 3, 62, 62)
-# if mask is None, perform the original deform_conv without modulation (v2)
-mask = torch.rand(2, 1 * 3 * 3, 62, 62)
+conv = DeformConv2d(3, 4, kernel_size=3)
+x = torch.rand(1, 3, 8, 8)
+offset = torch.rand(1, 18, 6, 6)
+mask = torch.rand(1, 9, 6, 6).sigmoid()
 
-conv = DeformConv2d(3, 16, kernel_size=(3, 3))
-
-output = conv(input, offset, mask)
-print(output.shape)
+y = conv(x, offset, mask)
+print(y.shape)
 ```
 
-Additionally, following many other implementations out there, we also implemented the _packed_ wrappers:
+The `PackedDeformConv1d/2d/3d` and `PackedDeformConvTranspose1d/2d/3d` modules generate offsets (and optionally masks)
+with convolution layers. Configure `offset_groups`, `mask_groups`, `deformable`, and `modulated` as needed. For example,
+`mask_activation='softmax'` selects softmax mask activation; `offset_activation` and `mask_activation` also accept
+`nn.Module` instances.
 
-- `tvdcn.ops.PackedDeformConv1d`
-- `tvdcn.ops.PackedDeformConv2d`
-- `tvdcn.ops.PackedDeformConv3d`
-- `tvdcn.ops.PackedDeformConvTranspose1d`
-- `tvdcn.ops.PackedDeformConvTranspose2d`
-- `tvdcn.ops.PackedDeformConvTranspose3d`
-
-These are easy-to-use classes that contain ordinary convolution layers with appropriate hyperparameters to generate
-`offset` (and `mask` if initialized with `modulated=True`);
-but that means less customization.
-The only tunable hyperparameters that effect these supplementary conv layers are `offset_groups` and `mask_groups`,
-which have been decoupled from and behave somewhat similar to `groups`.
-
-To use the softmax activation for mask proposed in [Deformable Convolution v3](https://arxiv.org/abs/2211.05778),
-set `mask_activation='softmax'`. `offset_activation` and `mask_activation` also accept any `nn.Module`.
+Modules can be compiled or exported with PyTorch:
 
 ```python
 import torch
+from tvdcn import DeformConv2d
 
-from tvdcn import PackedDeformConv1d
+conv = DeformConv2d(3, 4, kernel_size=3)
+x = torch.rand(1, 3, 8, 8)
+offset = torch.rand(1, 18, 6, 6)
+mask = torch.rand(1, 9, 6, 6).sigmoid()
 
-input = torch.rand(2, 3, 128)
+compiled = torch.compile(conv, fullgraph=True)
+print(compiled(x, offset, mask).shape)
 
-conv = PackedDeformConv1d(3, 16,
-                          kernel_size=5,
-                          modulated=True,
-                          mask_activation='softmax')
-# jit scripting
-scripted_conv = torch.jit.script(conv)
-print(scripted_conv)
-
-output = scripted_conv(input)
-print(output.shape)
+exported = torch.export.export(conv, (x, offset, mask))
+print(exported.module()(x, offset, mask).shape)
 ```
 
-**Note:** For transposed packed modules, we are generating `offset` and `mask` with pointwise convolution
-as we haven't found a better way to do it.
+For transposed packed modules, offsets and masks are generated with pointwise convolution.
 
-Do check the [examples](examples) folder, maybe you can find something helpful.
+See the [examples](examples) folder for more.
 
 ## Acknowledgements
 
 This _for fun_ project is directly modified and extended from `torchvision.ops.deform_conv2d`.
-
-## Citation
-
-```bibtex
-@software{hoang_nhat_tran_2025_15468695,
-  author       = {Hoang-Nhat Tran and
-                  Van Tien Pham},
-  title        = {inspiros/tvdcn: v1.1.0},
-  month        = may,
-  year         = 2025,
-  publisher    = {Zenodo},
-  version      = {v1.1.0},
-  doi          = {10.5281/zenodo.15468695},
-  url          = {https://doi.org/10.5281/zenodo.15468695},
-  swhid        = {swh:1:dir:c12477940dcb3dcdb2e019c4e53b852fb53244b2
-                   ;origin=https://doi.org/10.5281/zenodo.14699341;vi
-                   sit=swh:1:snp:7ac12e5f1ab64667e1c6c84028b8ac22838b
-                   93a5;anchor=swh:1:rel:2e678a84668611ce7ea45b45d46b
-                   c7c9303bd5c3;path=inspiros-tvdcn-fabd55d
-                  },
-}
-```
 
 ## License
 

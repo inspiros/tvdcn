@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using these metadata."
+title: "tvdcn: Torchvision+ Deformable Convolution Networks"
+type: software
+authors:
+  - family-names: Tran
+    given-names: Hoang-Nhat
+  - family-names: Pham
+    given-names: Van Tien
+doi: 10.5281/zenodo.14699341
+repository-code: "https://github.com/inspiros/tvdcn"
+license: MIT
+version: 2.0.0
+keywords:
+  - pytorch
+  - deformable convolution
+  - transposed deformable convolution
